@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type {
   CharacterAdventureSite,
   CombatEncounter,
+  CharacterSpell,
   CombatTurn,
   DamageType,
 } from '../types'
@@ -10,6 +11,29 @@ import type {
 type Props = {
   characterId: string
   onProgressChanged?: () => Promise<unknown> | void
+  onInventoryChanged?: () => Promise<unknown> | void
+}
+
+type CombatScroll = {
+  id: string
+  quantity: number
+  item_definitions: {
+    id: string
+    name: string
+    required_level: number
+    scroll_mode: 'cast' | null
+    scroll_spell_id: string | null
+  } | {
+    id: string
+    name: string
+    required_level: number
+    scroll_mode: 'cast' | null
+    scroll_spell_id: string | null
+  }[] | null
+}
+
+function normalizeCombatScrollDefinition(value: CombatScroll['item_definitions']) {
+  return Array.isArray(value) ? value[0] ?? null : value
 }
 
 const damageTypeLabels: Record<DamageType, string> = {
@@ -24,10 +48,16 @@ const damageTypeLabels: Record<DamageType, string> = {
   ice: 'Ледяной',
 }
 
-export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
+export function AdventuresPanel({
+  characterId,
+  onProgressChanged,
+  onInventoryChanged,
+}: Props) {
   const [sites, setSites] = useState<CharacterAdventureSite[]>([])
   const [encounters, setEncounters] = useState<CombatEncounter[]>([])
   const [turns, setTurns] = useState<CombatTurn[]>([])
+  const [spells, setSpells] = useState<CharacterSpell[]>([])
+  const [combatScrolls, setCombatScrolls] = useState<CombatScroll[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -35,19 +65,30 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
   async function loadAdventures() {
     setLoading(true)
 
-    const [siteResult, encounterResult] = await Promise.all([
+    const [siteResult, encounterResult, spellResult, scrollResult] = await Promise.all([
       supabase.rpc('get_character_adventures', {
         p_character_id: characterId,
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
+      supabase.rpc('get_character_spells', {
+        p_character_id: characterId,
+      }),
+      supabase
+        .from('character_items')
+        .select('id, quantity, item_definitions(id, name, required_level, scroll_mode, scroll_spell_id)')
+        .eq('character_id', characterId),
     ])
 
-    const error = siteResult.error ?? encounterResult.error
+    const error =
+      siteResult.error ??
+      encounterResult.error ??
+      spellResult.error ??
+      scrollResult.error
 
     if (error) {
       setMessage(error.message)
@@ -60,6 +101,13 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
 
     setSites(nextSites)
     setEncounters(nextEncounters)
+    setSpells((spellResult.data as CharacterSpell[] | null) ?? [])
+    setCombatScrolls(
+      (((scrollResult.data as CombatScroll[] | null) ?? []).filter((item) => {
+        const definition = normalizeCombatScrollDefinition(item.item_definitions)
+        return definition?.scroll_mode === 'cast' && Boolean(definition.scroll_spell_id)
+      }))
+    )
 
     const latestEncounter = nextEncounters[0] ?? null
 
@@ -189,6 +237,66 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
     setBusy(false)
   }
 
+  async function castSpell(spell: CharacterSpell) {
+    if (!activeCombat) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('cast_character_spell', {
+      p_encounter_id: activeCombat.id,
+      p_spell_id: spell.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('NOT_ENOUGH_MANA')) {
+        setMessage('Недостаточно маны для этого заклинания.')
+      } else if (raw.includes('SPELL_NOT_LEARNED')) {
+        setMessage('Это заклинание не изучено персонажем.')
+      } else {
+        setMessage(raw)
+      }
+      setBusy(false)
+      return
+    }
+
+    await Promise.resolve(onProgressChanged?.())
+    await loadAdventures()
+    setBusy(false)
+  }
+
+  async function castScroll(scroll: CombatScroll) {
+    if (!activeCombat) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('cast_spell_scroll', {
+      p_encounter_id: activeCombat.id,
+      p_character_item_id: scroll.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('LEVEL_TOO_LOW')) {
+        const definition = normalizeCombatScrollDefinition(scroll.item_definitions)
+        setMessage(`Для этого свитка нужен уровень ${definition?.required_level ?? '?'}.`)
+      } else {
+        setMessage(raw)
+      }
+      setBusy(false)
+      return
+    }
+
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      Promise.resolve(onInventoryChanged?.()),
+    ])
+    await loadAdventures()
+    setBusy(false)
+  }
+
   async function leaveDungeon(runId: string) {
     setBusy(true)
     setMessage('')
@@ -222,6 +330,10 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
     : 0
   const enemyHpPercent = activeCombat
     ? Math.max(0, Math.min(100, Math.round((activeCombat.enemy_hp_current / activeCombat.enemy_hp_max) * 100)))
+    : 0
+
+  const playerManaPercent = activeCombat
+    ? Math.max(0, Math.min(100, Math.round((activeCombat.player_mana_current / activeCombat.player_mana_max) * 100)))
     : 0
 
   const clearedRooms = activeDungeon?.run_rooms_cleared ?? 0
@@ -338,6 +450,11 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
                     <strong>{activeCombat.player_hp_current} / {activeCombat.player_hp_max} HP</strong>
                   </div>
                   <div className="combat-hp-meter player"><span style={{ width: playerHpPercent + '%' }} /></div>
+                  <div className="combatant-head mana">
+                    <span>Мана</span>
+                    <strong>{activeCombat.player_mana_current} / {activeCombat.player_mana_max}</strong>
+                  </div>
+                  <div className="combat-hp-meter mana"><span style={{ width: playerManaPercent + '%' }} /></div>
                 </div>
 
                 <div className="combatant-card enemy">
@@ -393,6 +510,66 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
                   Отступить
                 </button>
               </div>
+
+              {(spells.length > 0 || combatScrolls.length > 0) && (
+                <div className="combat-special-actions">
+                  {spells.length > 0 && (
+                    <div className="combat-spell-section">
+                      <div className="combat-special-heading">
+                        <strong>Изученные заклинания</strong>
+                        <span>расходуют ману</span>
+                      </div>
+                      <div className="combat-spell-grid">
+                        {spells
+                          .filter((spell) => spell.spell_kind === 'damage' && spell.damage_type)
+                          .map((spell) => (
+                            <button
+                              className="spell-action-button"
+                              type="button"
+                              key={spell.id}
+                              disabled={busy || activeCombat.player_mana_current < spell.mana_cost}
+                              onClick={() => void castSpell(spell)}
+                            >
+                              <strong>{spell.name}</strong>
+                              <span>
+                                {spell.damage_type ? damageTypeLabels[spell.damage_type] : 'Магия'}
+                                {' · '}{spell.mana_cost} маны
+                              </span>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {combatScrolls.length > 0 && (
+                    <div className="combat-spell-section">
+                      <div className="combat-special-heading">
+                        <strong>Боевые свитки</strong>
+                        <span>одноразовые · без маны</span>
+                      </div>
+                      <div className="combat-spell-grid">
+                        {combatScrolls.map((scroll) => {
+                          const definition = normalizeCombatScrollDefinition(scroll.item_definitions)
+                          if (!definition) return null
+
+                          return (
+                            <button
+                              className="spell-action-button scroll"
+                              type="button"
+                              key={scroll.id}
+                              disabled={busy}
+                              onClick={() => void castScroll(scroll)}
+                            >
+                              <strong>{definition.name}</strong>
+                              <span>×{scroll.quantity} · одно применение</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="combat-log">
                 {turns.map((turn) => (
