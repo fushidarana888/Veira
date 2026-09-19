@@ -44,6 +44,14 @@ const damageLabels: Record<DamageType, string> = {
   ice: 'Ледяной',
 }
 
+const spellKindLabels: Record<SpellDefinition['spell_kind'], string> = {
+  damage: 'Урон',
+  heal: 'Лечение',
+  guard: 'Защита',
+  cleanse: 'Очищение',
+  buff: 'Усиление',
+}
+
 const categories: Array<{ value: ItemCategory; label: string }> = [
   { value: 'weapon', label: 'Оружие' },
   { value: 'armor', label: 'Броня' },
@@ -116,7 +124,7 @@ type SpellDraft = {
   name: string
   description: string
   enabled: boolean
-  spell_kind: 'damage' | 'heal'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff'
   damage_type: ElementalDamageType | null
   mana_cost: number
   required_level: number
@@ -126,6 +134,9 @@ type SpellDraft = {
   status_effect_chance: number
   status_effect_turns: number
   status_effect_potency: number
+  support_effect_type: 'guard' | 'cleanse' | 'empower' | null
+  support_value: number
+  support_turns: number
 }
 
 function emptyItem(): ItemDraft {
@@ -175,6 +186,9 @@ function emptySpell(): SpellDraft {
     status_effect_chance: 0,
     status_effect_turns: 0,
     status_effect_potency: 0,
+    support_effect_type: null,
+    support_value: 0,
+    support_turns: 0,
   }
 }
 
@@ -289,6 +303,9 @@ export function GmItemsAndSpells() {
       status_effect_chance: spell.status_effect_chance,
       status_effect_turns: spell.status_effect_turns,
       status_effect_potency: spell.status_effect_potency,
+      support_effect_type: spell.support_effect_type,
+      support_value: spell.support_value,
+      support_turns: spell.support_turns,
     })
     setMessage('')
   }
@@ -401,7 +418,7 @@ export function GmItemsAndSpells() {
     setBusy(true)
     setMessage('')
 
-    const { data, error } = await supabase.rpc('gm_save_spell_definition', {
+    const { data, error } = await supabase.rpc('gm_save_spell_definition_v2', {
       p_id: spellDraft.id,
       p_slug: spellDraft.slug.trim(),
       p_name: spellDraft.name.trim(),
@@ -417,6 +434,9 @@ export function GmItemsAndSpells() {
       p_status_effect_chance: spellDraft.status_effect_chance,
       p_status_effect_turns: spellDraft.status_effect_turns,
       p_status_effect_potency: spellDraft.status_effect_potency,
+      p_support_effect_type: spellDraft.support_effect_type,
+      p_support_value: spellDraft.support_value,
+      p_support_turns: spellDraft.support_turns,
     })
 
     if (error) {
@@ -771,7 +791,7 @@ export function GmItemsAndSpells() {
               >
                 <span>{spell.name}</span>
                 <small>
-                  {spell.damage_type ? damageLabels[spell.damage_type] : spell.spell_kind}
+                  {spell.damage_type ? damageLabels[spell.damage_type] : spellKindLabels[spell.spell_kind]}
                   {' · '}{spell.mana_cost} MP
                 </small>
               </button>
@@ -800,9 +820,36 @@ export function GmItemsAndSpells() {
             <div className="gm-form-grid three">
               <label>
                 <span>Тип</span>
-                <select value={spellDraft.spell_kind} onChange={(e) => setSpellDraft({ ...spellDraft, spell_kind: e.target.value as 'damage' | 'heal', damage_type: e.target.value === 'damage' ? spellDraft.damage_type ?? 'fire' : null })}>
+                <select
+                  value={spellDraft.spell_kind}
+                  onChange={(e) => {
+                    const kind = e.target.value as SpellDraft['spell_kind']
+                    setSpellDraft({
+                      ...spellDraft,
+                      spell_kind: kind,
+                      damage_type: kind === 'damage' ? spellDraft.damage_type ?? 'fire' : null,
+                      status_effect_type: kind === 'damage' ? spellDraft.status_effect_type : null,
+                      status_effect_chance: kind === 'damage' ? spellDraft.status_effect_chance : 0,
+                      status_effect_turns: kind === 'damage' ? spellDraft.status_effect_turns : 0,
+                      status_effect_potency: kind === 'damage' ? spellDraft.status_effect_potency : 0,
+                      support_effect_type:
+                        kind === 'guard' ? 'guard'
+                          : kind === 'cleanse' ? 'cleanse'
+                            : kind === 'buff' ? 'empower'
+                              : null,
+                      support_value:
+                        kind === 'guard' ? Math.max(70, spellDraft.support_value)
+                          : kind === 'buff' ? Math.max(20, spellDraft.support_value)
+                            : 0,
+                      support_turns: kind === 'buff' ? Math.max(2, spellDraft.support_turns) : kind === 'guard' ? 1 : 0,
+                    })
+                  }}
+                >
                   <option value="damage">Урон</option>
-                  <option value="heal">Лечение (заготовка)</option>
+                  <option value="heal">Лечение</option>
+                  <option value="guard">Магическая защита</option>
+                  <option value="cleanse">Очищение дебаффов</option>
+                  <option value="buff">Усиление урона</option>
                 </select>
               </label>
               <label>
@@ -816,91 +863,146 @@ export function GmItemsAndSpells() {
 
             <div className="gm-form-grid three">
               <label><span>Требуемый уровень</span><input type="number" min={1} value={spellDraft.required_level} onChange={(e) => setSpellDraft({ ...spellDraft, required_level: Math.max(1, Number(e.target.value)) })} /></label>
-              <label><span>Множитель силы</span><input type="number" min={0} max={10} step={0.05} value={spellDraft.power_multiplier} onChange={(e) => setSpellDraft({ ...spellDraft, power_multiplier: Math.max(0, Number(e.target.value)) })} /></label>
-              <label><span>Плоский бонус</span><input type="number" min={0} value={spellDraft.flat_power} onChange={(e) => setSpellDraft({ ...spellDraft, flat_power: Math.max(0, Number(e.target.value)) })} /></label>
+              <label><span>Множитель силы</span><input type="number" min={0} max={10} step={0.05} disabled={!['damage', 'heal'].includes(spellDraft.spell_kind)} value={spellDraft.power_multiplier} onChange={(e) => setSpellDraft({ ...spellDraft, power_multiplier: Math.max(0, Number(e.target.value)) })} /></label>
+              <label><span>Плоский бонус</span><input type="number" min={0} disabled={!['damage', 'heal'].includes(spellDraft.spell_kind)} value={spellDraft.flat_power} onChange={(e) => setSpellDraft({ ...spellDraft, flat_power: Math.max(0, Number(e.target.value)) })} /></label>
             </div>
 
-            <div className="gm-editor-box">
-              <div>
-                <strong>Дополнительный боевой эффект</strong>
-                <small>Накладывается поверх основного урона заклинания</small>
+            {spellDraft.spell_kind === 'damage' && (
+              <div className="gm-editor-box">
+                <div>
+                  <strong>Дополнительный боевой эффект</strong>
+                  <small>Накладывается поверх основного урона заклинания</small>
+                </div>
+  
+                <div className="gm-form-grid four">
+                  <label>
+                    <span>Эффект</span>
+                    <select
+                      value={spellDraft.status_effect_type ?? ''}
+                      onChange={(e) => setSpellDraft({
+                        ...spellDraft,
+                        status_effect_type: e.target.value ? e.target.value as CombatStatusEffectType : null,
+                        status_effect_chance: e.target.value ? Math.max(1, spellDraft.status_effect_chance || 25) : 0,
+                        status_effect_turns: e.target.value ? Math.max(1, spellDraft.status_effect_turns || 1) : 0,
+                        status_effect_potency: e.target.value ? spellDraft.status_effect_potency : 0,
+                      })}
+                    >
+                      <option value="">Нет</option>
+                      {statusEffectOptions.map((effect) => (
+                        <option key={effect.value} value={effect.value}>{effect.label}</option>
+                      ))}
+                    </select>
+                  </label>
+  
+                  <label>
+                    <span>Шанс %</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      disabled={!spellDraft.status_effect_type}
+                      value={spellDraft.status_effect_chance}
+                      onChange={(e) => setSpellDraft({
+                        ...spellDraft,
+                        status_effect_chance: Math.max(0, Math.min(100, Number(e.target.value))),
+                      })}
+                    />
+                  </label>
+  
+                  <label>
+                    <span>Ходов</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      disabled={!spellDraft.status_effect_type}
+                      value={spellDraft.status_effect_turns}
+                      onChange={(e) => setSpellDraft({
+                        ...spellDraft,
+                        status_effect_turns: Math.max(0, Math.min(10, Number(e.target.value))),
+                      })}
+                    />
+                  </label>
+  
+                  <label>
+                    <span>Сила эффекта</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={1000}
+                      disabled={!spellDraft.status_effect_type}
+                      value={spellDraft.status_effect_potency}
+                      onChange={(e) => setSpellDraft({
+                        ...spellDraft,
+                        status_effect_potency: Math.max(0, Number(e.target.value)),
+                      })}
+                    />
+                  </label>
+                </div>
+  
+                <p className="muted">
+                  Горение, кровотечение и яд используют силу как урон за ход. Охлаждение и ослабление — как процент снижения урона. Уязвимость — как процент дополнительного входящего урона. Для оглушения сила не нужна.
+                </p>
               </div>
+  
+            )}
 
-              <div className="gm-form-grid four">
-                <label>
-                  <span>Эффект</span>
-                  <select
-                    value={spellDraft.status_effect_type ?? ''}
-                    onChange={(e) => setSpellDraft({
-                      ...spellDraft,
-                      status_effect_type: e.target.value ? e.target.value as CombatStatusEffectType : null,
-                      status_effect_chance: e.target.value ? Math.max(1, spellDraft.status_effect_chance || 25) : 0,
-                      status_effect_turns: e.target.value ? Math.max(1, spellDraft.status_effect_turns || 1) : 0,
-                      status_effect_potency: e.target.value ? spellDraft.status_effect_potency : 0,
-                    })}
-                  >
-                    <option value="">Нет</option>
-                    {statusEffectOptions.map((effect) => (
-                      <option key={effect.value} value={effect.value}>{effect.label}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  <span>Шанс %</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    disabled={!spellDraft.status_effect_type}
-                    value={spellDraft.status_effect_chance}
-                    onChange={(e) => setSpellDraft({
-                      ...spellDraft,
-                      status_effect_chance: Math.max(0, Math.min(100, Number(e.target.value))),
-                    })}
-                  />
-                </label>
-
-                <label>
-                  <span>Ходов</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10}
-                    disabled={!spellDraft.status_effect_type}
-                    value={spellDraft.status_effect_turns}
-                    onChange={(e) => setSpellDraft({
-                      ...spellDraft,
-                      status_effect_turns: Math.max(0, Math.min(10, Number(e.target.value))),
-                    })}
-                  />
-                </label>
-
-                <label>
-                  <span>Сила эффекта</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={1000}
-                    disabled={!spellDraft.status_effect_type}
-                    value={spellDraft.status_effect_potency}
-                    onChange={(e) => setSpellDraft({
-                      ...spellDraft,
-                      status_effect_potency: Math.max(0, Number(e.target.value)),
-                    })}
-                  />
-                </label>
+            {['guard', 'buff'].includes(spellDraft.spell_kind) && (
+              <div className="gm-editor-box">
+                <div>
+                  <strong>{spellDraft.spell_kind === 'guard' ? 'Магический щит' : 'Боевое усиление'}</strong>
+                  <small>
+                    {spellDraft.spell_kind === 'guard'
+                      ? 'Процент снижения следующего входящего удара'
+                      : 'Бонус к прямому урону и число усиленных атак'}
+                  </small>
+                </div>
+                <div className="gm-form-grid two">
+                  <label>
+                    <span>{spellDraft.spell_kind === 'guard' ? 'Снижение урона %' : 'Бонус урона %'}</span>
+                    <input
+                      type="number"
+                      min={spellDraft.spell_kind === 'guard' ? 55 : 1}
+                      max={spellDraft.spell_kind === 'guard' ? 85 : 100}
+                      value={spellDraft.support_value}
+                      onChange={(e) => setSpellDraft({
+                        ...spellDraft,
+                        support_value: Math.max(
+                          spellDraft.spell_kind === 'guard' ? 55 : 1,
+                          Math.min(spellDraft.spell_kind === 'guard' ? 85 : 100, Number(e.target.value)),
+                        ),
+                      })}
+                    />
+                  </label>
+                  <label>
+                    <span>Атак</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      disabled={spellDraft.spell_kind === 'guard'}
+                      value={spellDraft.spell_kind === 'guard' ? 1 : spellDraft.support_turns}
+                      onChange={(e) => setSpellDraft({
+                        ...spellDraft,
+                        support_turns: Math.max(1, Math.min(10, Number(e.target.value))),
+                      })}
+                    />
+                  </label>
+                </div>
               </div>
+            )}
 
-              <p className="muted">
-                Горение, кровотечение и яд используют силу как урон за ход. Охлаждение и ослабление — как процент снижения урона. Уязвимость — как процент дополнительного входящего урона. Для оглушения сила не нужна.
-              </p>
-            </div>
 
             <p className="muted">
               {spellDraft.spell_kind === 'heal'
-                ? 'Лечащее заклинание тратит ход и ману, восстанавливает HP по формуле от магической силы и не наносит урон.'
-                : 'Базовая магическая атака остаётся стихией расы. Это заклинание использует свою стихию и расходует ману.'}
+                ? 'Лечение тратит ход и ману и масштабируется от магической силы.'
+                : spellDraft.spell_kind === 'guard'
+                  ? 'Щит действует на следующий входящий удар и складывается с бонусом блока экипировки, но итоговая защита ограничена 85%.'
+                  : spellDraft.spell_kind === 'cleanse'
+                    ? 'Очищение снимает все текущие негативные эффекты. Если персонаж уже оглушён, он пропускает ход и не успевает применить очищение.'
+                    : spellDraft.spell_kind === 'buff'
+                      ? 'Усиление повышает прямой физический и магический урон на заданное число следующих атак.'
+                      : 'Базовая магическая атака остаётся стихией расы. Это заклинание использует собственную стихию и расходует ману.'}
             </p>
 
             <div className="gm-form-actions">
