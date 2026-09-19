@@ -409,6 +409,8 @@ export type CombatEncounter = {
   player_mana_max: number
   player_counter_bonus_percent: number
   player_counter_blocked_damage: number
+  player_spell_damage_bonus_percent: number
+  player_spell_damage_bonus_hits: number
   enemy_on_hit_effect_type: CombatStatusEffectType | null
   enemy_on_hit_effect_chance: number
   enemy_on_hit_effect_turns: number
