@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
-  CharacterSectorDiscovery,
-  MapSector,
+  CharacterMapSector,
+  ExpeditionEventInstance,
   SectorExpedition,
 } from '../types'
 
@@ -17,12 +17,29 @@ const ORIGINAL_MAP_URL = supabase.storage
   .from('veira-assets')
   .getPublicUrl('eilar-map-original.png').data.publicUrl + '?v=original-1'
 
-function isAdjacent(a: MapSector, b: MapSector) {
-  return (
-    Math.abs(a.grid_col - b.grid_col) <= 1 &&
-    Math.abs(a.grid_row - b.grid_row) <= 1 &&
-    !(a.grid_col === b.grid_col && a.grid_row === b.grid_row)
-  )
+const terrainLabels: Record<string, string> = {
+  unassigned: 'Не определено',
+  plains: 'Равнины',
+  forest: 'Лес',
+  swamp: 'Болота',
+  desert: 'Пустыня',
+  mountains: 'Горы',
+  tundra: 'Тундра',
+  coast: 'Побережье',
+  sea: 'Море',
+  riverlands: 'Речные земли',
+}
+
+const contentLabels: Record<string, string> = {
+  unassigned: 'Ничего особого',
+  wilderness: 'Дикая местность',
+  settlement: 'Поселение',
+  ruins: 'Руины',
+  dungeon: 'Подземелье',
+  resource: 'Ресурсная точка',
+  npc: 'NPC',
+  landmark: 'Достопримечательность',
+  event: 'Событие',
 }
 
 function formatRemaining(milliseconds: number) {
@@ -34,13 +51,14 @@ function formatRemaining(milliseconds: number) {
 
   return [hours, minutes, seconds]
     .map((value) => String(value).padStart(2, '0'))
-    .join(':')
+    .join('')
+    .replace(/^(..)(..)(..)$/, '$1:$2:$3')
 }
 
 export function WorldMap({ characterId }: Props) {
-  const [sectors, setSectors] = useState<MapSector[]>([])
-  const [discoveries, setDiscoveries] = useState<CharacterSectorDiscovery[]>([])
+  const [sectors, setSectors] = useState<CharacterMapSector[]>([])
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
+  const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -52,35 +70,25 @@ export function WorldMap({ characterId }: Props) {
     setLoading(true)
     setMessage('')
 
-    const { error: completionError } = await supabase.rpc(
-      'complete_character_sector_expeditions',
-      { p_character_id: characterId },
-    )
-
-    if (completionError) {
-      setMessage(completionError.message)
-      setLoading(false)
-      return
-    }
-
-    const [sectorResult, discoveryResult, expeditionResult] = await Promise.all([
-      supabase
-        .from('map_sectors')
-        .select('id, grid_col, grid_row, initially_known, location_key, location_name, terrain, metadata')
-        .order('id', { ascending: true }),
-      supabase
-        .from('character_sector_discoveries')
-        .select('character_id, sector_id, discovered_at, source')
-        .eq('character_id', characterId),
+    const [mapResult, expeditionResult, eventResult] = await Promise.all([
+      supabase.rpc('get_character_map_state', {
+        p_character_id: characterId,
+      }),
       supabase
         .from('sector_expeditions')
         .select('id, character_id, sector_id, status, started_at, ends_at, completed_at, created_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
+      supabase
+        .from('expedition_event_instances')
+        .select('id, expedition_id, event_definition_id, character_id, sector_id, title, player_prompt, status, resolution_text, outcome, created_at, resolved_at, resolved_by')
+        .eq('character_id', characterId)
+        .order('created_at', { ascending: false })
+        .limit(20),
     ])
 
-    const error = sectorResult.error ?? discoveryResult.error ?? expeditionResult.error
+    const error = mapResult.error ?? expeditionResult.error ?? eventResult.error
 
     if (error) {
       setMessage(error.message)
@@ -88,9 +96,9 @@ export function WorldMap({ characterId }: Props) {
       return
     }
 
-    setSectors((sectorResult.data as MapSector[] | null) ?? [])
-    setDiscoveries((discoveryResult.data as CharacterSectorDiscovery[] | null) ?? [])
+    setSectors((mapResult.data as CharacterMapSector[] | null) ?? [])
     setExpeditions((expeditionResult.data as SectorExpedition[] | null) ?? [])
+    setEvents((eventResult.data as ExpeditionEventInstance[] | null) ?? [])
     setLoading(false)
   }
 
@@ -103,40 +111,31 @@ export function WorldMap({ characterId }: Props) {
     return () => window.clearInterval(timer)
   }, [])
 
-  const discoveredIds = useMemo(
-    () => new Set(discoveries.map((entry) => entry.sector_id)),
-    [discoveries],
-  )
-
   const sectorById = useMemo(
     () => new Map(sectors.map((sector) => [sector.id, sector])),
     [sectors],
   )
 
-  const discoveredSectors = useMemo(
-    () => sectors.filter((sector) => discoveredIds.has(sector.id)),
-    [discoveredIds, sectors],
+  const discoveredCount = useMemo(
+    () => sectors.filter((sector) => sector.is_discovered).length,
+    [sectors],
   )
 
-  const activeExpedition = expeditions.find((entry) => entry.status === 'active') ?? null
-  const activeSector = activeExpedition ? sectorById.get(activeExpedition.sector_id) ?? null : null
-  const selectedSector = selectedSectorId ? sectorById.get(selectedSectorId) ?? null : null
+  const activeExpedition =
+    expeditions.find((entry) => entry.status === 'active') ?? null
+  const waitingExpedition =
+    expeditions.find((entry) => entry.status === 'awaiting_event') ?? null
+  const openExpedition = activeExpedition ?? waitingExpedition
+  const activeSector = openExpedition
+    ? sectorById.get(openExpedition.sector_id) ?? null
+    : null
 
-  const explorableIds = useMemo(() => {
-    const result = new Set<number>()
+  const pendingEvent =
+    events.find((entry) => entry.status === 'pending') ?? null
 
-    if (activeExpedition) return result
-
-    for (const target of sectors) {
-      if (discoveredIds.has(target.id)) continue
-
-      if (discoveredSectors.some((known) => isAdjacent(known, target))) {
-        result.add(target.id)
-      }
-    }
-
-    return result
-  }, [activeExpedition, discoveredIds, discoveredSectors, sectors])
+  const selectedSector = selectedSectorId
+    ? sectorById.get(selectedSectorId) ?? null
+    : null
 
   useEffect(() => {
     if (!activeExpedition) return
@@ -146,13 +145,13 @@ export function WorldMap({ characterId }: Props) {
 
     const timeout = window.setTimeout(() => {
       void loadMapData()
-    }, 600)
+    }, 700)
 
     return () => window.clearTimeout(timeout)
   }, [activeExpedition, now])
 
   async function startExploration() {
-    if (!selectedSector || !explorableIds.has(selectedSector.id)) return
+    if (!selectedSector?.is_explorable) return
 
     setBusy(true)
     setMessage('')
@@ -165,7 +164,7 @@ export function WorldMap({ characterId }: Props) {
     if (error) {
       const raw = error.message
       if (raw.includes('EXPEDITION_ALREADY_ACTIVE')) {
-        setMessage('У персонажа уже идёт исследование другого сектора.')
+        setMessage('У персонажа уже идёт экспедиция или ожидается решение события.')
       } else if (raw.includes('SECTOR_NOT_ADJACENT_TO_DISCOVERED')) {
         setMessage('Этот сектор пока нельзя исследовать: сначала открой соседнюю область.')
       } else {
@@ -206,7 +205,7 @@ export function WorldMap({ characterId }: Props) {
         </div>
 
         <div className="world-progress">
-          <strong>{discoveries.length} / {TOTAL_SECTORS}</strong>
+          <strong>{discoveredCount} / {TOTAL_SECTORS}</strong>
           <span>открыто</span>
         </div>
       </article>
@@ -219,13 +218,24 @@ export function WorldMap({ characterId }: Props) {
             <span className="eyebrow">ЭКСПЕДИЦИЯ ИДЁТ</span>
             <h3>Сектор {activeSector.grid_col}:{activeSector.grid_row}</h3>
             <p className="muted">
-              Завершится автоматически. Таймер на странице только показывает время — результат проверяет сервер.
+              По окончании таймера сектор либо откроется, либо экспедиция может столкнуться с событием.
             </p>
           </div>
           <div className="expedition-timer">
             <span>Осталось</span>
             <strong>{formatRemaining(remaining)}</strong>
           </div>
+        </article>
+      )}
+
+      {waitingExpedition && pendingEvent && (
+        <article className="panel expedition-event-card">
+          <div>
+            <span className="eyebrow">СОБЫТИЕ ЭКСПЕДИЦИИ</span>
+            <h3>{pendingEvent.title}</h3>
+            <p>{pendingEvent.player_prompt || 'Экспедиция столкнулась с ситуацией, требующей решения GM.'}</p>
+          </div>
+          <span className="badge event-waiting-badge">Ожидает GM</span>
         </article>
       )}
 
@@ -243,22 +253,17 @@ export function WorldMap({ characterId }: Props) {
 
           <div className="fog-grid" aria-label="Сектора карты Эйлара">
             {sectors.map((sector) => {
-              const discovered = discoveredIds.has(sector.id)
-              const explorable = explorableIds.has(sector.id)
-              const active = activeExpedition?.sector_id === sector.id
+              const active = openExpedition?.sector_id === sector.id
               const selected = selectedSectorId === sector.id
 
               const classNames = [
                 'fog-sector',
-                discovered ? 'discovered' : 'hidden',
-                explorable ? 'explorable' : '',
+                sector.is_discovered ? 'discovered' : 'hidden',
+                sector.is_explorable ? 'explorable' : '',
                 active ? 'active-expedition' : '',
+                waitingExpedition && active ? 'awaiting-event' : '',
                 selected ? 'selected' : '',
               ].filter(Boolean).join(' ')
-
-              const visibleName = discovered && sector.location_name
-                ? sector.location_name
-                : null
 
               return (
                 <button
@@ -266,21 +271,27 @@ export function WorldMap({ characterId }: Props) {
                   type="button"
                   className={classNames}
                   title={
-                    discovered
-                      ? visibleName ?? `Открытый сектор ${sector.grid_col}:${sector.grid_row}`
-                      : explorable
+                    sector.is_discovered
+                      ? sector.title ?? `Открытый сектор ${sector.grid_col}:${sector.grid_row}`
+                      : sector.is_explorable
                         ? `Исследовать сектор ${sector.grid_col}:${sector.grid_row}`
                         : 'Неизведанная территория'
                   }
                   aria-label={
-                    discovered
-                      ? visibleName ?? `Открытый сектор ${sector.grid_col}:${sector.grid_row}`
+                    sector.is_discovered
+                      ? sector.title ?? `Открытый сектор ${sector.grid_col}:${sector.grid_row}`
                       : `Неизведанный сектор ${sector.grid_col}:${sector.grid_row}`
                   }
                   onClick={() => setSelectedSectorId(sector.id)}
                 >
-                  {active && <span className="sector-expedition-mark">⌛</span>}
-                  {visibleName && <span className="sector-location-mark">◆</span>}
+                  {active && (
+                    <span className="sector-expedition-mark">
+                      {waitingExpedition ? '!' : '⌛'}
+                    </span>
+                  )}
+                  {sector.is_discovered && sector.title && (
+                    <span className="sector-location-mark">◆</span>
+                  )}
                 </button>
               )
             })}
@@ -294,15 +305,30 @@ export function WorldMap({ characterId }: Props) {
             <span className="eyebrow">СЕКТОР</span>
             <h3>Выбери область на карте</h3>
             <p className="muted">
-              Светлые области уже исследованы. Секторы на границе тумана подсвечиваются при наведении и доступны для следующей экспедиции.
+              После открытия сектор получает собственную карточку: тип местности, найденное место, уровень опасности и описание.
             </p>
           </>
-        ) : discoveredIds.has(selectedSector.id) ? (
+        ) : selectedSector.is_discovered ? (
           <>
-            <span className="eyebrow">ОТКРЫТАЯ ТЕРРИТОРИЯ</span>
-            <h3>{selectedSector.location_name ?? `Сектор ${selectedSector.grid_col}:${selectedSector.grid_row}`}</h3>
-            <p className="muted">
-              Этот сектор уже нанесён на личную карту персонажа.
+            <div className="sector-detail-heading">
+              <div>
+                <span className="eyebrow">ОТКРЫТАЯ ТЕРРИТОРИЯ</span>
+                <h3>{selectedSector.title ?? `Сектор ${selectedSector.grid_col}:${selectedSector.grid_row}`}</h3>
+              </div>
+              <span className="badge">
+                Опасность {selectedSector.danger_level ?? 0}/5
+              </span>
+            </div>
+
+            <div className="sector-tags">
+              <span>{terrainLabels[selectedSector.terrain_type ?? 'unassigned'] ?? 'Не определено'}</span>
+              <span>{contentLabels[selectedSector.content_type ?? 'unassigned'] ?? 'Не определено'}</span>
+              {selectedSector.requires_gm && <span>GM-сцена</span>}
+            </div>
+
+            <p className="sector-description">
+              {selectedSector.player_description ||
+                'Этот сектор уже нанесён на карту, но подробное описание пока не задано.'}
             </p>
           </>
         ) : (
@@ -310,16 +336,18 @@ export function WorldMap({ characterId }: Props) {
             <span className="eyebrow">НЕИЗВЕДАННАЯ ТЕРРИТОРИЯ</span>
             <h3>Сектор {selectedSector.grid_col}:{selectedSector.grid_row}</h3>
             <p className="muted">
-              {explorableIds.has(selectedSector.id)
+              {selectedSector.is_explorable
                 ? 'Он граничит с уже известной территорией и доступен для исследования.'
-                : 'Пока слишком далеко от изученной части карты. Сначала открой соседние сектора.'}
+                : openExpedition
+                  ? 'Сначала нужно завершить текущую экспедицию или событие.'
+                  : 'Пока слишком далеко от изученной части карты. Сначала открой соседние сектора.'}
             </p>
 
-            {explorableIds.has(selectedSector.id) && (
+            {selectedSector.is_explorable && (
               <button
                 className="primary-button sector-explore-button"
                 type="button"
-                disabled={busy || Boolean(activeExpedition)}
+                disabled={busy || Boolean(openExpedition)}
                 onClick={() => void startExploration()}
               >
                 {busy ? 'Отправляемся…' : 'Исследовать · 12 часов'}
