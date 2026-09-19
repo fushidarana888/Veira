@@ -933,7 +933,7 @@ export function AdventuresPanel({
         onInventoryChanged={onInventoryChanged}
       />
 
-      {message && <p className="gm-notice" aria-live="polite">{message}</p>
+      {message && <p className="gm-notice" aria-live="polite">{message}</p>}
 
       {activeDungeon && activeDungeon.active_run_id && (
         <article className="panel active-dungeon-panel">
