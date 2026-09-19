@@ -1431,3 +1431,134 @@ textarea {
     width: 100%;
   }
 }
+
+
+.level-up-panel {
+  border-color: #5a4b36;
+  background:
+    linear-gradient(145deg, rgba(171, 137, 87, .08), transparent 55%),
+    var(--panel);
+}
+
+.stat-points-badge {
+  border-color: #766141;
+  color: #e0c392;
+  background: #1f1a13;
+}
+
+.level-up-copy {
+  margin: -4px 0 16px;
+  max-width: 720px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.level-up-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.level-up-grid button {
+  min-width: 0;
+  min-height: 76px;
+  border: 1px solid #343b46;
+  border-radius: 13px;
+  padding: 10px;
+  background: #11161c;
+  color: #e3e6ea;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+}
+
+.level-up-grid button:hover:not(:disabled) {
+  border-color: #786344;
+  background: #211d17;
+}
+
+.level-up-grid button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.level-up-grid button > span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.level-up-grid strong {
+  font-size: 12px;
+}
+
+.level-up-grid small {
+  color: #8f97a2;
+  font-size: 9px;
+}
+
+.level-up-grid b {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #5b4b35;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #dfc08d;
+  background: #1b1813;
+  font-size: 13px;
+}
+
+.combat-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.combat-stat-tile {
+  min-height: 88px;
+  border: 1px solid #2b313b;
+  border-radius: 14px;
+  padding: 13px;
+  background: #10141a;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.combat-stat-tile span {
+  color: #969eaa;
+  font-size: 11px;
+}
+
+.combat-stat-tile strong {
+  font-size: 27px;
+}
+
+@media (max-width: 820px) {
+  .level-up-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .combat-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .level-up-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .level-up-grid button {
+    min-height: 62px;
+  }
+
+  .combat-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
