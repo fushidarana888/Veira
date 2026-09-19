@@ -799,3 +799,27 @@ export type AutobattleResult = {
   player_mana_max?: number
   hp_percent?: number
 }
+
+export type CombatStyleProfile = {
+  character_id: string
+  context: 'normal' | 'boss'
+  sample_battles: number
+  sample_actions: number
+  confidence_percent: number
+  physical_weight: number
+  magic_weight: number
+  guard_weight: number
+  damage_spell_weight: number
+  heal_weight: number
+  cleanse_weight: number
+  shield_weight: number
+  buff_weight: number
+  heal_hp_percent: number
+  cleanse_min_debuffs: number
+  telegraph_guard_percent: number
+  mana_reserve_percent: number
+  preferred_damage_spell_id: string | null
+  preferred_heal_spell_id: string | null
+  updated_at: string
+}
+
