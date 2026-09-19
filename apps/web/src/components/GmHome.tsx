@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { GmItemsAndSpells } from './GmItemsAndSpells'
+import { GmRaceEditor } from './GmRaceEditor'
 import { GmWorldEditor } from './GmWorldEditor'
 import type { Character, CharacterProgress, ItemDefinition, Profile } from '../types'
 
@@ -9,7 +10,7 @@ type Props = {
   onSignOut: () => Promise<void> | void
 }
 
-type GmTab = 'players' | 'world' | 'content' | 'audit'
+type GmTab = 'players' | 'world' | 'races' | 'content' | 'audit'
 
 type AuditEntry = {
   id: number
@@ -290,6 +291,9 @@ export function GmHome({ profile, onSignOut }: Props) {
         <button className={tab === 'world' ? 'active' : ''} type="button" onClick={() => setTab('world')}>
           Карта мира
         </button>
+        <button className={tab === 'races' ? 'active' : ''} type="button" onClick={() => setTab('races')}>
+          Расы
+        </button>
         <button className={tab === 'content' ? 'active' : ''} type="button" onClick={() => setTab('content')}>
           Предметы и магия
         </button>
@@ -511,6 +515,8 @@ export function GmHome({ profile, onSignOut }: Props) {
 
           <GmWorldEditor characters={characters} profiles={profiles} />
         </div>
+      ) : tab === 'races' ? (
+        <GmRaceEditor />
       ) : tab === 'content' ? (
         <GmItemsAndSpells />
       ) : (
