@@ -212,14 +212,50 @@ export type ExpeditionEventInstance = {
   id: string
   expedition_id: string
   event_definition_id: string | null
+  encounter_template_id: string | null
+  source_kind: 'sector' | 'random'
   character_id: string
   sector_id: number
   title: string
   player_prompt: string
+  gm_notes: string
   status: 'pending' | 'resolved'
   resolution_text: string
   outcome: 'discovered' | 'blocked' | null
   created_at: string
   resolved_at: string | null
   resolved_by: string | null
+}
+
+export type ExpeditionResult = {
+  id: string
+  expedition_id: string
+  character_id: string
+  sector_id: number
+  source: 'standard' | 'random_event' | 'gm_event'
+  result_type: SectorContentType
+  title: string
+  summary: string
+  outcome: 'discovered' | 'blocked'
+  encounter_template_id: string | null
+  created_at: string
+}
+
+export type ExplorationEventTemplate = {
+  id: string
+  name: string
+  enabled: boolean
+  terrain_type: SectorTerrain | null
+  content_type: SectorContentType | null
+  min_danger: number
+  max_danger: number
+  chance_percent: number
+  weight: number
+  requires_gm: boolean
+  title: string
+  player_prompt: string
+  automatic_result: string
+  gm_notes: string
+  created_at: string
+  updated_at: string
 }
