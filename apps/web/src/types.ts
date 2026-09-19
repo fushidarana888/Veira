@@ -414,6 +414,8 @@ export type CombatEncounter = {
   enemy_on_hit_effect_turns: number
   enemy_on_hit_effect_potency: number
   enemy_special_name: string
+  enemy_special_kind: 'attack' | 'heal' | 'guard' | 'enrage' | 'cleanse'
+  enemy_special_value: number
   enemy_special_damage_multiplier: number
   enemy_special_every_n: number
   enemy_special_damage_type: DamageType | null
@@ -425,6 +427,15 @@ export type CombatEncounter = {
   enemy_special_attack_text: string
   enemy_special_charging: boolean
   enemy_special_started_round: number | null
+  enemy_guard_percent: number
+  enemy_guard_hits: number
+  enemy_attack_bonus_percent: number
+  enemy_phase: number
+  enemy_phase2_hp_percent: number
+  enemy_phase2_name: string
+  enemy_phase2_attack_bonus_percent: number
+  enemy_phase2_defense_bonus_percent: number
+  enemy_phase2_special_every_n: number
   created_at: string
   ended_at: string | null
 }
@@ -490,6 +501,8 @@ export type EnemyTemplate = {
   on_hit_effect_turns: number
   on_hit_effect_potency: number
   special_name: string
+  special_kind: 'attack' | 'heal' | 'guard' | 'enrage' | 'cleanse'
+  special_value: number
   special_damage_multiplier: number
   special_every_n: number
   special_damage_type: DamageType | null
@@ -499,6 +512,11 @@ export type EnemyTemplate = {
   special_effect_potency: number
   special_telegraph_text: string
   special_attack_text: string
+  phase2_hp_percent: number
+  phase2_name: string
+  phase2_attack_bonus_percent: number
+  phase2_defense_bonus_percent: number
+  phase2_special_every_n: number
   created_at: string
   updated_at: string
 }
