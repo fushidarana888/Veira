@@ -3,6 +3,7 @@ import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, 
 import { supabase } from '../lib/supabase'
 import { AdventuresPanel } from './AdventuresPanel'
 import { CraftingPanel } from './CraftingPanel'
+import { DuelPanel } from './DuelPanel'
 import { MagicPanel } from './MagicPanel'
 import { WorldMap } from './WorldMap'
 import type {
@@ -755,7 +756,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           onInventoryChanged={loadInventory}
         />
       )}
-      {tab === 'community' && <Placeholder title="Сообщество" text="Здесь появятся гильдии, игроки и социальные механики." />}
+      {tab === 'community' && <DuelPanel characterId={character.id} />}
       {tab === 'more' && (
         <div className="more-section">
           <section className="panel account-security-panel">
