@@ -227,7 +227,7 @@ export function WorldMap({ characterId }: Props) {
       <div className="eilar-map-frame">
         <div className="eilar-map-stage">
           <img
-            src={import.meta.env.BASE_URL + 'eilar-map.webp'}
+            src={import.meta.env.BASE_URL + 'eilar-map.webp?v=20260919-2'}
             alt="Карта Эйлара"
             draggable={false}
           />
