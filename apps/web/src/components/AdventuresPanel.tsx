@@ -279,12 +279,17 @@ export function AdventuresPanel({
 
     if (error) {
       const raw = error.message
-      if (raw.includes('LEVEL_TOO_LOW')) {
-        const definition = normalizeCombatScrollDefinition(scroll.item_definitions)
-        setMessage(`Для этого свитка нужен уровень ${definition?.required_level ?? '?'}.`)
+
+      if (raw.includes('SCROLL_NOT_AVAILABLE')) {
+        setMessage('Этот свиток уже был использован или его больше нет в инвентаре.')
+      } else if (raw.includes('ITEM_IS_NOT_COMBAT_SCROLL')) {
+        setMessage('Этот предмет нельзя применить как боевой свиток.')
+      } else if (raw.includes('SPELL_NOT_AVAILABLE')) {
+        setMessage('Заклинание этого свитка сейчас недоступно.')
       } else {
         setMessage(raw)
       }
+
       setBusy(false)
       return
     }
@@ -510,6 +515,12 @@ export function AdventuresPanel({
                   Отступить
                 </button>
               </div>
+
+              {message && (
+                <p className="form-message combat-action-message" aria-live="polite">
+                  {message}
+                </p>
+              )}
 
               {(spells.length > 0 || combatScrolls.length > 0) && (
                 <div className="combat-special-actions">
