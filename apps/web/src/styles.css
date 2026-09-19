@@ -4405,3 +4405,188 @@ textarea {
     grid-template-columns: minmax(0, 1fr) 72px auto;
   }
 }
+
+
+/* Race mechanics */
+.race-card.locked {
+  opacity: .62;
+  cursor: not-allowed;
+}
+
+.race-card.locked:hover {
+  transform: none;
+}
+
+.race-card-mechanics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.race-card-mechanics span,
+.race-lock-note {
+  border: 1px solid #37404a;
+  border-radius: 999px;
+  background: rgba(59, 68, 79, .12);
+  color: #9da8b4;
+  padding: 3px 6px;
+  font-size: 8px;
+  line-height: 1.2;
+}
+
+.race-lock-note {
+  width: fit-content;
+  border-color: #624842;
+  background: rgba(107, 67, 58, .12);
+  color: #d2a69b;
+  border-radius: 7px;
+}
+
+.selected-race-details,
+.player-race-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.selected-race-details {
+  border: 1px solid #3d4652;
+  border-radius: 12px;
+  background: rgba(44, 53, 64, .10);
+  padding: 12px;
+}
+
+.selected-race-details h3,
+.player-race-panel h2 {
+  margin: 3px 0 0;
+}
+
+.race-mechanic-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.race-mechanic-grid > span {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #303943;
+  border-radius: 9px;
+  background: #10151b;
+  padding: 8px;
+}
+
+.race-mechanic-grid small {
+  color: #7f8995;
+  font-size: 8px;
+}
+
+.race-mechanic-grid strong {
+  color: #dfe4e9;
+  font-size: 12px;
+}
+
+.race-resistance-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.race-resistance-list span {
+  border: 1px solid #39424d;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.race-resistance-list .positive {
+  border-color: #3e5646;
+  color: #a9c8ae;
+  background: rgba(64, 92, 70, .10);
+}
+
+.race-resistance-list .negative {
+  border-color: #5f4040;
+  color: #d29f9f;
+  background: rgba(105, 58, 58, .10);
+}
+
+.race-passive-card {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #504461;
+  border-radius: 10px;
+  background: rgba(85, 64, 104, .10);
+  padding: 9px 10px;
+}
+
+.race-passive-card strong {
+  color: #ccb8d8;
+  font-size: 10px;
+}
+
+.race-passive-card p {
+  margin: 0;
+  color: #a99bb1;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.gm-race-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.gm-race-access-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.gm-race-grant-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.gm-race-grant-list {
+  display: grid;
+  gap: 6px;
+}
+
+.gm-race-grant-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #303943;
+  border-radius: 9px;
+  background: #10151b;
+  padding: 8px 9px;
+}
+
+.gm-race-grant-item > div {
+  display: grid;
+  gap: 2px;
+}
+
+.gm-race-grant-item strong {
+  color: #e0e4e9;
+  font-size: 10px;
+}
+
+.gm-race-grant-item span {
+  color: #89939e;
+  font-size: 8px;
+}
+
+@media (max-width: 760px) {
+  .race-mechanic-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gm-race-grant-row {
+    grid-template-columns: 1fr;
+  }
+}
