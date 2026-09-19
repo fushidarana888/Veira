@@ -5875,3 +5875,237 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Party / co-op foundation */
+.party-panel {
+  display: grid;
+  gap: 14px;
+  border-color: #3b4551;
+  background:
+    linear-gradient(145deg, rgba(86, 111, 142, .08), transparent 58%),
+    var(--panel);
+}
+
+.party-invites-block,
+.party-recruit-block {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #2d3540;
+  border-radius: 14px;
+  padding: 12px;
+  background: #0e1319;
+}
+
+.party-subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.party-subheading strong {
+  color: #e8ebef;
+  font-size: 12px;
+}
+
+.party-subheading span {
+  color: #8994a0;
+  font-size: 10px;
+}
+
+.party-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px dashed #39434f;
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(18, 24, 31, .66);
+}
+
+.party-empty-state p {
+  max-width: 640px;
+  margin: 5px 0 0;
+  line-height: 1.5;
+}
+
+.party-member-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.party-member-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #303944;
+  border-radius: 14px;
+  padding: 12px;
+  background: #0f141a;
+}
+
+.party-member-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.party-member-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.party-member-head strong {
+  color: #edf0f3;
+  font-size: 13px;
+}
+
+.party-member-head span:not(.badge) {
+  color: #8f99a4;
+  font-size: 10px;
+}
+
+.party-hp-row {
+  display: grid;
+  gap: 5px;
+}
+
+.party-hp-row > span {
+  color: #9ba5af;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.party-hp-meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #252c34;
+}
+
+.party-hp-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #789486;
+}
+
+.party-kick-button {
+  margin-top: 0;
+  min-height: 32px;
+  padding: 6px 9px;
+  justify-self: start;
+  font-size: 9px;
+}
+
+.party-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.party-search-row input {
+  min-width: 0;
+  border: 1px solid #303844;
+  border-radius: 10px;
+  background: #0f141a;
+  color: #e8ebef;
+  padding: 9px 10px;
+}
+
+.party-invite-list,
+.party-candidate-list,
+.party-outgoing-list {
+  display: grid;
+  gap: 7px;
+}
+
+.party-invite-row,
+.party-candidate-row,
+.party-outgoing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #29313a;
+  border-radius: 11px;
+  padding: 9px 10px;
+  background: #11171d;
+}
+
+.party-invite-row > div:first-child,
+.party-candidate-row > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.party-invite-row strong,
+.party-candidate-row strong,
+.party-outgoing-row strong {
+  color: #e4e8ec;
+}
+
+.party-invite-row span,
+.party-candidate-row span,
+.party-outgoing-row span {
+  color: #8d98a4;
+  font-size: 10px;
+}
+
+.party-inline-actions,
+.party-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.party-inline-actions button,
+.party-candidate-row button,
+.party-outgoing-row button {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 9px;
+}
+
+.party-footer-actions {
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.party-footer-actions .danger-button {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .party-member-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .party-empty-state,
+  .party-invite-row,
+  .party-candidate-row,
+  .party-outgoing-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .party-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .party-inline-actions,
+  .party-footer-actions {
+    width: 100%;
+  }
+
+  .party-inline-actions button,
+  .party-footer-actions button,
+  .party-candidate-row button,
+  .party-outgoing-row button {
+    flex: 1 1 auto;
+  }
+}
