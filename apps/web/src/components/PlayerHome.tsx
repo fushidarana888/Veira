@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
+import { WorldMap } from './WorldMap'
 import type {
   Character,
   CharacterEquipment,
@@ -447,7 +448,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
         </>
       )}
 
-      {tab === 'world' && <Placeholder title="Мир" text="Здесь появится личная карта Эйлара, исследованные сектора и экспедиции." />}
+      {tab === 'world' && <WorldMap characterId={character.id} />}
       {tab === 'adventures' && <Placeholder title="Приключения" text="Здесь будут пати, данжи, боссы и активные прохождения." />}
       {tab === 'community' && <Placeholder title="Сообщество" text="Здесь появятся гильдии, игроки и социальные механики." />}
       {tab === 'more' && <Placeholder title="Ещё" text="Настройки, достижения, журнал и другие разделы Veira." />}
