@@ -2906,3 +2906,179 @@ textarea {
     width: 100%;
   }
 }
+
+
+/* First dungeon combat loop */
+.dungeon-entry-actions,
+.combat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.combat-shell {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid #2c323b;
+  padding-top: 14px;
+}
+
+.combat-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.combat-heading h3 {
+  margin: 5px 0 3px;
+  font-size: 22px;
+}
+
+.combatants-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.combatant-card {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #303641;
+  border-radius: 14px;
+  background: #10141a;
+  padding: 12px;
+}
+
+.combatant-card.enemy {
+  border-color: #433333;
+}
+
+.combatant-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.combatant-head span {
+  color: #aeb5bf;
+  font-size: 11px;
+}
+
+.combatant-head strong {
+  font-size: 13px;
+}
+
+.combat-hp-meter {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid #272d35;
+  border-radius: 999px;
+  background: #0b0e12;
+}
+
+.combat-hp-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #73543d, #c19a69);
+}
+
+.combat-hp-meter.enemy > span {
+  background: linear-gradient(90deg, #713b3b, #b96565);
+}
+
+.combat-actions .primary-button,
+.combat-actions .ghost-button,
+.dungeon-entry-actions .primary-button,
+.dungeon-entry-actions .ghost-button {
+  flex: 1 1 150px;
+}
+
+.combat-log {
+  display: grid;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid #292f37;
+  border-radius: 12px;
+  background: #0d1116;
+  padding: 8px;
+}
+
+.combat-log-row {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  border-radius: 9px;
+  padding: 7px 8px;
+  background: #11161d;
+}
+
+.combat-log-row span {
+  color: #8f98a3;
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.combat-log-row p {
+  margin: 0;
+  color: #cbd1d7;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.combat-log-row.player {
+  border-left: 2px solid #8f7855;
+}
+
+.combat-log-row.enemy {
+  border-left: 2px solid #7c4545;
+}
+
+.combat-log-row.system {
+  border-left: 2px solid #53616d;
+}
+
+.combat-result-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.combat-result-panel h3 {
+  margin: 6px 0;
+}
+
+@media (max-width: 620px) {
+  .combat-heading,
+  .combat-result-panel {
+    display: grid;
+  }
+
+  .combatants-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .combat-actions,
+  .dungeon-entry-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .combat-actions .primary-button,
+  .combat-actions .ghost-button,
+  .dungeon-entry-actions .primary-button,
+  .dungeon-entry-actions .ghost-button {
+    width: 100%;
+  }
+
+  .combat-log-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
