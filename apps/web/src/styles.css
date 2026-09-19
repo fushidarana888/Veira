@@ -4842,6 +4842,122 @@ textarea {
 }
 
 
+/* Learned player combat style */
+.style-autobattle-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #31505a;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(38, 76, 84, .14), rgba(19, 36, 42, .08));
+  padding: 11px;
+}
+
+.style-autobattle-panel .section-heading {
+  margin: 0;
+}
+
+.style-autobattle-panel h3 {
+  margin: 2px 0 0;
+  color: #d8e4e5;
+  font-size: 13px;
+}
+
+.style-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.style-profile-stats > span {
+  display: grid;
+  gap: 2px;
+  border: 1px solid #2f444a;
+  border-radius: 9px;
+  background: #0e1518;
+  padding: 8px;
+  text-align: center;
+}
+
+.style-profile-stats strong {
+  color: #cbe0e2;
+  font-size: 11px;
+}
+
+.style-profile-stats small,
+.style-learning-meta,
+.style-learning-progress span {
+  color: #83989d;
+  font-size: 8px;
+}
+
+.style-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.style-traits span {
+  border: 1px solid #355058;
+  border-radius: 999px;
+  background: rgba(49, 80, 88, .14);
+  color: #aac0c4;
+  padding: 5px 8px;
+  font-size: 8px;
+}
+
+.style-learning-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.style-learning-progress {
+  display: grid;
+  gap: 4px;
+  border-left: 2px solid #42616a;
+  padding: 5px 8px;
+}
+
+.style-learning-progress strong {
+  color: #c5d8db;
+  font-size: 10px;
+}
+
+.style-autobattle-button {
+  border: 1px solid #3c6973;
+  border-radius: 9px;
+  background: rgba(46, 94, 104, .18);
+  color: #d0e6e8;
+  padding: 8px 11px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.style-autobattle-button:hover:not(:disabled) {
+  border-color: #538994;
+  background: rgba(55, 107, 118, .24);
+}
+
+.style-autobattle-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.style-autobattle-button.compact {
+  padding: 8px 10px;
+}
+
+@media (max-width: 680px) {
+  .style-profile-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .style-autobattle-panel .section-heading {
+    align-items: flex-start;
+  }
+}
+
+
 /* Guard -> physical counter */
 .combat-counter-ready {
   display: grid;
