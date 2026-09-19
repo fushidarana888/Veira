@@ -284,7 +284,16 @@ export function PartyDungeonPanel({
 
     const overview = (partyResult.data as PartyOverview | null)
     const nextOptions = (optionResult.data as DungeonOption[] | null) ?? []
-    const nextState = (dungeonResult.data as PartyDungeonState | null) ?? emptyState
+    const rawState = (dungeonResult.data as Partial<PartyDungeonState> | null) ?? {}
+    const nextState: PartyDungeonState = {
+      ...emptyState,
+      ...rawState,
+      members: Array.isArray(rawState.members) ? rawState.members : [],
+      statuses: Array.isArray(rawState.statuses) ? rawState.statuses : [],
+      turns: Array.isArray(rawState.turns) ? rawState.turns : [],
+      loot: Array.isArray(rawState.loot) ? rawState.loot : [],
+      sacrifice_scroll_count: Number(rawState.sacrifice_scroll_count ?? 0),
+    }
 
     setParty(overview?.party ?? null)
     setOptions(nextOptions)
