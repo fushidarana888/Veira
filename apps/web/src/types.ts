@@ -135,6 +135,10 @@ export type ItemDefinition = {
   damage_resistances: Partial<Record<DamageType, number>>
   scroll_spell_id: string | null
   scroll_mode: 'learn' | 'cast' | null
+  unique_property_name: string | null
+  unique_property_description: string
+  unique_effect_type: 'lifesteal' | 'mana_on_hit' | 'damage_vs_wounded' | 'guard_boost' | null
+  unique_effect_value: number
 }
 
 export type CharacterItem = {
@@ -535,6 +539,83 @@ export type LootPoolEntry = {
   min_quantity: number
   max_quantity: number
   enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+
+export type ItemAffixInstance = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  stat_modifiers: Record<string, number>
+  damage_resistances: Partial<Record<DamageType, number>>
+}
+
+export type CraftingIngredientState = {
+  item_definition_id: string
+  name: string
+  rarity: ItemRarity
+  required_quantity: number
+  owned_quantity: number
+}
+
+export type CharacterCraftingRecipe = {
+  recipe_id: string
+  slug: string
+  name: string
+  description: string
+  required_level: number
+  gold_cost: number
+  output_item_id: string
+  output_item_name: string
+  output_rarity: ItemRarity
+  output_category: ItemCategory
+  output_quantity: number
+  affix_bonus: number
+  level_unlocked: boolean
+  can_afford_gold: boolean
+  has_ingredients: boolean
+  can_craft: boolean
+  ingredients: CraftingIngredientState[]
+}
+
+export type GmCraftingRecipe = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  enabled: boolean
+  required_level: number
+  gold_cost: number
+  output_item_definition_id: string
+  output_item_name: string
+  output_quantity: number
+  affix_bonus: number
+  sort_order: number
+  ingredients: Array<{
+    item_definition_id: string
+    name: string
+    quantity: number
+  }>
+  created_at: string
+  updated_at: string
+}
+
+export type EquipmentAffix = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  enabled: boolean
+  min_rarity_rank: number
+  max_rarity_rank: number
+  weight: number
+  allowed_categories: Array<'weapon' | 'armor' | 'accessory'>
+  allowed_equip_groups: ItemEquipGroup[]
+  stat_modifiers: Record<string, number>
+  damage_resistances: Partial<Record<DamageType, number>>
   created_at: string
   updated_at: string
 }
