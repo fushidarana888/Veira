@@ -114,10 +114,21 @@ type PartySpell = {
   source: string
 }
 
+type PartyStatus = {
+  id: number
+  target_type: 'enemy' | 'member'
+  target_character_id: string | null
+  effect_type: 'burn' | 'bleed' | 'poison' | 'stun' | 'chill' | 'weaken' | 'vulnerable'
+  potency: number
+  remaining_turns: number
+  source: string
+}
+
 type PartyDungeonState = {
   run: PartyRun | null
   encounter: PartyEncounter | null
   members: PartyCombatMember[]
+  statuses: PartyStatus[]
   turns: PartyTurn[]
   loot: PartyLoot[]
 }
@@ -132,6 +143,7 @@ const emptyState: PartyDungeonState = {
   run: null,
   encounter: null,
   members: [],
+  statuses: [],
   turns: [],
   loot: [],
 }
@@ -160,6 +172,24 @@ const terrainLabels: Record<string, string> = {
   riverlands: 'речные земли',
 }
 
+const statusLabels: Record<PartyStatus['effect_type'], string> = {
+  burn: 'Ожог',
+  bleed: 'Кровотечение',
+  poison: 'Яд',
+  stun: 'Оглушение',
+  chill: 'Охлаждение',
+  weaken: 'Ослабление',
+  vulnerable: 'Уязвимость',
+}
+
+function statusDetail(status: PartyStatus) {
+  if (status.effect_type === 'stun') return status.remaining_turns + ' ход.'
+  if (['burn', 'bleed', 'poison'].includes(status.effect_type)) {
+    return status.potency + ' урона · ' + status.remaining_turns + ' ход.'
+  }
+  return status.potency + '% · ' + status.remaining_turns + ' ход.'
+}
+
 function coopError(raw: string) {
   if (raw.includes('PARTY_NEEDS_TWO_MEMBERS')) return 'Для группового похода нужно минимум 2 персонажа.'
   if (raw.includes('PARTY_DUNGEON_NOT_AVAILABLE_TO_ALL')) return 'Не у всех участников открыт и разведан этот вход.'
@@ -176,6 +206,8 @@ function coopError(raw: string) {
   if (raw.includes('SPELL_NOT_LEARNED')) return 'Это заклинание не изучено персонажем.'
   if (raw.includes('ALREADY_FULL_HEALTH')) return 'У выбранного союзника уже полное здоровье.'
   if (raw.includes('PARTY_TARGET_DOWNED')) return 'На выведенного союзника сейчас можно применить только лечение.'
+  if (raw.includes('PARTY_MEMBER_STUNNED')) return 'Персонаж оглушён. В этом раунде действие будет пропущено.'
+  if (raw.includes('PARTY_MEMBER_NOT_STUNNED')) return 'Оглушение уже прошло.'
   if (raw.includes('PARTY_SPELL_NOT_SUPPORTED')) return 'Это заклинание пока не поддерживается в групповом бою.'
   return raw
 }
@@ -234,7 +266,7 @@ export function PartyDungeonPanel({
     setState(nextState)
     setSpells(
       ((spellResult.data as PartySpell[] | null) ?? [])
-        .filter((spell) => ['damage', 'heal', 'guard', 'buff'].includes(spell.spell_kind)),
+        .filter((spell) => ['damage', 'heal', 'guard', 'cleanse', 'buff'].includes(spell.spell_kind)),
     )
 
     if (
@@ -393,6 +425,40 @@ export function PartyDungeonPanel({
     setBusy(false)
   }
 
+  async function skipStunnedTurn() {
+    if (!state.encounter) return
+
+    setBusy(true)
+    setMessage('Оглушение не даёт действовать…')
+
+    const { data, error } = await supabase.rpc('skip_party_stunned_turn', {
+      p_character_id: characterId,
+      p_encounter_id: state.encounter.id,
+    })
+
+    if (error) {
+      setMessage(coopError(error.message))
+      setBusy(false)
+      await loadState(true)
+      return
+    }
+
+    const result = data as { status?: string; enemy_acted?: boolean; enemy_stunned?: boolean } | null
+    await Promise.all([loadState(true), refreshPlayer()])
+
+    if (result?.status === 'defeat') {
+      setMessage('После пропущенного хода группа потерпела поражение.')
+    } else if (result?.enemy_stunned) {
+      setMessage('Ты пропускаешь ход из-за оглушения, но противник тоже оглушён и не атакует.')
+    } else if (result?.enemy_acted) {
+      setMessage('Ты пропускаешь ход из-за оглушения. После действий группы противник атакует.')
+    } else {
+      setMessage('Ход пропущен из-за оглушения. Ждём остальных участников.')
+    }
+
+    setBusy(false)
+  }
+
   async function attemptEscape() {
     if (!state.run) return
 
@@ -431,6 +497,11 @@ export function PartyDungeonPanel({
   const activeRun = run?.status === 'active' ? run : null
   const activeEncounter = activeRun && encounter?.status === 'active' ? encounter : null
   const me = state.members.find((member) => member.character_id === characterId) ?? null
+  const myStatuses = state.statuses.filter(
+    (status) => status.target_type === 'member' && status.target_character_id === characterId,
+  )
+  const enemyStatuses = state.statuses.filter((status) => status.target_type === 'enemy')
+  const meStunned = myStatuses.some((status) => status.effect_type === 'stun')
   const isLeader = Boolean(party && party.leader_character_id === characterId)
   const canStartGroup = Boolean(party && party.member_count >= 2)
   const canAct = Boolean(
@@ -438,6 +509,15 @@ export function PartyDungeonPanel({
     && me
     && !me.downed
     && !me.acted
+    && !meStunned
+    && !busy,
+  )
+  const canSkipStun = Boolean(
+    activeEncounter
+    && me
+    && !me.downed
+    && !me.acted
+    && meStunned
     && !busy,
   )
   const escapeLocked = Boolean(
@@ -620,6 +700,19 @@ export function PartyDungeonPanel({
                     Боевой фокус +{member.damage_bonus_percent}% · атак {member.damage_bonus_hits}
                   </small>
                 )}
+                {state.statuses.some(
+                  (status) => status.target_type === 'member' && status.target_character_id === member.character_id,
+                ) && (
+                  <div className="party-status-list member">
+                    {state.statuses
+                      .filter((status) => status.target_type === 'member' && status.target_character_id === member.character_id)
+                      .map((status) => (
+                        <span className={'party-status-chip ' + status.effect_type} key={status.id}>
+                          {statusLabels[status.effect_type]} · {statusDetail(status)}
+                        </span>
+                      ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -680,14 +773,25 @@ export function PartyDungeonPanel({
                 <div className="party-enemy-hp-meter">
                   <span style={{ width: hpPercent(activeEncounter.enemy_hp_current, activeEncounter.enemy_hp_max) + '%' }} />
                 </div>
+                {enemyStatuses.length > 0 && (
+                  <div className="party-status-list enemy">
+                    {enemyStatuses.map((status) => (
+                      <span className={'party-status-chip ' + status.effect_type} key={status.id}>
+                        {statusLabels[status.effect_type]} · {statusDetail(status)}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="party-turn-status">
                 {me?.downed
-                  ? 'Ты выведен из строя до конца этого боя. Наблюдай за товарищами.'
+                  ? 'Ты выведен из строя. Союзник с лечащим заклинанием может вернуть тебя в бой.'
                   : me?.acted
                     ? 'Твоё действие принято. Ждём остальных живых участников.'
-                    : 'Твой ход в этом раунде.'}
+                    : meStunned
+                      ? 'Ты оглушён и не можешь действовать в этом раунде.'
+                      : 'Твой ход в этом раунде.'}
               </div>
 
               <div className="party-combat-actions">
@@ -715,6 +819,17 @@ export function PartyDungeonPanel({
                 >
                   Защита
                 </button>
+
+                {canSkipStun && (
+                  <button
+                    className="ghost-button stunned-skip-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void skipStunnedTurn()}
+                  >
+                    Пропустить ход · оглушение
+                  </button>
+                )}
 
                 {isLeader && (
                   <button
@@ -765,7 +880,9 @@ export function PartyDungeonPanel({
                                   ? 'лечение / поднятие'
                                   : spell.spell_kind === 'guard'
                                     ? 'щит союзника'
-                                    : 'усиление урона'}
+                                    : spell.spell_kind === 'cleanse'
+                                      ? 'очищение'
+                                      : 'усиление урона'}
                               {' · '}{spell.mana_cost} MP
                             </span>
                           </div>
@@ -815,7 +932,7 @@ export function PartyDungeonPanel({
               )}
 
               <small className="party-coop-note">
-                Лечение можно направлять на любого участника и поднимать им выведенного союзника. Арканный щит и Боевой фокус тоже можно накладывать на товарищей. Эффекты состояний вроде ожога, оглушения и ослабления пока не переносятся в групповой бой.
+                Лечение поднимает выведенного союзника, щит и Боевой фокус можно направлять на товарищей. Ожог, кровотечение, яд, оглушение, охлаждение, ослабление и уязвимость работают в групповом бою; «Очищение» снимает негативные эффекты с выбранного участника.
               </small>
 
               <div className="party-combat-log">
