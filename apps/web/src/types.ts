@@ -27,6 +27,17 @@ export type CharacterProgress = {
   mana_regen_anchor_at?: string
 }
 
+export type RacePassiveType =
+  | 'all_damage_bonus'
+  | 'physical_damage_bonus'
+  | 'magic_damage_bonus'
+  | 'lifesteal'
+  | 'mana_on_hit'
+  | 'damage_vs_wounded'
+  | 'guard_boost'
+  | 'low_hp_damage_reduction'
+  | 'boss_damage_bonus'
+
 export type RaceDefinition = {
   id: string
   slug: string
@@ -38,6 +49,17 @@ export type RaceDefinition = {
   stat_modifiers: Record<string, number>
   traits: unknown[]
   innate_magic_damage_type: ElementalDamageType
+  access_mode: 'open' | 'gm_only'
+  hp_bonus: number
+  mana_bonus: number
+  hp_regen_per_hour: number
+  mana_regen_per_hour: number
+  damage_resistances: Partial<Record<DamageType, number>>
+  passive_type: RacePassiveType | null
+  passive_value: number
+  passive_name: string
+  passive_description: string
+  is_available?: boolean
 }
 
 export type Character = {
@@ -618,4 +640,14 @@ export type EquipmentAffix = {
   damage_resistances: Partial<Record<DamageType, number>>
   created_at: string
   updated_at: string
+}
+
+
+export type RaceAccessGrant = {
+  user_id: string
+  display_name: string
+  race_id: string
+  race_name: string
+  granted_at: string
+  granted_by: string
 }
