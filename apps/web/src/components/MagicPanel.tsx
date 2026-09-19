@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { CharacterProgress, CharacterSpell, DamageType } from '../types'
+import type { CharacterProgress, CharacterSpell, CombatStatusEffectType, DamageType } from '../types'
 
 type Props = {
   characterId: string
   progress: CharacterProgress
+}
+
+const statusEffectLabels: Record<CombatStatusEffectType, string> = {
+  burn: 'Горение',
+  bleed: 'Кровотечение',
+  poison: 'Яд',
+  chill: 'Охлаждение',
+  stun: 'Оглушение',
+  weaken: 'Ослабление',
+  vulnerable: 'Уязвимость',
 }
 
 const damageLabels: Record<DamageType, string> = {
@@ -107,6 +117,13 @@ export function MagicPanel({ characterId, progress }: Props) {
                   <span>Мана <strong>{spell.mana_cost}</strong></span>
                   <span>Сила <strong>×{Number(spell.power_multiplier).toFixed(2)}</strong></span>
                   {spell.flat_power > 0 && <span>Бонус <strong>+{spell.flat_power}</strong></span>}
+                  {spell.status_effect_type && (
+                    <span className="spell-effect-stat">
+                      {statusEffectLabels[spell.status_effect_type]}
+                      {' '}<strong>{spell.status_effect_chance}%</strong>
+                      {' · '}{spell.status_effect_turns} х.
+                    </span>
+                  )}
                 </div>
               </article>
             ))}
