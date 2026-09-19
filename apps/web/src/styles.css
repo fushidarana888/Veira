@@ -5039,3 +5039,41 @@ textarea {
 .enemy-special-summary.charging strong {
   color: #e0a07d;
 }
+
+
+.enemy-combat-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.enemy-combat-state span {
+  border: 1px solid #3d4550;
+  border-radius: 999px;
+  background: rgba(62, 73, 84, .12);
+  color: #9da7b1;
+  padding: 4px 7px;
+  font-size: 8px;
+}
+
+.enemy-phase-editor {
+  border-color: #4a455e;
+  background: rgba(60, 53, 82, .07);
+}
+
+.gm-inline-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+@media (max-width: 680px) {
+  .enemy-combat-state {
+    display: grid;
+  }
+
+  .enemy-combat-state span {
+    width: fit-content;
+  }
+}
