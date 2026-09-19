@@ -247,6 +247,11 @@ function emptySpell(): SpellDraft {
   }
 }
 
+function hasFirstPhysicalStrike(modifiers: Record<string, number>) {
+  return Number(modifiers.first_physical_strike_multiplier ?? 1) > 1
+    || Number(modifiers.first_physical_bonus_damage_multiplier ?? 1) > 1
+}
+
 function resourceAmount(item: ItemDefinition, type: 'heal_hp' | 'restore_mana') {
   let total = 0
   for (const effect of item.effects ?? []) {
@@ -997,7 +1002,7 @@ export function GmItemsAndSpells() {
               <div className="gm-editor-box">
                 <div>
                   <strong>Уникальное свойство</strong>
-                  <small>Фиксированный эффект предмета, не случайный аффикс</small>
+                  <small>Фиксированный эффект предмета, не случайный аффикс. Для «первого физического удара» название и описание можно использовать без отдельного unique_effect_type.</small>
                 </div>
 
                 <div className="gm-form-grid two">
@@ -1005,15 +1010,20 @@ export function GmItemsAndSpells() {
                     <span>Тип эффекта</span>
                     <select
                       value={itemDraft.unique_effect_type ?? ''}
-                      onChange={(e) => setItemDraft({
-                        ...itemDraft,
-                        unique_effect_type: e.target.value
+                      onChange={(e) => {
+                        const nextType = e.target.value
                           ? e.target.value as ItemDraft['unique_effect_type']
-                          : null,
-                        unique_effect_value: e.target.value ? itemDraft.unique_effect_value : 0,
-                        unique_property_name: e.target.value ? itemDraft.unique_property_name : '',
-                        unique_property_description: e.target.value ? itemDraft.unique_property_description : '',
-                      })}
+                          : null
+                        const keepNamedProperty = Boolean(nextType) || hasFirstPhysicalStrike(itemDraft.stat_modifiers)
+
+                        setItemDraft({
+                          ...itemDraft,
+                          unique_effect_type: nextType,
+                          unique_effect_value: nextType ? itemDraft.unique_effect_value : 0,
+                          unique_property_name: keepNamedProperty ? itemDraft.unique_property_name : '',
+                          unique_property_description: keepNamedProperty ? itemDraft.unique_property_description : '',
+                        })
+                      }}
                     >
                       <option value="">Нет</option>
                       <option value="lifesteal">Вампиризм · % от прямого урона</option>
@@ -1044,7 +1054,7 @@ export function GmItemsAndSpells() {
                   <label>
                     <span>Название свойства</span>
                     <input
-                      disabled={!itemDraft.unique_effect_type}
+                      disabled={!itemDraft.unique_effect_type && !hasFirstPhysicalStrike(itemDraft.stat_modifiers)}
                       value={itemDraft.unique_property_name}
                       onChange={(e) => setItemDraft({ ...itemDraft, unique_property_name: e.target.value })}
                       placeholder="Жажда жизни"
@@ -1053,7 +1063,7 @@ export function GmItemsAndSpells() {
                   <label>
                     <span>Описание</span>
                     <input
-                      disabled={!itemDraft.unique_effect_type}
+                      disabled={!itemDraft.unique_effect_type && !hasFirstPhysicalStrike(itemDraft.stat_modifiers)}
                       value={itemDraft.unique_property_description}
                       onChange={(e) => setItemDraft({ ...itemDraft, unique_property_description: e.target.value })}
                       placeholder="Восстанавливает часть нанесённого урона как HP"
