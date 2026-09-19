@@ -174,7 +174,7 @@ export function AdventuresPanel({
     setLoading(true)
 
     const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult, autobattleSpellResult, combatStyleResult] = await Promise.all([
-      supabase.rpc('get_character_adventures', {
+      supabase.rpc('get_character_adventures_v2', {
         p_character_id: characterId,
       }),
       supabase
@@ -826,7 +826,7 @@ export function AdventuresPanel({
   }
 
   async function leaveDungeon(runId: string) {
-    if (!window.confirm('Попытаться сбежать из подземелья? Шанс успеха — 80%. При провале HP упадёт до 1, а персонаж останется внутри.')) return
+    if (!window.confirm('Попытаться сбежать из подземелья? Шанс успеха — 80%. При провале HP упадёт до 1, персонаж останется внутри, а повторить побег на этом этапе уже нельзя.')) return
 
     setBusy(true)
     setMessage('Пытаемся выбраться из подземелья…')
@@ -836,7 +836,12 @@ export function AdventuresPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      const raw = error.message
+      setMessage(
+        raw.includes('ESCAPE_ALREADY_ATTEMPTED_THIS_STAGE')
+          ? 'В этом зале попытка побега уже была. Следующая станет доступна только после прохождения следующего зала.'
+          : raw,
+      )
       setBusy(false)
       return
     }
@@ -851,7 +856,7 @@ export function AdventuresPanel({
     setMessage(
       result?.escaped
         ? 'Побег удался. Персонаж покинул подземелье; прохождение можно начать заново позже.'
-        : 'Побег провален. Персонаж остаётся в подземелье с 1 HP.',
+        : 'Побег провален. Персонаж остаётся в подземелье с 1 HP. Повторить попытку можно будет только после прохождения следующего зала.',
     )
     setBusy(false)
   }
@@ -877,6 +882,11 @@ export function AdventuresPanel({
     : 0
 
   const clearedRooms = activeDungeon?.run_rooms_cleared ?? 0
+  const escapeLocked = Boolean(
+    activeDungeon
+    && activeDungeon.run_escape_attempt_stage != null
+    && activeDungeon.run_escape_attempt_stage === clearedRooms
+  )
   const totalRooms = activeDungeon?.run_total_rooms ?? 0
   const nextRoom = Math.min(totalRooms, clearedRooms + 1)
   const dungeonProgress = totalRooms > 0
@@ -1407,11 +1417,13 @@ export function AdventuresPanel({
                 <button
                   className="ghost-button danger-button"
                   type="button"
-                  disabled={busy}
-                  title="80% шанс успешно покинуть подземелье. При провале HP снизится до 1, и персонаж останется внутри."
+                  disabled={busy || escapeLocked}
+                  title={escapeLocked
+                    ? 'Попытка побега на этом этапе уже использована. Сначала пройди следующий зал.'
+                    : '80% шанс успешно покинуть подземелье. При провале HP снизится до 1, и повторить попытку на этом этапе нельзя.'}
                   onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
                 >
-                  Попытаться уйти · 80%
+                  {escapeLocked ? 'Побег уже использован' : 'Попытаться уйти · 80%'}
                 </button>
               </div>
             </>
@@ -1606,11 +1618,13 @@ export function AdventuresPanel({
                 <button
                   className="ghost-button danger-button"
                   type="button"
-                  disabled={busy}
-                  title="80% шанс успешно сбежать. При провале HP снизится до 1, и бой продолжится."
+                  disabled={busy || escapeLocked}
+                  title={escapeLocked
+                    ? 'Попытка побега в этом зале уже использована.'
+                    : '80% шанс успешно сбежать. При провале HP снизится до 1, бой продолжится, а повторная попытка в этом зале будет недоступна.'}
                   onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
                 >
-                  Побег · 80%
+                  {escapeLocked ? 'Побег недоступен' : 'Побег · 80%'}
                 </button>
               </div>
 
