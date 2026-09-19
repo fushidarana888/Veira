@@ -32,6 +32,7 @@ const damageLabels: Record<DamageType, string> = {
 export function MagicPanel({ characterId, progress }: Props) {
   const [spells, setSpells] = useState<CharacterSpell[]>([])
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
   async function loadSpells() {
@@ -54,6 +55,53 @@ export function MagicPanel({ characterId, progress }: Props) {
     void loadSpells()
   }, [characterId])
 
+  async function toggleCombatSpell(spell: CharacterSpell) {
+    const selected = spells
+      .filter((item) => item.combat_slot !== null)
+      .sort((a, b) => (a.combat_slot ?? 99) - (b.combat_slot ?? 99))
+
+    const isSelected = spell.combat_slot !== null
+    const nextIds = isSelected
+      ? selected.filter((item) => item.id !== spell.id).map((item) => item.id)
+      : [...selected.map((item) => item.id), spell.id]
+
+    if (!isSelected && nextIds.length > 3) {
+      setMessage('В боевой набор можно взять максимум 3 заклинания.')
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('set_character_combat_spells', {
+      p_character_id: characterId,
+      p_spell_ids: nextIds,
+    })
+
+    if (error) {
+      const raw = error.message
+      setMessage(
+        raw.includes('SPELL_LOADOUT_LOCKED')
+          ? 'Боевой набор уже зафиксирован: сначала закончи текущий бой, данж или дуэль.'
+          : raw.includes('SPELL_LOADOUT_LIMIT')
+            ? 'В боевой набор можно взять максимум 3 заклинания.'
+            : raw.includes('SPELL_NOT_LEARNED')
+              ? 'Одно из выбранных заклинаний больше недоступно персонажу.'
+              : raw,
+      )
+      setBusy(false)
+      return
+    }
+
+    await loadSpells()
+    setMessage(isSelected ? 'Заклинание убрано из боевого набора.' : 'Заклинание добавлено в боевой набор.')
+    setBusy(false)
+  }
+
+  const selectedSpells = spells
+    .filter((spell) => spell.combat_slot !== null)
+    .sort((a, b) => (a.combat_slot ?? 99) - (b.combat_slot ?? 99))
+
   const manaPercent = progress.mana_max > 0
     ? Math.max(0, Math.min(100, Math.round((progress.mana_current / progress.mana_max) * 100)))
     : 0
@@ -65,7 +113,7 @@ export function MagicPanel({ characterId, progress }: Props) {
           <span className="eyebrow">МАГИЯ</span>
           <h2>Книга заклинаний</h2>
           <p className="muted">
-            Базовая магическая атака использует врождённую стихию расы. Изученные заклинания могут наносить стихийный урон или лечить персонажа прямо в бою.
+            Базовая магическая атака использует врождённую стихию расы. Из всех изученных заклинаний в бой можно заранее взять максимум три; свитки и врождённая магия в эти слоты не входят.
           </p>
         </div>
 
@@ -80,6 +128,35 @@ export function MagicPanel({ characterId, progress }: Props) {
       </article>
 
       {message && <p className="form-message" aria-live="polite">{message}</p>}
+
+      <article className="panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">ПОДГОТОВКА</span>
+            <h2>Боевой набор · {selectedSpells.length}/3</h2>
+          </div>
+          <span className="badge">{selectedSpells.length}/3</span>
+        </div>
+
+        <p className="muted">
+          Этот набор используется в боях, данжах и дуэлях. Во время активного боя или похода менять его нельзя.
+        </p>
+
+        {selectedSpells.length === 0 ? (
+          <div className="empty-state magic-empty-state">
+            <strong>Боевой набор пуст</strong>
+            <span>Можно идти и без заклинаний или выбрать до трёх ниже.</span>
+          </div>
+        ) : (
+          <div className="spell-stats">
+            {selectedSpells.map((spell) => (
+              <span key={spell.id}>
+                Слот {spell.combat_slot} · <strong>{spell.name}</strong>
+              </span>
+            ))}
+          </div>
+        )}
+      </article>
 
       <article className="panel">
         <div className="section-heading">
@@ -129,6 +206,19 @@ export function MagicPanel({ characterId, progress }: Props) {
                     </span>
                   )}
                 </div>
+
+                <button
+                  className="ghost-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void toggleCombatSpell(spell)}
+                >
+                  {spell.combat_slot !== null
+                    ? `Убрать из набора · слот ${spell.combat_slot}`
+                    : selectedSpells.length >= 3
+                      ? 'Набор заполнен'
+                      : 'Взять в бой'}
+                </button>
               </article>
             ))}
           </div>
