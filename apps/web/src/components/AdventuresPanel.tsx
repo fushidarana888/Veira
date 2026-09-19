@@ -1813,7 +1813,7 @@ export function AdventuresPanel({
                           const resources = combatResourceAmounts(item.item_definitions)
                           const noUsefulHeal = resources.heal <= 0 || activeCombat.player_hp_current >= activeCombat.player_hp_max
                           const noUsefulMana = resources.mana <= 0 || activeCombat.player_mana_current >= activeCombat.player_mana_max
-                          const disabled = busy || (noUsefulHeal && noUsefulMana)
+                          const disabled = busy || activeCombat.player_bow_draw_pending || (noUsefulHeal && noUsefulMana)
 
                           return (
                             <button
