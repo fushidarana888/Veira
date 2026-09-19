@@ -620,6 +620,7 @@ export type CharacterSpell = {
   status_effect_potency: number
   learned_at: string
   source: string
+  combat_slot: number | null
 }
 
 
