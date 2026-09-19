@@ -3138,3 +3138,26 @@ textarea {
     gap: 3px;
   }
 }
+
+
+/* GM attribute highlighting: exact terrain / content / danger matches */
+.gm-map-sector.attribute-highlight {
+  z-index: 2;
+  background: rgba(87, 156, 255, .30);
+  border-color: rgba(116, 178, 255, .98);
+  box-shadow:
+    inset 0 0 0 1px rgba(97, 165, 255, .55),
+    0 0 8px rgba(83, 150, 255, .22);
+}
+
+.gm-map-sector.attribute-highlight:hover {
+  background: rgba(87, 156, 255, .42);
+}
+
+.gm-attribute-highlight-filter {
+  flex-wrap: wrap;
+}
+
+.gm-attribute-highlight-filter select {
+  max-width: 180px;
+}
