@@ -5,6 +5,8 @@ export type Profile = {
   display_name: string
   avatar_url: string | null
   account_type: AccountType
+  email_verified: boolean
+  email_verified_at: string | null
 }
 
 export type CharacterProgress = {
