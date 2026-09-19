@@ -700,6 +700,17 @@ export type GmCraftingRecipe = {
   updated_at: string
 }
 
+export type EquipmentAffixEffectType =
+  | 'lifesteal'
+  | 'mana_on_hit'
+  | 'damage_vs_wounded'
+  | 'guard_boost'
+  | 'physical_damage_bonus'
+  | 'magic_damage_bonus'
+  | 'all_damage_bonus'
+  | 'low_hp_damage_reduction'
+  | 'boss_damage_bonus'
+
 export type EquipmentAffix = {
   id: string
   slug: string
@@ -713,6 +724,8 @@ export type EquipmentAffix = {
   allowed_equip_groups: ItemEquipGroup[]
   stat_modifiers: Record<string, number>
   damage_resistances: Partial<Record<DamageType, number>>
+  unique_effect_type: EquipmentAffixEffectType | null
+  unique_effect_value: number
   created_at: string
   updated_at: string
 }
@@ -751,6 +764,16 @@ export type AutobattleSettings = {
   boss_guard_mode: AutobattleGuardMode
   boss_guard_hp_percent: number
   boss_guard_every_n: number
+  normal_support_enabled: boolean
+  normal_heal_hp_percent: number
+  normal_cleanse_min_debuffs: number
+  normal_shield_special: boolean
+  normal_buff_enabled: boolean
+  boss_support_enabled: boolean
+  boss_heal_hp_percent: number
+  boss_cleanse_min_debuffs: number
+  boss_shield_special: boolean
+  boss_buff_enabled: boolean
   updated_at: string
 }
 
