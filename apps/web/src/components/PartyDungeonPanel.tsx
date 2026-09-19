@@ -72,6 +72,7 @@ type PartyCombatMember = {
   guard_percent: number
   damage_bonus_percent: number
   damage_bonus_hits: number
+  taunt_chance: number
   acted: boolean
   is_leader: boolean
   joined_order: number
@@ -104,7 +105,7 @@ type PartySpell = {
   slug: string
   name: string
   description: string
-  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt'
   damage_type: string | null
   mana_cost: number
   required_level: number
@@ -266,7 +267,7 @@ export function PartyDungeonPanel({
     setState(nextState)
     setSpells(
       ((spellResult.data as PartySpell[] | null) ?? [])
-        .filter((spell) => ['damage', 'heal', 'guard', 'cleanse', 'buff'].includes(spell.spell_kind)),
+        .filter((spell) => ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt'].includes(spell.spell_kind)),
     )
 
     if (
@@ -700,6 +701,11 @@ export function PartyDungeonPanel({
                     Боевой фокус +{member.damage_bonus_percent}% · атак {member.damage_bonus_hits}
                   </small>
                 )}
+                {member.taunt_chance > 0 && !member.downed && (
+                  <small className="party-buff-state">
+                    Провокация · {member.taunt_chance}% шанс стать целью
+                  </small>
+                )}
                 {state.statuses.some(
                   (status) => status.target_type === 'member' && status.target_character_id === member.character_id,
                 ) && (
@@ -882,7 +888,9 @@ export function PartyDungeonPanel({
                                     ? 'щит союзника'
                                     : spell.spell_kind === 'cleanse'
                                       ? 'очищение'
-                                      : 'усиление урона'}
+                                      : spell.spell_kind === 'taunt'
+                                        ? 'провокация союзника'
+                                        : 'усиление урона'}
                               {' · '}{spell.mana_cost} MP
                             </span>
                           </div>
@@ -932,7 +940,7 @@ export function PartyDungeonPanel({
               )}
 
               <small className="party-coop-note">
-                Лечение поднимает выведенного союзника, щит и Боевой фокус можно направлять на товарищей. Ожог, кровотечение, яд, оглушение, охлаждение, ослабление и уязвимость работают в групповом бою; «Очищение» снимает негативные эффекты с выбранного участника.
+                Лечение поднимает выведенного союзника, щит и Боевой фокус можно направлять на товарищей. «Провокация» даёт выбранному живому союзнику 90% шанс стать целью врага до его выведения из строя или конца боя. Ожог, кровотечение, яд, оглушение, охлаждение, ослабление и уязвимость работают в групповом бою; «Очищение» снимает негативные эффекты с выбранного участника.
               </small>
 
               <div className="party-combat-log">
