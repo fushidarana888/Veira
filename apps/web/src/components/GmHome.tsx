@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { GmWorldEditor } from './GmWorldEditor'
 import type { Character, CharacterProgress, ItemDefinition, Profile } from '../types'
 
 type Props = {
@@ -446,49 +447,52 @@ export function GmHome({ profile, onSignOut }: Props) {
           </section>
         </div>
       ) : tab === 'world' ? (
-        <section className="panel gm-map-upload-panel">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">КАРТА ЭЙЛАРА</span>
-              <h2>Оригинальная подложка мира</h2>
+        <div className="gm-world-tab">
+          <section className="panel gm-map-upload-panel">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">ПОДЛОЖКА ЭЙЛАРА</span>
+                <h2>Оригинальная карта мира</h2>
+              </div>
+              <span className="badge">PNG · до 10 МБ</span>
             </div>
-            <span className="badge">PNG · до 10 МБ</span>
-          </div>
 
-          <p className="muted gm-map-upload-copy">
-            Файл сохраняется как есть: без уменьшения разрешения, WebP-конвертации и повторного сжатия.
-            Для текущей карты используй исходник 1472×1069.
-          </p>
+            <p className="muted gm-map-upload-copy">
+              Этот файл используется как визуальная подложка. Сектора, содержимое и события хранятся отдельно в базе.
+            </p>
 
-          <div className="gm-map-upload-controls">
-            <label className="gm-map-file-picker">
-              <span>{mapFile ? mapFile.name : 'Выбрать PNG-карту'}</span>
-              <input
-                type="file"
-                accept="image/png"
-                onChange={(event) => setMapFile(event.target.files?.[0] ?? null)}
+            <div className="gm-map-upload-controls">
+              <label className="gm-map-file-picker">
+                <span>{mapFile ? mapFile.name : 'Выбрать PNG-карту'}</span>
+                <input
+                  type="file"
+                  accept="image/png"
+                  onChange={(event) => setMapFile(event.target.files?.[0] ?? null)}
+                />
+              </label>
+
+              <button
+                className="primary-button"
+                type="button"
+                disabled={!mapFile || mapUploading}
+                onClick={() => void uploadWorldMap()}
+              >
+                {mapUploading ? 'Загружаем…' : 'Опубликовать карту'}
+              </button>
+            </div>
+
+            <div className="gm-map-preview compact">
+              <img
+                src={supabase.storage
+                  .from('veira-assets')
+                  .getPublicUrl('eilar-map-original.png').data.publicUrl + '?v=' + mapPreviewVersion}
+                alt="Текущая карта Эйлара"
               />
-            </label>
+            </div>
+          </section>
 
-            <button
-              className="primary-button"
-              type="button"
-              disabled={!mapFile || mapUploading}
-              onClick={() => void uploadWorldMap()}
-            >
-              {mapUploading ? 'Загружаем…' : 'Опубликовать карту'}
-            </button>
-          </div>
-
-          <div className="gm-map-preview">
-            <img
-              src={supabase.storage
-                .from('veira-assets')
-                .getPublicUrl('eilar-map-original.png').data.publicUrl + '?v=' + mapPreviewVersion}
-              alt="Текущая карта Эйлара"
-            />
-          </div>
-        </section>
+          <GmWorldEditor characters={characters} profiles={profiles} />
+        </div>
       ) : (
         <section className="panel">
           <div className="section-heading">
