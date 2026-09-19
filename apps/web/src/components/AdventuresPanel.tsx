@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
+  AutobattleGuardMode,
   AutobattleResult,
   AutobattleSettings,
-  AutobattleStrategy,
+  AutobattleSpellRule,
   CharacterAdventureSite,
   CombatEncounter,
   CharacterSpell,
@@ -77,6 +78,8 @@ export function AdventuresPanel({
   const [combatScrolls, setCombatScrolls] = useState<CombatScroll[]>([])
   const [lootDrops, setLootDrops] = useState<DungeonLootDrop[]>([])
   const [autobattleSettings, setAutobattleSettings] = useState<AutobattleSettings | null>(null)
+  const [autobattleSpellRules, setAutobattleSpellRules] = useState<AutobattleSpellRule[]>([])
+  const [autobattleEditorMode, setAutobattleEditorMode] = useState<'normal' | 'boss'>('normal')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -84,7 +87,7 @@ export function AdventuresPanel({
   async function loadAdventures() {
     setLoading(true)
 
-    const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult] = await Promise.all([
+    const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult, autobattleSpellResult] = await Promise.all([
       supabase.rpc('get_character_adventures', {
         p_character_id: characterId,
       }),
@@ -104,6 +107,9 @@ export function AdventuresPanel({
       supabase.rpc('get_character_autobattle_settings', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_character_autobattle_spell_rules', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
@@ -111,7 +117,8 @@ export function AdventuresPanel({
       encounterResult.error ??
       spellResult.error ??
       scrollResult.error ??
-      autobattleResult.error
+      autobattleResult.error ??
+      autobattleSpellResult.error
 
     if (error) {
       setMessage(error.message)
@@ -135,6 +142,9 @@ export function AdventuresPanel({
       (Array.isArray(autobattleResult.data)
         ? autobattleResult.data[0]
         : autobattleResult.data) as AutobattleSettings | null,
+    )
+    setAutobattleSpellRules(
+      (autobattleSpellResult.data as AutobattleSpellRule[] | null) ?? [],
     )
 
     const latestEncounter = nextEncounters[0] ?? null
@@ -383,6 +393,18 @@ export function AdventuresPanel({
       p_mana_reserve_percent: autobattleSettings.mana_reserve_percent,
       p_use_learned_spells: autobattleSettings.use_learned_spells,
       p_include_boss: autobattleSettings.include_boss,
+      p_normal_allow_physical: autobattleSettings.normal_allow_physical,
+      p_normal_allow_magic: autobattleSettings.normal_allow_magic,
+      p_normal_allow_spells: autobattleSettings.normal_allow_spells,
+      p_normal_guard_mode: autobattleSettings.normal_guard_mode,
+      p_normal_guard_hp_percent: autobattleSettings.normal_guard_hp_percent,
+      p_normal_guard_every_n: autobattleSettings.normal_guard_every_n,
+      p_boss_allow_physical: autobattleSettings.boss_allow_physical,
+      p_boss_allow_magic: autobattleSettings.boss_allow_magic,
+      p_boss_allow_spells: autobattleSettings.boss_allow_spells,
+      p_boss_guard_mode: autobattleSettings.boss_guard_mode,
+      p_boss_guard_hp_percent: autobattleSettings.boss_guard_hp_percent,
+      p_boss_guard_every_n: autobattleSettings.boss_guard_every_n,
     })
 
     if (error) {
@@ -391,10 +413,98 @@ export function AdventuresPanel({
       return
     }
 
+    const spellRuleResults = await Promise.all(
+      autobattleSpellRules.map((rule) => supabase.rpc('save_character_autobattle_spell_rule', {
+        p_character_id: characterId,
+        p_spell_id: rule.spell_id,
+        p_normal_enabled: rule.normal_enabled,
+        p_normal_priority: rule.normal_priority,
+        p_boss_enabled: rule.boss_enabled,
+        p_boss_priority: rule.boss_priority,
+      })),
+    )
+
+    const spellRuleError = spellRuleResults.find((result) => result.error)?.error
+    if (spellRuleError) {
+      setMessage(spellRuleError.message)
+      setBusy(false)
+      return
+    }
+
     const saved = (Array.isArray(data) ? data[0] : data) as AutobattleSettings | null
     if (saved) setAutobattleSettings(saved)
-    setMessage('Настройки автобоя сохранены.')
+    setMessage('Тактика автобоя сохранена.')
     setBusy(false)
+  }
+
+  function applyAutobattlePreset(preset: 'physical' | 'mage' | 'tank' | 'balanced') {
+    if (!autobattleSettings) return
+
+    const boss = autobattleEditorMode === 'boss'
+    const prefix = boss ? 'boss' : 'normal'
+
+    const patch = preset === 'mage'
+      ? {
+          [prefix + '_allow_physical']: false,
+          [prefix + '_allow_magic']: true,
+          [prefix + '_allow_spells']: true,
+          [prefix + '_guard_mode']: 'low_hp',
+          [prefix + '_guard_hp_percent']: boss ? 35 : 25,
+          [prefix + '_guard_every_n']: 0,
+        }
+      : preset === 'tank'
+        ? {
+            [prefix + '_allow_physical']: true,
+            [prefix + '_allow_magic']: false,
+            [prefix + '_allow_spells']: false,
+            [prefix + '_guard_mode']: 'low_hp_or_interval',
+            [prefix + '_guard_hp_percent']: boss ? 60 : 45,
+            [prefix + '_guard_every_n']: 2,
+          }
+        : preset === 'physical'
+          ? {
+              [prefix + '_allow_physical']: true,
+              [prefix + '_allow_magic']: false,
+              [prefix + '_allow_spells']: false,
+              [prefix + '_guard_mode']: 'low_hp',
+              [prefix + '_guard_hp_percent']: boss ? 35 : 25,
+              [prefix + '_guard_every_n']: 0,
+            }
+          : {
+              [prefix + '_allow_physical']: true,
+              [prefix + '_allow_magic']: true,
+              [prefix + '_allow_spells']: true,
+              [prefix + '_guard_mode']: 'low_hp',
+              [prefix + '_guard_hp_percent']: boss ? 35 : 25,
+              [prefix + '_guard_every_n']: 0,
+            }
+
+    setAutobattleSettings({
+      ...autobattleSettings,
+      ...patch,
+    } as AutobattleSettings)
+  }
+
+  function updateAutobattleSpellRule(
+    spellId: string,
+    field: 'enabled' | 'priority',
+    value: boolean | number,
+  ) {
+    const boss = autobattleEditorMode === 'boss'
+
+    setAutobattleSpellRules((current) => current.map((rule) => {
+      if (rule.spell_id !== spellId) return rule
+
+      if (boss) {
+        return field === 'enabled'
+          ? { ...rule, boss_enabled: Boolean(value) }
+          : { ...rule, boss_priority: Math.max(1, Math.min(999, Number(value))) }
+      }
+
+      return field === 'enabled'
+        ? { ...rule, normal_enabled: Boolean(value) }
+        : { ...rule, normal_priority: Math.max(1, Math.min(999, Number(value))) }
+    }))
   }
 
   function autobattleMessage(result: AutobattleResult, wholeDungeon: boolean) {
@@ -592,75 +702,222 @@ export function AdventuresPanel({
             <details className="autobattle-panel">
               <summary>
                 <span>
-                  <strong>Автобой</strong>
-                  <small>
-                    {autobattleSettings.strategy === 'aggressive'
-                      ? 'агрессивная тактика'
-                      : autobattleSettings.strategy === 'conservative'
-                        ? 'осторожная тактика'
-                        : 'сбалансированная тактика'}
-                  </small>
+                  <strong>Автобой · своя тактика</strong>
+                  <small>Отдельные правила для обычных врагов и боссов</small>
                 </span>
                 <b>настроить</b>
               </summary>
 
+              <div className="autobattle-mode-switch">
+                <button
+                  type="button"
+                  className={autobattleEditorMode === 'normal' ? 'active' : ''}
+                  onClick={() => setAutobattleEditorMode('normal')}
+                >
+                  Обычные бои
+                </button>
+                <button
+                  type="button"
+                  className={autobattleEditorMode === 'boss' ? 'active' : ''}
+                  onClick={() => setAutobattleEditorMode('boss')}
+                >
+                  Боссы
+                </button>
+              </div>
+
+              <div className="autobattle-presets">
+                <span>Быстрый пресет</span>
+                <div>
+                  <button type="button" onClick={() => applyAutobattlePreset('physical')}>Физик</button>
+                  <button type="button" onClick={() => applyAutobattlePreset('mage')}>Маг</button>
+                  <button type="button" onClick={() => applyAutobattlePreset('tank')}>Танк</button>
+                  <button type="button" onClick={() => applyAutobattlePreset('balanced')}>Универсал</button>
+                </div>
+              </div>
+
+              <div className="autobattle-action-policy">
+                <strong>Что персонажу вообще разрешено делать</strong>
+                <div className="autobattle-checks">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_allow_physical
+                        : autobattleSettings.normal_allow_physical}
+                      onChange={(event) => setAutobattleSettings({
+                        ...autobattleSettings,
+                        [autobattleEditorMode === 'boss'
+                          ? 'boss_allow_physical'
+                          : 'normal_allow_physical']: event.target.checked,
+                      })}
+                    />
+                    <span>Физические атаки</span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_allow_magic
+                        : autobattleSettings.normal_allow_magic}
+                      onChange={(event) => setAutobattleSettings({
+                        ...autobattleSettings,
+                        [autobattleEditorMode === 'boss'
+                          ? 'boss_allow_magic'
+                          : 'normal_allow_magic']: event.target.checked,
+                      })}
+                    />
+                    <span>Врождённая магия</span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_allow_spells
+                        : autobattleSettings.normal_allow_spells}
+                      onChange={(event) => setAutobattleSettings({
+                        ...autobattleSettings,
+                        [autobattleEditorMode === 'boss'
+                          ? 'boss_allow_spells'
+                          : 'normal_allow_spells']: event.target.checked,
+                      })}
+                    />
+                    <span>Изученные заклинания</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="autobattle-settings-grid">
                 <label>
-                  <span>Тактика</span>
+                  <span>Защита</span>
                   <select
-                    value={autobattleSettings.strategy}
+                    value={autobattleEditorMode === 'boss'
+                      ? autobattleSettings.boss_guard_mode
+                      : autobattleSettings.normal_guard_mode}
                     onChange={(event) => setAutobattleSettings({
                       ...autobattleSettings,
-                      strategy: event.target.value as AutobattleStrategy,
+                      [autobattleEditorMode === 'boss'
+                        ? 'boss_guard_mode'
+                        : 'normal_guard_mode']: event.target.value as AutobattleGuardMode,
                     })}
                   >
-                    <option value="conservative">Осторожная</option>
-                    <option value="balanced">Сбалансированная</option>
-                    <option value="aggressive">Агрессивная</option>
+                    <option value="never">Не использовать</option>
+                    <option value="low_hp">При низком HP</option>
+                    <option value="interval">Каждые N ходов</option>
+                    <option value="low_hp_or_interval">HP или каждые N ходов</option>
                   </select>
                 </label>
 
                 <label>
-                  <span>Стоп при HP ≤ %</span>
+                  <span>Защита при HP ≤ %</span>
                   <input
                     type="number"
                     min={0}
-                    max={80}
-                    value={autobattleSettings.stop_hp_percent}
+                    max={100}
+                    value={autobattleEditorMode === 'boss'
+                      ? autobattleSettings.boss_guard_hp_percent
+                      : autobattleSettings.normal_guard_hp_percent}
                     onChange={(event) => setAutobattleSettings({
                       ...autobattleSettings,
-                      stop_hp_percent: Math.max(0, Math.min(80, Number(event.target.value))),
+                      [autobattleEditorMode === 'boss'
+                        ? 'boss_guard_hp_percent'
+                        : 'normal_guard_hp_percent']: Math.max(0, Math.min(100, Number(event.target.value))),
                     })}
                   />
                 </label>
 
                 <label>
-                  <span>Резерв маны %</span>
+                  <span>Защита каждый N-й ход</span>
                   <input
                     type="number"
                     min={0}
-                    max={100}
-                    value={autobattleSettings.mana_reserve_percent}
+                    max={20}
+                    value={autobattleEditorMode === 'boss'
+                      ? autobattleSettings.boss_guard_every_n
+                      : autobattleSettings.normal_guard_every_n}
                     onChange={(event) => setAutobattleSettings({
                       ...autobattleSettings,
-                      mana_reserve_percent: Math.max(0, Math.min(100, Number(event.target.value))),
+                      [autobattleEditorMode === 'boss'
+                        ? 'boss_guard_every_n'
+                        : 'normal_guard_every_n']: Math.max(0, Math.min(20, Number(event.target.value))),
                     })}
                   />
                 </label>
               </div>
 
-              <div className="autobattle-checks">
+              <div className="autobattle-global-settings">
                 <label>
+                  <span>Полностью остановить автобой при HP ≤</span>
+                  <strong>{autobattleSettings.stop_hp_percent}%</strong>
                   <input
-                    type="checkbox"
-                    checked={autobattleSettings.use_learned_spells}
+                    type="range"
+                    min={0}
+                    max={80}
+                    value={autobattleSettings.stop_hp_percent}
                     onChange={(event) => setAutobattleSettings({
                       ...autobattleSettings,
-                      use_learned_spells: event.target.checked,
+                      stop_hp_percent: Number(event.target.value),
                     })}
                   />
-                  <span>Использовать изученные заклинания</span>
                 </label>
+
+                <label>
+                  <span>Не тратить последние</span>
+                  <strong>{autobattleSettings.mana_reserve_percent}% маны</strong>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={autobattleSettings.mana_reserve_percent}
+                    onChange={(event) => setAutobattleSettings({
+                      ...autobattleSettings,
+                      mana_reserve_percent: Number(event.target.value),
+                    })}
+                  />
+                </label>
+              </div>
+
+              {autobattleSpellRules.length > 0 && (
+                <div className="autobattle-spell-rules">
+                  <div className="combat-special-heading">
+                    <strong>Приоритет заклинаний</strong>
+                    <span>1 = использовать раньше</span>
+                  </div>
+
+                  {autobattleSpellRules.map((rule) => (
+                    <div className="autobattle-spell-rule" key={rule.spell_id}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={autobattleEditorMode === 'boss'
+                            ? rule.boss_enabled
+                            : rule.normal_enabled}
+                          onChange={(event) => updateAutobattleSpellRule(
+                            rule.spell_id,
+                            'enabled',
+                            event.target.checked,
+                          )}
+                        />
+                        <span>{rule.spell_name}</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={999}
+                        value={autobattleEditorMode === 'boss'
+                          ? rule.boss_priority
+                          : rule.normal_priority}
+                        onChange={(event) => updateAutobattleSpellRule(
+                          rule.spell_id,
+                          'priority',
+                          Number(event.target.value),
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="autobattle-checks final">
                 <label>
                   <input
                     type="checkbox"
@@ -670,21 +927,21 @@ export function AdventuresPanel({
                       include_boss: event.target.checked,
                     })}
                   />
-                  <span>Автоматически сражаться с хранителем</span>
+                  <span>Автозачистке разрешено самой входить к боссу</span>
                 </label>
               </div>
 
               <div className="autobattle-note">
-                Автобой сам выбирает физическую атаку, врождённую магию или изученное заклинание с учётом сопротивлений врага и запаса маны. Боевые свитки автоматически не расходуются.
+                Автобой не придумывает билд за тебя. Если выключить физические атаки, маг никогда не ударит рукой. Если настроить защиту каждые 2 хода для босса, танк будет соблюдать эту ротацию. Заклинания используются строго по заданному тобой приоритету. Боевые свитки автоматически не тратятся.
               </div>
 
               <button
-                className="ghost-button"
+                className="primary-button"
                 type="button"
                 disabled={busy}
                 onClick={() => void saveAutobattleSettings()}
               >
-                Сохранить настройки
+                Сохранить тактику
               </button>
             </details>
           )}
