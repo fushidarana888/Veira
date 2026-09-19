@@ -1,0 +1,1 @@
+# Character growth build verification
