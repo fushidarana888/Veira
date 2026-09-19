@@ -61,6 +61,12 @@ const damageTypeLabels: Record<DamageType, string> = {
   ice: 'Ледяной',
 }
 
+const weaponScalingLabels: Record<NonNullable<ItemDefinition['weapon_scaling']>, string> = {
+  strength: 'Силовое',
+  agility: 'Ловкостное',
+  hybrid: 'Гибридное',
+}
+
 const statLabels: Record<StatKey, string> = {
   strength: 'Сила',
   agility: 'Ловкость',
@@ -227,6 +233,8 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               shop_price,
               shop_enabled,
               damage_type,
+              weapon_base_damage,
+              weapon_scaling,
               damage_resistances,
               damage_bonuses,
               scroll_spell_id,
@@ -318,11 +326,22 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     }
   }, [equipment, itemById])
 
+  const equippedWeaponProfile = useMemo(() => {
+    const weaponEntry = equipment.find((entry) => entry.slot === 'weapon')
+    const weaponItem = weaponEntry ? itemById.get(weaponEntry.character_item_id) : null
+    const weaponDefinition = weaponItem ? normalizeDefinition(weaponItem.item_definitions) : null
+
+    return {
+      baseDamage: Math.max(0, Number(weaponDefinition?.weapon_base_damage ?? 0)),
+      scaling: weaponDefinition?.weapon_scaling ?? 'strength',
+    }
+  }, [equipment, itemById])
+
   const derivedCombatStats = useMemo(
     () => progress && effectiveStats
-      ? calculateDerivedCombatStats(progress.level, effectiveStats)
+      ? calculateDerivedCombatStats(progress.level, effectiveStats, equippedWeaponProfile)
       : null,
-    [effectiveStats, progress],
+    [effectiveStats, equippedWeaponProfile, progress],
   )
 
   if (!progress || !effectiveStats || !derivedCombatStats) {
@@ -955,6 +974,21 @@ function InventoryPanel({
                   </div>
                 )}
 
+                {definition.category === 'weapon' && (
+                  <div className="modifier-list">
+                    <span>Базовый урон +{definition.weapon_base_damage ?? 0}</span>
+                    <span>
+                      {weaponScalingLabels[definition.weapon_scaling ?? 'strength']}
+                      {' · '}
+                      {definition.weapon_scaling === 'agility'
+                        ? 'AGI ×3 + STR ×0.5'
+                        : definition.weapon_scaling === 'hybrid'
+                          ? 'STR ×1.75 + AGI ×1.75'
+                          : 'STR ×3 + AGI ×0.5'}
+                    </span>
+                  </div>
+                )}
+
                 {resistances.length > 0 && (
                   <div className="resistance-list">
                     {resistances.map(([type, value]) => (
@@ -1114,6 +1148,12 @@ function EquipmentPanel({
                     <span className="equipment-damage-type">
                       {damageTypeLabels[definition.damage_type]}
                     </span>
+                  )}
+                  {definition.category === 'weapon' && (
+                    <div className="modifier-list compact">
+                      <span>Базовый урон +{definition.weapon_base_damage ?? 0}</span>
+                      <span>{weaponScalingLabels[definition.weapon_scaling ?? 'strength']}</span>
+                    </div>
                   )}
                   {item && Object.entries(combinedResistances(item, definition))
                     .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
