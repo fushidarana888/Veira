@@ -3599,3 +3599,396 @@ textarea {
   font-size: 10px;
   font-weight: 700;
 }
+
+
+/* Mana, spellbook, combat spells and GM content editor */
+.mana-meter > span,
+.combat-hp-meter.mana > span {
+  background: linear-gradient(90deg, #44567d, #7b8fc2);
+}
+
+.magic-panel-section {
+  display: grid;
+  gap: 14px;
+}
+
+.magic-summary-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(230px, .75fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.magic-summary-card h2 {
+  margin: 5px 0 6px;
+}
+
+.magic-summary-card p {
+  max-width: 720px;
+  line-height: 1.55;
+}
+
+.mana-summary {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #303846;
+  border-radius: 13px;
+  background: rgba(70, 87, 130, .08);
+  padding: 12px;
+}
+
+.mana-summary small {
+  color: #8995aa;
+  font-size: 10px;
+}
+
+.spell-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.spell-card {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #313946;
+  border-radius: 13px;
+  background: #10151b;
+  padding: 12px;
+}
+
+.spell-card-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.spell-card h3 {
+  margin: 3px 0 0;
+  font-size: 14px;
+}
+
+.spell-card > p {
+  margin: 0;
+  color: #959eaa;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.spell-stats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.spell-stats span {
+  border: 1px solid #343c48;
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: #aeb7c4;
+  font-size: 9px;
+}
+
+.spell-stats strong {
+  color: #dfe6f5;
+}
+
+.magic-empty-state {
+  min-height: 120px;
+}
+
+.combatant-head.mana {
+  margin-top: 2px;
+}
+
+.combat-special-actions {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #2d3541;
+  border-radius: 13px;
+  background: #0e1319;
+  padding: 10px;
+}
+
+.combat-spell-section {
+  display: grid;
+  gap: 8px;
+}
+
+.combat-special-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.combat-special-heading strong {
+  font-size: 11px;
+}
+
+.combat-special-heading span {
+  color: #84909e;
+  font-size: 9px;
+}
+
+.combat-spell-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.spell-action-button {
+  display: grid;
+  gap: 4px;
+  min-height: 54px;
+  border: 1px solid #3a4350;
+  border-radius: 10px;
+  background: rgba(74, 88, 119, .10);
+  color: #e7ebf2;
+  padding: 8px 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spell-action-button:hover:not(:disabled) {
+  border-color: #6f7fa4;
+  background: rgba(86, 105, 151, .16);
+}
+
+.spell-action-button.scroll {
+  border-color: #4d4332;
+  background: rgba(119, 91, 48, .08);
+}
+
+.spell-action-button strong {
+  font-size: 11px;
+}
+
+.spell-action-button span {
+  color: #909baa;
+  font-size: 9px;
+}
+
+.spell-action-button:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+.gm-content-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.gm-editor-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gm-editor-switch button {
+  border: 1px solid #333b46;
+  border-radius: 9px;
+  background: #10151b;
+  color: #aeb6c0;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.gm-editor-switch button.active {
+  border-color: #a37e48;
+  color: #f2d7ab;
+  background: rgba(151, 112, 57, .12);
+}
+
+.gm-content-layout {
+  display: grid;
+  grid-template-columns: minmax(235px, .62fr) minmax(0, 1.55fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.gm-content-list {
+  display: grid;
+  gap: 10px;
+  max-height: 760px;
+  overflow-y: auto;
+}
+
+.gm-content-list-group {
+  display: grid;
+  gap: 5px;
+}
+
+.gm-content-list-group > strong {
+  color: #87919d;
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 4px 2px 1px;
+}
+
+.gm-content-list-group > button,
+.gm-content-list > button:not(.primary-button) {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  border: 1px solid #2f3741;
+  border-radius: 9px;
+  background: #10151b;
+  color: #c8ced6;
+  padding: 8px 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gm-content-list-group > button.active,
+.gm-content-list > button.active {
+  border-color: #9d7745;
+  background: rgba(150, 110, 55, .10);
+}
+
+.gm-content-list button span {
+  font-size: 11px;
+}
+
+.gm-content-list button small {
+  color: #838d99;
+  font-size: 9px;
+}
+
+.gm-content-form {
+  display: grid;
+  gap: 12px;
+}
+
+.gm-content-form > label,
+.gm-form-grid label,
+.gm-editor-box label {
+  display: grid;
+  gap: 5px;
+}
+
+.gm-content-form label > span,
+.gm-form-grid label > span,
+.gm-editor-box label > span {
+  color: #adb6c0;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.gm-content-form input:not([type="checkbox"]),
+.gm-content-form select,
+.gm-content-form textarea,
+.gm-editor-box input:not([type="checkbox"]),
+.gm-editor-box select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #303844;
+  border-radius: 9px;
+  background: #0f141a;
+  color: #e5e8ec;
+  padding: 8px 9px;
+}
+
+.gm-form-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.gm-form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gm-form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gm-form-grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.gm-form-grid.five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.gm-editor-box {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #2d3540;
+  border-radius: 12px;
+  background: #0d1217;
+  padding: 10px;
+}
+
+.gm-editor-box > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gm-editor-box small {
+  color: #7f8995;
+  font-size: 9px;
+}
+
+.gm-check-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 14px;
+  align-items: center;
+}
+
+.gm-check-strip label,
+.gm-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #aeb6c0;
+  font-size: 10px;
+}
+
+.gm-check-strip input[type="number"] {
+  width: 70px;
+}
+
+.gm-form-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 980px) {
+  .spell-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gm-content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-content-list {
+    max-height: 320px;
+  }
+
+  .gm-form-grid.four,
+  .gm-form-grid.five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .magic-summary-card,
+  .spell-grid,
+  .combat-spell-grid,
+  .gm-form-grid.two,
+  .gm-form-grid.three,
+  .gm-form-grid.four,
+  .gm-form-grid.five {
+    grid-template-columns: 1fr;
+  }
+
+  .combat-special-heading {
+    display: grid;
+    gap: 2px;
+  }
+}
