@@ -82,6 +82,56 @@ const equipGroups: Array<{ value: ItemEquipGroup; label: string }> = [
   { value: 'accessory', label: 'Аксессуар' },
 ]
 
+const cyrillicSlugMap: Record<string, string> = {
+  а: 'a',
+  б: 'b',
+  в: 'v',
+  г: 'g',
+  д: 'd',
+  е: 'e',
+  ё: 'yo',
+  ж: 'zh',
+  з: 'z',
+  и: 'i',
+  й: 'y',
+  к: 'k',
+  л: 'l',
+  м: 'm',
+  н: 'n',
+  о: 'o',
+  п: 'p',
+  р: 'r',
+  с: 's',
+  т: 't',
+  у: 'u',
+  ф: 'f',
+  х: 'h',
+  ц: 'ts',
+  ч: 'ch',
+  ш: 'sh',
+  щ: 'sch',
+  ъ: '',
+  ы: 'y',
+  ь: '',
+  э: 'e',
+  ю: 'yu',
+  я: 'ya',
+}
+
+function itemSlugFromName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .split('')
+    .map((char) => cyrillicSlugMap[char] ?? char)
+    .join('')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_+/g, '_')
+}
+
 const statKeys = ['strength', 'agility', 'intellect', 'vitality', 'luck'] as const
 const statLabels: Record<(typeof statKeys)[number], string> = {
   strength: 'Сила',
@@ -331,9 +381,17 @@ export function GmItemsAndSpells() {
     setBusy(true)
     setMessage('')
 
+    const normalizedSlug = itemSlugFromName(itemDraft.slug || itemDraft.name)
+
+    if (!normalizedSlug) {
+      setMessage('Укажи название предмета — техническое имя создастся автоматически.')
+      setBusy(false)
+      return
+    }
+
     const { data, error } = await supabase.rpc('gm_save_item_definition', {
       p_id: itemDraft.id,
-      p_slug: itemDraft.slug.trim(),
+      p_slug: normalizedSlug,
       p_name: itemDraft.name.trim(),
       p_description: itemDraft.description,
       p_category: itemDraft.category,
@@ -386,7 +444,11 @@ export function GmItemsAndSpells() {
     }
 
     await loadData()
-    if (!itemDraft.id) setItemDraft({ ...itemDraft, id: savedId })
+    setItemDraft((current) => ({
+      ...current,
+      id: current.id ?? savedId,
+      slug: normalizedSlug,
+    }))
     setMessage(itemDraft.id ? 'Предмет обновлён.' : 'Предмет создан.')
     setBusy(false)
   }
@@ -566,8 +628,41 @@ export function GmItemsAndSpells() {
             </div>
 
             <div className="gm-form-grid two">
-              <label><span>Название</span><input value={itemDraft.name} onChange={(e) => setItemDraft({ ...itemDraft, name: e.target.value })} /></label>
-              <label><span>Slug</span><input value={itemDraft.slug} onChange={(e) => setItemDraft({ ...itemDraft, slug: e.target.value })} /></label>
+              <label>
+                <span>Название</span>
+                <input
+                  value={itemDraft.name}
+                  onChange={(e) => {
+                    const name = e.target.value
+                    setItemDraft((current) => {
+                      const oldAutoSlug = itemSlugFromName(current.name)
+                      const shouldAutoGenerate =
+                        !current.id
+                        && (!current.slug || current.slug === oldAutoSlug)
+
+                      return {
+                        ...current,
+                        name,
+                        slug: shouldAutoGenerate ? itemSlugFromName(name) : current.slug,
+                      }
+                    })
+                  }}
+                />
+              </label>
+              <label>
+                <span>Slug · техническое имя</span>
+                <input
+                  value={itemDraft.slug}
+                  placeholder={itemDraft.name ? itemSlugFromName(itemDraft.name) : 'sozdaetsya_avtomaticheski'}
+                  onChange={(e) => setItemDraft({
+                    ...itemDraft,
+                    slug: itemSlugFromName(e.target.value),
+                  })}
+                />
+                <small className="gm-field-hint">
+                  Создаётся из названия автоматически. Меняй вручную только если это действительно нужно.
+                </small>
+              </label>
             </div>
 
             <label><span>Описание</span><textarea rows={3} value={itemDraft.description} onChange={(e) => setItemDraft({ ...itemDraft, description: e.target.value })} /></label>
