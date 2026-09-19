@@ -1892,3 +1892,418 @@ textarea {
     min-width: 720px;
   }
 }
+
+
+.expedition-event-card {
+  border-color: #6a4c35;
+  background:
+    linear-gradient(145deg, rgba(147, 91, 48, .13), transparent 55%),
+    var(--panel);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.expedition-event-card h3 {
+  margin: 6px 0 8px;
+}
+
+.expedition-event-card p {
+  margin: 0;
+  max-width: 760px;
+  line-height: 1.6;
+  color: #c7c0b5;
+}
+
+.event-waiting-badge {
+  border-color: #7b5639;
+  color: #e4b982;
+  background: #22170f;
+}
+
+.fog-sector.awaiting-event {
+  border-color: rgba(232, 155, 83, .95);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(110, 59, 30, .86) 0,
+      rgba(110, 59, 30, .86) 7px,
+      rgba(32, 22, 17, .94) 7px,
+      rgba(32, 22, 17, .94) 14px
+    );
+}
+
+.sector-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sector-tags {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 14px 0 0;
+}
+
+.sector-tags span {
+  border: 1px solid #353b45;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #10141a;
+  color: #b7bec7;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.sector-description {
+  margin: 14px 0 0;
+  color: #c5cad1;
+  line-height: 1.65;
+}
+
+.gm-world-tab,
+.gm-world-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.gm-map-preview.compact {
+  max-height: 260px;
+}
+
+.gm-map-preview.compact img {
+  min-width: 0;
+}
+
+.gm-world-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.gm-world-summary p {
+  max-width: 720px;
+  margin: 8px 0 0;
+}
+
+.gm-world-counters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.gm-world-counters > span {
+  min-width: 88px;
+  border: 1px solid #303641;
+  border-radius: 12px;
+  padding: 10px;
+  background: #10141a;
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.gm-world-counters strong {
+  font-size: 20px;
+}
+
+.gm-world-counters small {
+  color: #8d96a1;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.gm-world-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(330px, .75fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.gm-world-main {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.gm-map-frame {
+  overflow: auto;
+  border: 1px solid #34302a;
+  border-radius: 18px;
+  background: #090b0e;
+}
+
+.gm-map-stage {
+  position: relative;
+  min-width: 1000px;
+  width: 100%;
+  aspect-ratio: 1472 / 1069;
+  overflow: hidden;
+}
+
+.gm-map-stage > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+
+.gm-sector-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  grid-template-rows: repeat(15, minmax(0, 1fr));
+}
+
+.gm-map-sector {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 0;
+  background: rgba(0, 0, 0, .04);
+  color: rgba(255,255,255,.8);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.gm-map-sector:hover {
+  background: rgba(221, 183, 126, .16);
+  border-color: rgba(233, 202, 153, .45);
+}
+
+.gm-map-sector.configured {
+  border-color: rgba(143, 176, 121, .28);
+}
+
+.gm-map-sector.has-event {
+  background: rgba(130, 70, 31, .17);
+  color: #efb46f;
+  font-weight: 800;
+}
+
+.gm-map-sector.selected {
+  z-index: 2;
+  background: rgba(211, 169, 105, .24);
+  border-color: rgba(242, 208, 154, .92);
+  box-shadow: inset 0 0 0 1px rgba(242, 208, 154, .35);
+}
+
+.gm-sector-editor-panel {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.gm-sector-form {
+  display: grid;
+  gap: 12px;
+}
+
+.gm-sector-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.gm-sector-form label > span {
+  color: #b6bdc6;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.gm-sector-form select,
+.gm-character-map-row select {
+  min-height: 42px;
+  border: 1px solid #303641;
+  border-radius: 11px;
+  background: #0f1318;
+  color: #e6e9ed;
+  padding: 10px 12px;
+}
+
+.gm-sector-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.gm-check-row {
+  grid-template-columns: auto 1fr !important;
+  align-items: center;
+  gap: 9px !important;
+  border: 1px solid #2b3139;
+  border-radius: 11px;
+  padding: 10px;
+  background: #10141a;
+}
+
+.gm-check-row input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+}
+
+.gm-sector-event-box {
+  border: 1px solid #4d3b2d;
+  border-radius: 13px;
+  padding: 11px;
+  background: #15110e;
+  display: grid;
+  gap: 10px;
+}
+
+.gm-character-map-control h3 {
+  margin: 4px 0 0;
+}
+
+.gm-character-map-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, .7fr) auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.gm-character-map-status {
+  display: grid;
+  gap: 3px;
+}
+
+.gm-character-map-status strong {
+  font-size: 12px;
+}
+
+.gm-character-map-status span {
+  color: #89919c;
+  font-size: 10px;
+}
+
+.gm-expedition-list,
+.gm-event-list {
+  display: grid;
+  gap: 8px;
+}
+
+.gm-expedition-row {
+  border: 1px solid #2d333d;
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: #10141a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gm-expedition-row > div {
+  display: grid;
+  gap: 4px;
+}
+
+.gm-expedition-row strong {
+  font-size: 13px;
+}
+
+.gm-expedition-row span {
+  color: #8f97a2;
+  font-size: 10px;
+}
+
+.gm-event-task {
+  border: 1px solid #513a2a;
+  border-radius: 14px;
+  padding: 13px;
+  background: #15110e;
+  display: grid;
+  gap: 10px;
+}
+
+.gm-event-task-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gm-event-task-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.gm-event-task-heading strong {
+  font-size: 14px;
+}
+
+.gm-event-task-heading span:not(.badge) {
+  color: #91877c;
+  font-size: 10px;
+}
+
+.gm-event-task p {
+  margin: 0;
+  color: #c4bbb1;
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+.gm-event-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1080px) {
+  .gm-world-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-sector-editor-panel {
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .gm-world-summary,
+  .expedition-event-card,
+  .sector-detail-heading {
+    flex-direction: column;
+  }
+
+  .gm-world-counters {
+    width: 100%;
+  }
+
+  .gm-map-stage {
+    min-width: 900px;
+  }
+
+  .gm-character-map-row {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-sector-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-expedition-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .gm-expedition-row .ghost-button,
+  .gm-event-actions button {
+    width: 100%;
+  }
+}
