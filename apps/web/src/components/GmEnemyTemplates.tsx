@@ -70,6 +70,8 @@ type Draft = {
   on_hit_effect_turns: number
   on_hit_effect_potency: number
   special_name: string
+  special_kind: 'attack' | 'heal' | 'guard' | 'enrage' | 'cleanse'
+  special_value: number
   special_damage_multiplier: number
   special_every_n: number
   special_damage_type: DamageType | null
@@ -79,6 +81,11 @@ type Draft = {
   special_effect_potency: number
   special_telegraph_text: string
   special_attack_text: string
+  phase2_hp_percent: number
+  phase2_name: string
+  phase2_attack_bonus_percent: number
+  phase2_defense_bonus_percent: number
+  phase2_special_every_n: number
 }
 
 function emptyDraft(): Draft {
@@ -104,6 +111,8 @@ function emptyDraft(): Draft {
     on_hit_effect_turns: 0,
     on_hit_effect_potency: 0,
     special_name: '',
+    special_kind: 'attack',
+    special_value: 0,
     special_damage_multiplier: 0,
     special_every_n: 0,
     special_damage_type: null,
@@ -113,6 +122,11 @@ function emptyDraft(): Draft {
     special_effect_potency: 0,
     special_telegraph_text: '',
     special_attack_text: '',
+    phase2_hp_percent: 0,
+    phase2_name: '',
+    phase2_attack_bonus_percent: 0,
+    phase2_defense_bonus_percent: 0,
+    phase2_special_every_n: 0,
   }
 }
 
@@ -160,6 +174,8 @@ export function GmEnemyTemplates() {
       on_hit_effect_turns: template.on_hit_effect_turns,
       on_hit_effect_potency: template.on_hit_effect_potency,
       special_name: template.special_name ?? '',
+      special_kind: template.special_kind ?? 'attack',
+      special_value: template.special_value ?? 0,
       special_damage_multiplier: Number(template.special_damage_multiplier ?? 0),
       special_every_n: template.special_every_n ?? 0,
       special_damage_type: template.special_damage_type ?? null,
@@ -169,6 +185,11 @@ export function GmEnemyTemplates() {
       special_effect_potency: template.special_effect_potency ?? 0,
       special_telegraph_text: template.special_telegraph_text ?? '',
       special_attack_text: template.special_attack_text ?? '',
+      phase2_hp_percent: template.phase2_hp_percent ?? 0,
+      phase2_name: template.phase2_name ?? '',
+      phase2_attack_bonus_percent: template.phase2_attack_bonus_percent ?? 0,
+      phase2_defense_bonus_percent: template.phase2_defense_bonus_percent ?? 0,
+      phase2_special_every_n: template.phase2_special_every_n ?? 0,
     })
     setMessage('')
   }
@@ -222,6 +243,8 @@ export function GmEnemyTemplates() {
     const { error: specialError } = await supabase.rpc('gm_set_enemy_special', {
       p_enemy_id: savedId,
       p_special_name: draft.special_name.trim(),
+      p_kind: draft.special_kind,
+      p_value: draft.special_value,
       p_damage_multiplier: draft.special_damage_multiplier,
       p_every_n: draft.special_every_n,
       p_damage_type: draft.special_damage_type,
@@ -235,6 +258,21 @@ export function GmEnemyTemplates() {
 
     if (specialError) {
       setMessage(specialError.message)
+      setBusy(false)
+      return
+    }
+
+    const { error: phaseError } = await supabase.rpc('gm_set_enemy_phase2', {
+      p_enemy_id: savedId,
+      p_hp_percent: draft.phase2_hp_percent,
+      p_name: draft.phase2_name,
+      p_attack_bonus_percent: draft.phase2_attack_bonus_percent,
+      p_defense_bonus_percent: draft.phase2_defense_bonus_percent,
+      p_special_every_n: draft.phase2_special_every_n,
+    })
+
+    if (phaseError) {
+      setMessage(phaseError.message)
       setBusy(false)
       return
     }
@@ -554,14 +592,47 @@ export function GmEnemyTemplates() {
 
           <div className="gm-enemy-resistances enemy-special-editor">
             <div>
-              <strong>Особая атака с подготовкой</strong>
+              <strong>Особая способность с подготовкой</strong>
               <span>
-                Если интервал больше нуля, враг сначала явно готовит атаку один ход, а применяет её на следующем.
-                Автобой видит только уже начавшуюся подготовку.
+                Враг сначала тратит ход на явную подготовку. На следующем своём действии способность срабатывает,
+                если её не сорвать оглушением. Автобой не знает её заранее.
               </span>
             </div>
 
             <div className="gm-enemy-resistance-grid">
+              <label>
+                <span>Тип способности</span>
+                <select
+                  disabled={draft.special_every_n === 0}
+                  value={draft.special_kind}
+                  onChange={(event) => {
+                    const kind = event.target.value as Draft['special_kind']
+                    setDraft({
+                      ...draft,
+                      special_kind: kind,
+                      special_value: kind === 'heal' ? Math.max(10, draft.special_value || 10)
+                        : kind === 'guard' ? Math.max(30, draft.special_value || 30)
+                        : kind === 'enrage' ? Math.max(15, draft.special_value || 15)
+                        : 0,
+                      special_damage_multiplier: kind === 'attack'
+                        ? Math.max(1, draft.special_damage_multiplier || 1.75)
+                        : 0,
+                      special_damage_type: kind === 'attack' ? draft.special_damage_type : null,
+                      special_effect_type: kind === 'attack' ? draft.special_effect_type : null,
+                      special_effect_chance: kind === 'attack' ? draft.special_effect_chance : 0,
+                      special_effect_turns: kind === 'attack' ? draft.special_effect_turns : 0,
+                      special_effect_potency: kind === 'attack' ? draft.special_effect_potency : 0,
+                    })
+                  }}
+                >
+                  <option value="attack">Усиленная атака</option>
+                  <option value="heal">Самолечение</option>
+                  <option value="guard">Защитная стойка</option>
+                  <option value="enrage">Усиление атаки</option>
+                  <option value="cleanse">Снятие эффектов</option>
+                </select>
+              </label>
+
               <label>
                 <span>Название</span>
                 <input
@@ -581,50 +652,149 @@ export function GmEnemyTemplates() {
                   value={draft.special_every_n}
                   onChange={(event) => {
                     const value = Math.max(0, Math.min(20, Number(event.target.value)))
+                    const interval = value === 1 ? 2 : value
                     setDraft({
                       ...draft,
-                      special_every_n: value === 1 ? 2 : value,
-                      special_damage_multiplier: value > 0
+                      special_every_n: interval,
+                      special_damage_multiplier: interval > 0 && draft.special_kind === 'attack'
                         ? Math.max(1, draft.special_damage_multiplier || 1.75)
-                        : 0,
+                        : interval > 0 ? 0 : 0,
                     })
                   }}
                 />
               </label>
 
-              <label>
-                <span>Урон ×</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={5}
-                  step={0.05}
-                  disabled={draft.special_every_n === 0}
-                  value={draft.special_damage_multiplier}
-                  onChange={(event) => setDraft({
-                    ...draft,
-                    special_damage_multiplier: Math.max(0, Math.min(5, Number(event.target.value))),
-                  })}
-                />
-              </label>
-
-              <label>
-                <span>Тип урона</span>
-                <select
-                  disabled={draft.special_every_n === 0}
-                  value={draft.special_damage_type ?? ''}
-                  onChange={(event) => setDraft({
-                    ...draft,
-                    special_damage_type: event.target.value ? event.target.value as DamageType : null,
-                  })}
-                >
-                  <option value="">Как обычная атака</option>
-                  {damageTypes.map((type) => (
-                    <option key={type} value={type}>{damageLabels[type]}</option>
-                  ))}
-                </select>
-              </label>
+              {draft.special_kind === 'attack' ? (
+                <label>
+                  <span>Урон ×</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={5}
+                    step={0.05}
+                    disabled={draft.special_every_n === 0}
+                    value={draft.special_damage_multiplier}
+                    onChange={(event) => setDraft({
+                      ...draft,
+                      special_damage_multiplier: Math.max(0, Math.min(5, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+              ) : draft.special_kind !== 'cleanse' ? (
+                <label>
+                  <span>
+                    {draft.special_kind === 'heal'
+                      ? 'Лечение % max HP'
+                      : draft.special_kind === 'guard'
+                        ? 'Снижение следующего урона %'
+                        : 'Бонус атаки %'}
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    disabled={draft.special_every_n === 0}
+                    value={draft.special_value}
+                    onChange={(event) => setDraft({
+                      ...draft,
+                      special_value: Math.max(1, Math.min(100, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+              ) : (
+                <div />
+              )}
             </div>
+
+            {draft.special_kind === 'attack' && (
+              <div className="gm-enemy-resistance-grid">
+                <label>
+                  <span>Тип урона</span>
+                  <select
+                    disabled={draft.special_every_n === 0}
+                    value={draft.special_damage_type ?? ''}
+                    onChange={(event) => setDraft({
+                      ...draft,
+                      special_damage_type: event.target.value ? event.target.value as DamageType : null,
+                    })}
+                  >
+                    <option value="">Как обычная атака</option>
+                    {damageTypes.map((type) => (
+                      <option key={type} value={type}>{damageLabels[type]}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Эффект</span>
+                  <select
+                    disabled={draft.special_every_n === 0}
+                    value={draft.special_effect_type ?? ''}
+                    onChange={(event) => setDraft({
+                      ...draft,
+                      special_effect_type: event.target.value
+                        ? event.target.value as CombatStatusEffectType
+                        : null,
+                      special_effect_chance: event.target.value
+                        ? Math.max(1, draft.special_effect_chance || 50)
+                        : 0,
+                      special_effect_turns: event.target.value
+                        ? Math.max(1, draft.special_effect_turns || 1)
+                        : 0,
+                      special_effect_potency: event.target.value ? draft.special_effect_potency : 0,
+                    })}
+                  >
+                    <option value="">Нет</option>
+                    {statusEffectOptions.map((effect) => (
+                      <option key={effect.value} value={effect.value}>{effect.label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Шанс %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    disabled={draft.special_every_n === 0 || !draft.special_effect_type}
+                    value={draft.special_effect_chance}
+                    onChange={(event) => setDraft({
+                      ...draft,
+                      special_effect_chance: Math.max(0, Math.min(100, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+
+                <label>
+                  <span>Ходов / сила</span>
+                  <div className="gm-inline-fields">
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      disabled={draft.special_every_n === 0 || !draft.special_effect_type}
+                      value={draft.special_effect_turns}
+                      onChange={(event) => setDraft({
+                        ...draft,
+                        special_effect_turns: Math.max(0, Math.min(10, Number(event.target.value))),
+                      })}
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={1000}
+                      disabled={draft.special_every_n === 0 || !draft.special_effect_type}
+                      value={draft.special_effect_potency}
+                      onChange={(event) => setDraft({
+                        ...draft,
+                        special_effect_potency: Math.max(0, Number(event.target.value)),
+                      })}
+                    />
+                  </div>
+                </label>
+              </div>
+            )}
 
             <div className="gm-sector-form-grid">
               <label>
@@ -634,90 +804,95 @@ export function GmEnemyTemplates() {
                   disabled={draft.special_every_n === 0}
                   value={draft.special_telegraph_text}
                   onChange={(event) => setDraft({ ...draft, special_telegraph_text: event.target.value })}
-                  placeholder="Колосс заносит обе руки. Удар будет на следующем ходу."
                 />
               </label>
               <label>
-                <span>Текст удара</span>
+                <span>Текст срабатывания</span>
                 <textarea
                   rows={2}
                   disabled={draft.special_every_n === 0}
                   value={draft.special_attack_text}
                   onChange={(event) => setDraft({ ...draft, special_attack_text: event.target.value })}
-                  placeholder="Колосс обрушивает сокрушающий удар."
                 />
               </label>
+            </div>
+          </div>
+
+          <div className="gm-enemy-resistances enemy-phase-editor">
+            <div>
+              <strong>Вторая фаза</strong>
+              <span>
+                Срабатывает один раз при указанном проценте HP. Можно усилить атаку/защиту и ускорить особую способность.
+              </span>
             </div>
 
             <div className="gm-enemy-resistance-grid">
               <label>
-                <span>Эффект</span>
-                <select
-                  disabled={draft.special_every_n === 0}
-                  value={draft.special_effect_type ?? ''}
+                <span>Порог HP %</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={90}
+                  value={draft.phase2_hp_percent}
                   onChange={(event) => setDraft({
                     ...draft,
-                    special_effect_type: event.target.value
-                      ? event.target.value as CombatStatusEffectType
-                      : null,
-                    special_effect_chance: event.target.value
-                      ? Math.max(1, draft.special_effect_chance || 50)
-                      : 0,
-                    special_effect_turns: event.target.value
-                      ? Math.max(1, draft.special_effect_turns || 1)
-                      : 0,
-                    special_effect_potency: event.target.value ? draft.special_effect_potency : 0,
+                    phase2_hp_percent: Math.max(0, Math.min(90, Number(event.target.value))),
                   })}
-                >
-                  <option value="">Нет</option>
-                  {statusEffectOptions.map((effect) => (
-                    <option key={effect.value} value={effect.value}>{effect.label}</option>
-                  ))}
-                </select>
+                />
               </label>
 
               <label>
-                <span>Шанс %</span>
+                <span>Название фазы</span>
+                <input
+                  disabled={draft.phase2_hp_percent === 0}
+                  value={draft.phase2_name}
+                  onChange={(event) => setDraft({ ...draft, phase2_name: event.target.value })}
+                  placeholder="Последняя стойка"
+                />
+              </label>
+
+              <label>
+                <span>Атака +%</span>
                 <input
                   type="number"
                   min={0}
                   max={100}
-                  disabled={draft.special_every_n === 0 || !draft.special_effect_type}
-                  value={draft.special_effect_chance}
+                  disabled={draft.phase2_hp_percent === 0}
+                  value={draft.phase2_attack_bonus_percent}
                   onChange={(event) => setDraft({
                     ...draft,
-                    special_effect_chance: Math.max(0, Math.min(100, Number(event.target.value))),
+                    phase2_attack_bonus_percent: Math.max(0, Math.min(100, Number(event.target.value))),
                   })}
                 />
               </label>
 
               <label>
-                <span>Ходов</span>
+                <span>Защита +%</span>
                 <input
                   type="number"
                   min={0}
-                  max={10}
-                  disabled={draft.special_every_n === 0 || !draft.special_effect_type}
-                  value={draft.special_effect_turns}
+                  max={100}
+                  disabled={draft.phase2_hp_percent === 0}
+                  value={draft.phase2_defense_bonus_percent}
                   onChange={(event) => setDraft({
                     ...draft,
-                    special_effect_turns: Math.max(0, Math.min(10, Number(event.target.value))),
+                    phase2_defense_bonus_percent: Math.max(0, Math.min(100, Number(event.target.value))),
                   })}
                 />
               </label>
 
               <label>
-                <span>Сила</span>
+                <span>Особая каждые N</span>
                 <input
                   type="number"
                   min={0}
-                  max={1000}
-                  disabled={draft.special_every_n === 0 || !draft.special_effect_type}
-                  value={draft.special_effect_potency}
-                  onChange={(event) => setDraft({
-                    ...draft,
-                    special_effect_potency: Math.max(0, Number(event.target.value)),
-                  })}
+                  max={20}
+                  disabled={draft.phase2_hp_percent === 0}
+                  value={draft.phase2_special_every_n}
+                  onChange={(event) => {
+                    const value = Math.max(0, Math.min(20, Number(event.target.value)))
+                    setDraft({ ...draft, phase2_special_every_n: value === 1 ? 2 : value })
+                  }}
                 />
               </label>
             </div>
