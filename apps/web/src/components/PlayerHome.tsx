@@ -1076,7 +1076,13 @@ function EquipmentPanel({
                   {item && itemAffixes(item).length > 0 && (
                     <div className="item-affix-list compact">
                       {itemAffixes(item).map((affix, index) => (
-                        <span key={affix.name + '-' + index}>{affix.name}</span>
+                        <span
+                          key={affix.name + '-' + index}
+                          title={[affix.description, affixEffectText(affix)].filter(Boolean).join(' · ') || affix.name}
+                        >
+                          {affix.name}
+                          {affixEffectText(affix) ? ' · ' + affixEffectText(affix) : ''}
+                        </span>
                       ))}
                     </div>
                   )}
