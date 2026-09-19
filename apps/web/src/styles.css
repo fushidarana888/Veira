@@ -4060,3 +4060,107 @@ textarea {
   border-color: #4a4058 !important;
   color: #c8b5d6 !important;
 }
+
+
+/* Dungeon loot */
+.dungeon-loot-block {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #3b352b;
+  border-radius: 12px;
+  background: rgba(124, 91, 45, .08);
+  padding: 10px;
+}
+
+.dungeon-loot-block.result {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.dungeon-loot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.dungeon-loot-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #343b45;
+  border-radius: 9px;
+  background: #10151b;
+  padding: 8px 9px;
+}
+
+.dungeon-loot-item > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dungeon-loot-item strong {
+  color: #e3e6ea;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.dungeon-loot-item span {
+  color: #858f9a;
+  font-size: 8px;
+}
+
+.dungeon-loot-item b {
+  flex: 0 0 auto;
+  color: #d9bd89;
+  font-size: 11px;
+}
+
+.dungeon-loot-item.rarity-uncommon {
+  border-color: #3e5745;
+}
+
+.dungeon-loot-item.rarity-rare {
+  border-color: #3e536b;
+}
+
+.dungeon-loot-item.rarity-epic {
+  border-color: #58446c;
+}
+
+.dungeon-loot-item.rarity-legendary,
+.dungeon-loot-item.rarity-unique {
+  border-color: #6f5734;
+  background: rgba(116, 83, 39, .10);
+}
+
+/* GM loot editor */
+.gm-loot-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.loot-quantity-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 5px;
+  align-items: center;
+}
+
+.loot-quantity-pair > span {
+  color: #737d88;
+  font-size: 10px;
+  text-align: center;
+}
+
+.loot-rule-help p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .dungeon-loot-grid {
+    grid-template-columns: 1fr;
+  }
+}
