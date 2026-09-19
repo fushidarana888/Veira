@@ -8,6 +8,7 @@ import type {
   CombatStatusEffectType,
   CombatTurn,
   DamageType,
+  DungeonLootDrop,
 } from '../types'
 
 type Props = {
@@ -71,6 +72,7 @@ export function AdventuresPanel({
   const [statusEffects, setStatusEffects] = useState<CombatStatusEffect[]>([])
   const [spells, setSpells] = useState<CharacterSpell[]>([])
   const [combatScrolls, setCombatScrolls] = useState<CombatScroll[]>([])
+  const [lootDrops, setLootDrops] = useState<DungeonLootDrop[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -123,6 +125,24 @@ export function AdventuresPanel({
     )
 
     const latestEncounter = nextEncounters[0] ?? null
+    const activeRunId =
+      nextSites.find((site) => site.content_type === 'dungeon' && site.run_status === 'active')?.active_run_id ??
+      null
+    const lootRunId = latestEncounter?.dungeon_run_id ?? activeRunId
+
+    if (lootRunId) {
+      const { data: lootData, error: lootError } = await supabase.rpc('get_dungeon_run_loot', {
+        p_run_id: lootRunId,
+      })
+
+      if (lootError) {
+        setMessage(lootError.message)
+      } else {
+        setLootDrops((lootData as DungeonLootDrop[] | null) ?? [])
+      }
+    } else {
+      setLootDrops([])
+    }
 
     if (latestEncounter) {
       const [turnResult, statusResult] = await Promise.all([
@@ -261,7 +281,10 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.resolve(onProgressChanged?.())
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      Promise.resolve(onInventoryChanged?.()),
+    ])
     await loadAdventures()
     setBusy(false)
   }
@@ -290,7 +313,10 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.resolve(onProgressChanged?.())
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      Promise.resolve(onInventoryChanged?.()),
+    ])
     await loadAdventures()
     setBusy(false)
   }
@@ -421,6 +447,32 @@ export function AdventuresPanel({
               </strong>
             </div>
           </div>
+
+          {lootDrops.length > 0 && (
+            <div className="dungeon-loot-block">
+              <div className="combat-special-heading">
+                <strong>Добыча этого прохождения</strong>
+                <span>уже добавлена в инвентарь</span>
+              </div>
+              <div className="dungeon-loot-grid">
+                {lootDrops.map((drop) => (
+                  <div className={'dungeon-loot-item rarity-' + drop.rarity} key={drop.drop_id}>
+                    <div>
+                      <strong>{drop.item_name}</strong>
+                      <span>
+                        {drop.source_type === 'dungeon'
+                          ? 'финальный тайник'
+                          : drop.source_type === 'boss'
+                            ? 'хранитель'
+                            : 'враг'}
+                      </span>
+                    </div>
+                    <b>×{drop.quantity}</b>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {!activeCombat ? (
             <>
@@ -685,6 +737,32 @@ export function AdventuresPanel({
                 : 'зал очищен'
               : latestCombat.status}
           </span>
+
+          {lootDrops.length > 0 && (
+            <div className="dungeon-loot-block result">
+              <div className="combat-special-heading">
+                <strong>Полученная добыча</strong>
+                <span>{lootDrops.length} поз.</span>
+              </div>
+              <div className="dungeon-loot-grid">
+                {lootDrops.map((drop) => (
+                  <div className={'dungeon-loot-item rarity-' + drop.rarity} key={drop.drop_id}>
+                    <div>
+                      <strong>{drop.item_name}</strong>
+                      <span>
+                        {drop.source_type === 'dungeon'
+                          ? 'финальный тайник'
+                          : drop.source_type === 'boss'
+                            ? 'хранитель'
+                            : 'враг'}
+                      </span>
+                    </div>
+                    <b>×{drop.quantity}</b>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </article>
       )}
 
