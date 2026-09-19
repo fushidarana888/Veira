@@ -22,6 +22,13 @@ export type CharacterStats = {
 
 export type StatModifiers = Partial<Record<StatKey, number>>
 
+export type WeaponScaling = 'strength' | 'agility' | 'hybrid'
+
+export type WeaponAttackProfile = {
+  baseDamage: number
+  scaling: WeaponScaling
+}
+
 export type DerivedCombatStats = {
   physicalPower: number
   magicPower: number
@@ -46,14 +53,24 @@ export function baseHpMax(level: number, vitality: number): number {
 export function calculateDerivedCombatStats(
   level: number,
   stats: Record<StatKey, number>,
+  weapon: WeaponAttackProfile = { baseDamage: 0, scaling: 'strength' },
 ): DerivedCombatStats {
   const safeLevel = Math.max(1, Math.floor(level))
+  const safeWeaponDamage = Math.max(0, Math.floor(weapon.baseDamage))
+  const physicalStatPower = weapon.scaling === 'agility'
+    ? stats.agility * 3 + stats.strength * 0.5
+    : weapon.scaling === 'hybrid'
+      ? stats.strength * 1.75 + stats.agility * 1.75
+      : stats.strength * 3 + stats.agility * 0.5
 
-  const physicalDefense = stats.vitality * 2 + stats.agility + safeLevel
+  const physicalDefense = Math.max(
+    0,
+    Math.round(stats.vitality * 2 + stats.agility * 0.5 + safeLevel),
+  )
   const magicDefense = stats.vitality + stats.intellect + safeLevel
 
   return {
-    physicalPower: stats.strength * 3 + stats.agility + safeLevel * 2,
+    physicalPower: Math.max(0, Math.round(safeWeaponDamage + physicalStatPower + safeLevel * 2)),
     magicPower: stats.intellect * 3 + stats.luck + safeLevel * 2,
     physicalDefense,
     magicDefense,
