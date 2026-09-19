@@ -380,6 +380,7 @@ export type CharacterAdventureSite = {
   run_total_rooms: number | null
   run_reward_gold: number | null
   run_reward_experience: number | null
+  run_escape_attempt_stage: number | null
 }
 
 
