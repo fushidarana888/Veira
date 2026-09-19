@@ -228,6 +228,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               shop_enabled,
               damage_type,
               damage_resistances,
+              damage_bonuses,
               scroll_spell_id,
               scroll_mode,
               unique_property_name,
@@ -889,6 +890,8 @@ function InventoryPanel({
               .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
             const resistances = Object.entries(combinedResistances(item, definition))
               .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+            const damageBonuses = Object.entries(definition.damage_bonuses ?? {})
+              .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
 
             return (
               <article className={'item-card rarity-' + definition.rarity} key={item.id}>
@@ -916,6 +919,16 @@ function InventoryPanel({
                     {resistances.map(([type, value]) => (
                       <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
                         {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {damageBonuses.length > 0 && (
+                  <div className="damage-bonus-list">
+                    {damageBonuses.map(([type, value]) => (
+                      <span key={'damage-bonus-' + type}>
+                        {damageTypeLabels[type]} урон +{value}%
                       </span>
                     ))}
                   </div>
@@ -1070,6 +1083,19 @@ function EquipmentPanel({
                           .map(([type, value]) => (
                             <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
                               {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                  {Object.entries(definition.damage_bonuses ?? {})
+                    .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
+                    .length > 0 && (
+                      <div className="damage-bonus-list compact">
+                        {Object.entries(definition.damage_bonuses ?? {})
+                          .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
+                          .map(([type, value]) => (
+                            <span key={'equipped-damage-bonus-' + type}>
+                              {damageTypeLabels[type]} урон +{value}%
                             </span>
                           ))}
                       </div>
