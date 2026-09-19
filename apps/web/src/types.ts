@@ -120,3 +120,33 @@ export type CharacterEquipment = {
   character_item_id: string
   equipped_at: string
 }
+
+
+export type MapSector = {
+  id: number
+  grid_col: number
+  grid_row: number
+  initially_known: boolean
+  location_key: string | null
+  location_name: string | null
+  terrain: string | null
+  metadata: Record<string, unknown>
+}
+
+export type CharacterSectorDiscovery = {
+  character_id: string
+  sector_id: number
+  discovered_at: string
+  source: string
+}
+
+export type SectorExpedition = {
+  id: string
+  character_id: string
+  sector_id: number
+  status: 'active' | 'completed' | 'cancelled'
+  started_at: string
+  ends_at: string
+  completed_at: string | null
+  created_at: string
+}
