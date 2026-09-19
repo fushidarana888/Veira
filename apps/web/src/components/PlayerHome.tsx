@@ -79,6 +79,18 @@ function normalizeDefinition(value: CharacterItem['item_definitions']): ItemDefi
   return value
 }
 
+const affixEffectLabels: Record<string, { label: string; percent: boolean }> = {
+  lifesteal: { label: 'Вампиризм', percent: true },
+  mana_on_hit: { label: 'Мана за удар', percent: false },
+  damage_vs_wounded: { label: 'Урон по раненым', percent: true },
+  guard_boost: { label: 'Усиление блока', percent: true },
+  physical_damage_bonus: { label: 'Физический урон', percent: true },
+  magic_damage_bonus: { label: 'Магический урон', percent: true },
+  all_damage_bonus: { label: 'Весь прямой урон', percent: true },
+  low_hp_damage_reduction: { label: 'Защита при низком HP', percent: true },
+  boss_damage_bonus: { label: 'Урон боссам', percent: true },
+}
+
 function itemAffixes(item: CharacterItem) {
   const value = item.metadata?.affixes
   if (!Array.isArray(value)) return []
@@ -88,7 +100,16 @@ function itemAffixes(item: CharacterItem) {
     description?: string
     stat_modifiers?: Record<string, number>
     damage_resistances?: Partial<Record<DamageType, number>>
+    unique_effect_type?: string | null
+    unique_effect_value?: number
   } => Boolean(entry) && typeof entry === 'object' && 'name' in entry && typeof entry.name === 'string')
+}
+
+function affixEffectText(affix: ReturnType<typeof itemAffixes>[number]) {
+  if (!affix.unique_effect_type || !affix.unique_effect_value) return ''
+  const info = affixEffectLabels[affix.unique_effect_type]
+  if (!info) return ''
+  return `${info.label} +${affix.unique_effect_value}${info.percent ? '%' : ''}`
 }
 
 function affixStatModifiers(item: CharacterItem): Record<string, number> {
@@ -922,8 +943,12 @@ function InventoryPanel({
                 {affixes.length > 0 && (
                   <div className="item-affix-list">
                     {affixes.map((affix, index) => (
-                      <span key={affix.name + '-' + index} title={affix.description || affix.name}>
+                      <span
+                        key={affix.name + '-' + index}
+                        title={[affix.description, affixEffectText(affix)].filter(Boolean).join(' · ') || affix.name}
+                      >
                         {affix.name}
+                        {affixEffectText(affix) ? ' · ' + affixEffectText(affix) : ''}
                       </span>
                     ))}
                   </div>
