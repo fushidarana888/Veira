@@ -508,6 +508,29 @@ export function AdventuresPanel({
       return
     }
 
+    const { data: supportData, error: supportError } = await supabase.rpc(
+      'save_character_autobattle_support_settings',
+      {
+        p_character_id: characterId,
+        p_normal_support_enabled: autobattleSettings.normal_support_enabled,
+        p_normal_heal_hp_percent: autobattleSettings.normal_heal_hp_percent,
+        p_normal_cleanse_min_debuffs: autobattleSettings.normal_cleanse_min_debuffs,
+        p_normal_shield_special: autobattleSettings.normal_shield_special,
+        p_normal_buff_enabled: autobattleSettings.normal_buff_enabled,
+        p_boss_support_enabled: autobattleSettings.boss_support_enabled,
+        p_boss_heal_hp_percent: autobattleSettings.boss_heal_hp_percent,
+        p_boss_cleanse_min_debuffs: autobattleSettings.boss_cleanse_min_debuffs,
+        p_boss_shield_special: autobattleSettings.boss_shield_special,
+        p_boss_buff_enabled: autobattleSettings.boss_buff_enabled,
+      },
+    )
+
+    if (supportError) {
+      setMessage(supportError.message)
+      setBusy(false)
+      return
+    }
+
     const spellRuleResults = await Promise.all(
       autobattleSpellRules.map((rule) => supabase.rpc('save_character_autobattle_spell_rule', {
         p_character_id: characterId,
@@ -526,7 +549,7 @@ export function AdventuresPanel({
       return
     }
 
-    const saved = (Array.isArray(data) ? data[0] : data) as AutobattleSettings | null
+    const saved = (Array.isArray(supportData) ? supportData[0] : supportData) as AutobattleSettings | null
     if (saved) setAutobattleSettings(saved)
     setMessage('Тактика автобоя сохранена.')
     setBusy(false)
@@ -600,6 +623,20 @@ export function AdventuresPanel({
         ? { ...rule, normal_enabled: Boolean(value) }
         : { ...rule, normal_priority: Math.max(1, Math.min(999, Number(value))) }
     }))
+  }
+
+  function updateAutobattleSupport(
+    field: 'support_enabled' | 'heal_hp_percent' | 'cleanse_min_debuffs' | 'shield_special' | 'buff_enabled',
+    value: boolean | number,
+  ) {
+    if (!autobattleSettings) return
+    const prefix = autobattleEditorMode === 'boss' ? 'boss' : 'normal'
+    const key = (prefix + '_' + field) as keyof AutobattleSettings
+
+    setAutobattleSettings({
+      ...autobattleSettings,
+      [key]: value,
+    } as AutobattleSettings)
   }
 
   function autobattleMessage(result: AutobattleResult, wholeDungeon: boolean) {
@@ -971,6 +1008,90 @@ export function AdventuresPanel({
                 </label>
               </div>
 
+              <div className="autobattle-spell-rules">
+                <div className="combat-special-heading">
+                  <strong>Умная поддержка</strong>
+                  <span>реагирует на состояние боя автоматически</span>
+                </div>
+
+                <div className="autobattle-checks">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_support_enabled
+                        : autobattleSettings.normal_support_enabled}
+                      onChange={(event) => updateAutobattleSupport('support_enabled', event.target.checked)}
+                    />
+                    <span>Использовать лечебные и вспомогательные заклинания</span>
+                  </label>
+
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_shield_special
+                        : autobattleSettings.normal_shield_special}
+                      onChange={(event) => updateAutobattleSupport('shield_special', event.target.checked)}
+                    />
+                    <span>Магический щит перед подготовленной особой атакой</span>
+                  </label>
+
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_buff_enabled
+                        : autobattleSettings.normal_buff_enabled}
+                      onChange={(event) => updateAutobattleSupport('buff_enabled', event.target.checked)}
+                    />
+                    <span>Поддерживать усиление урона, пока враг не добит</span>
+                  </label>
+                </div>
+
+                <div className="autobattle-global-settings">
+                  <label>
+                    <span>Лечиться при HP ≤</span>
+                    <strong>
+                      {autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_heal_hp_percent
+                        : autobattleSettings.normal_heal_hp_percent}%
+                    </strong>
+                    <input
+                      type="range"
+                      min={0}
+                      max={90}
+                      value={autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_heal_hp_percent
+                        : autobattleSettings.normal_heal_hp_percent}
+                      onChange={(event) => updateAutobattleSupport('heal_hp_percent', Number(event.target.value))}
+                    />
+                  </label>
+
+                  <label>
+                    <span>Очищаться при дебаффах</span>
+                    <strong>
+                      {autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_cleanse_min_debuffs
+                        : autobattleSettings.normal_cleanse_min_debuffs}+
+                    </strong>
+                    <input
+                      type="range"
+                      min={0}
+                      max={6}
+                      value={autobattleEditorMode === 'boss'
+                        ? autobattleSettings.boss_cleanse_min_debuffs
+                        : autobattleSettings.normal_cleanse_min_debuffs}
+                      onChange={(event) => updateAutobattleSupport('cleanse_min_debuffs', Number(event.target.value))}
+                    />
+                  </label>
+                </div>
+
+                <p className="muted">
+                  Поддержка уважает общий резерв маны. Приоритет: лечение → очищение → щит на подготовленную атаку → усиление. Значение 0 отключает соответствующий порог.
+                </p>
+              </div>
+
               {autobattleSpellRules.length > 0 && (
                 <div className="autobattle-spell-rules">
                   <div className="combat-special-heading">
@@ -1027,7 +1148,7 @@ export function AdventuresPanel({
               </div>
 
               <div className="autobattle-note">
-                Автобой не придумывает билд за тебя и не знает будущие действия врага. Но если противник уже начал явно готовить особую атаку, автобой может уйти в защиту — только при включённом режиме защиты. Физическая контратака после блока тратится первой. Боевые свитки и зелья автоматически не расходуются.
+                Автобой теперь умеет сам лечиться, очищать дебаффы, ставить изученный магический щит перед объявленной особой атакой и поддерживать бафф урона. Он соблюдает резерв маны и не расходует боевые свитки или зелья автоматически. Физическая контратака после блока всё ещё тратится первой, если поддержка в этот ход не нужна.
               </div>
 
               <button
