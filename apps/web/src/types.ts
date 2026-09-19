@@ -19,6 +19,7 @@ export type CharacterProgress = {
   vitality: number
   luck: number
   gold: number
+  unspent_stat_points: number
   updated_at: string
 }
 
