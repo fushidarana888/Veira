@@ -131,6 +131,7 @@ function duelError(raw: string) {
   if (raw.includes('NOT_YOUR_TURN')) return 'Сейчас ход соперника.'
   if (raw.includes('NOT_ENOUGH_MANA')) return 'Недостаточно маны.'
   if (raw.includes('ALREADY_FULL_HEALTH')) return 'Здоровье уже полное.'
+  if (raw.includes('SPELL_NOT_IN_LOADOUT')) return 'Это заклинание не входит в текущий боевой набор.'
   if (raw.includes('SPELL_NOT_LEARNED')) return 'Это заклинание не изучено.'
   if (raw.includes('DUEL_NOT_ACTIVE')) return 'Эта дуэль уже завершена.'
   if (raw.includes('DUEL_NOT_PENDING')) return 'Этот вызов уже обработан.'
@@ -185,7 +186,7 @@ export function DuelPanel({ characterId }: Props) {
 
     const nextOverview = (overviewResult.data as DuelOverview | null) ?? { players: [], duels: [] }
     setOverview(nextOverview)
-    setSpells((spellsResult.data as CharacterSpell[] | null) ?? [])
+    setSpells(((spellsResult.data as CharacterSpell[] | null) ?? []).filter((spell) => spell.combat_slot !== null))
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
 
     const active = nextOverview.duels.find((duel) => duel.status === 'active') ?? null
