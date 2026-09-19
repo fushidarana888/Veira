@@ -554,7 +554,7 @@ export type SpellDefinition = {
   name: string
   description: string
   enabled: boolean
-  spell_kind: 'damage' | 'heal'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff'
   damage_type: ElementalDamageType | null
   mana_cost: number
   required_level: number
@@ -564,6 +564,9 @@ export type SpellDefinition = {
   status_effect_chance: number
   status_effect_turns: number
   status_effect_potency: number
+  support_effect_type: 'guard' | 'cleanse' | 'empower' | null
+  support_value: number
+  support_turns: number
   created_at: string
   updated_at: string
 }
@@ -573,7 +576,7 @@ export type CharacterSpell = {
   slug: string
   name: string
   description: string
-  spell_kind: 'damage' | 'heal'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff'
   damage_type: ElementalDamageType | null
   mana_cost: number
   required_level: number
