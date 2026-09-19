@@ -253,7 +253,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
   }
 
   async function allocateStatPoint(stat: StatKey) {
-    if (progress.unspent_stat_points <= 0) return
+    if (!progress || progress.unspent_stat_points <= 0) return
 
     setStatBusy(true)
     setProgressMessage('')
