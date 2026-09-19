@@ -1121,6 +1121,292 @@ export function GmWorldEditor({ characters, profiles }: Props) {
         </aside>
       </div>
 
+      <article className="panel gm-event-pool-panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">ПУЛЫ ЭКСПЕДИЦИЙ</span>
+            <h2>Случайные события исследования</h2>
+          </div>
+          <span className="badge">{eventTemplates.length}</span>
+        </div>
+
+        <p className="muted gm-event-pool-intro">
+          После 12 часов сначала проверяется закреплённое за сектором событие, затем один подходящий шаблон из этого пула.
+          Шаблоны фильтруются по местности, содержимому и опасности. Если событие требует GM, экспедиция остановится и попадёт в очередь ниже.
+        </p>
+
+        <div className="gm-event-pool-layout">
+          <div className="gm-event-template-list">
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={newEventTemplate}
+            >
+              + Новый шаблон
+            </button>
+
+            {eventTemplates.length === 0 && (
+              <p className="muted">
+                Пул пока пуст. Без шаблонов экспедиции просто получают обычный отчёт по типу сектора.
+              </p>
+            )}
+
+            {eventTemplates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                className={[
+                  'gm-event-template-card',
+                  eventTemplateDraft.id === template.id ? 'active' : '',
+                  !template.enabled ? 'disabled' : '',
+                ].filter(Boolean).join(' ')}
+                onClick={() => editEventTemplate(template)}
+              >
+                <span className="gm-event-template-card-head">
+                  <strong>{template.name}</strong>
+                  <small>{template.enabled ? 'включено' : 'выключено'}</small>
+                </span>
+                <span>
+                  {template.terrain_type
+                    ? terrainOptions.find((option) => option.value === template.terrain_type)?.label
+                    : 'любая местность'}
+                  {' · '}
+                  {template.content_type
+                    ? contentOptions.find((option) => option.value === template.content_type)?.label
+                    : 'любое содержимое'}
+                </span>
+                <span>
+                  опасность {template.min_danger}–{template.max_danger} · шанс {template.chance_percent}% · вес {template.weight}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="gm-event-template-editor">
+            <div className="gm-event-template-editor-head">
+              <div>
+                <span className="eyebrow">
+                  {eventTemplateDraft.id ? 'РЕДАКТИРОВАНИЕ' : 'НОВОЕ СОБЫТИЕ'}
+                </span>
+                <h3>{eventTemplateDraft.name || 'Шаблон события'}</h3>
+              </div>
+              <label className="gm-check-row compact">
+                <input
+                  type="checkbox"
+                  checked={eventTemplateDraft.enabled}
+                  onChange={(event) => setEventTemplateDraft({
+                    ...eventTemplateDraft,
+                    enabled: event.target.checked,
+                  })}
+                />
+                <span>Включено</span>
+              </label>
+            </div>
+
+            <div className="gm-event-template-fields">
+              <label>
+                <span>Название шаблона для GM</span>
+                <input
+                  value={eventTemplateDraft.name}
+                  onChange={(event) => setEventTemplateDraft({
+                    ...eventTemplateDraft,
+                    name: event.target.value,
+                  })}
+                  placeholder="Например: Засада на лесной дороге"
+                />
+              </label>
+
+              <div className="gm-sector-form-grid">
+                <label>
+                  <span>Местность</span>
+                  <select
+                    value={eventTemplateDraft.terrain_type ?? ''}
+                    onChange={(event) => setEventTemplateDraft({
+                      ...eventTemplateDraft,
+                      terrain_type: event.target.value
+                        ? event.target.value as SectorTerrain
+                        : null,
+                    })}
+                  >
+                    <option value="">Любая</option>
+                    {terrainOptions
+                      .filter((option) => option.value !== 'unassigned')
+                      .map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Содержимое сектора</span>
+                  <select
+                    value={eventTemplateDraft.content_type ?? ''}
+                    onChange={(event) => setEventTemplateDraft({
+                      ...eventTemplateDraft,
+                      content_type: event.target.value
+                        ? event.target.value as SectorContentType
+                        : null,
+                    })}
+                  >
+                    <option value="">Любое</option>
+                    {contentOptions
+                      .filter((option) => option.value !== 'unassigned')
+                      .map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="gm-event-template-numbers">
+                <label>
+                  <span>Опасность от</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={eventTemplateDraft.min_danger}
+                    onChange={(event) => setEventTemplateDraft({
+                      ...eventTemplateDraft,
+                      min_danger: Math.max(0, Math.min(5, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+
+                <label>
+                  <span>до</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={eventTemplateDraft.max_danger}
+                    onChange={(event) => setEventTemplateDraft({
+                      ...eventTemplateDraft,
+                      max_danger: Math.max(0, Math.min(5, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+
+                <label>
+                  <span>Шанс %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={eventTemplateDraft.chance_percent}
+                    onChange={(event) => setEventTemplateDraft({
+                      ...eventTemplateDraft,
+                      chance_percent: Math.max(0, Math.min(100, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+
+                <label>
+                  <span>Вес</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={eventTemplateDraft.weight}
+                    onChange={(event) => setEventTemplateDraft({
+                      ...eventTemplateDraft,
+                      weight: Math.max(1, Math.min(1000, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+              </div>
+
+              <label className="gm-check-row">
+                <input
+                  type="checkbox"
+                  checked={eventTemplateDraft.requires_gm}
+                  onChange={(event) => setEventTemplateDraft({
+                    ...eventTemplateDraft,
+                    requires_gm: event.target.checked,
+                  })}
+                />
+                <span>Остановить экспедицию и передать событие GM</span>
+              </label>
+
+              <label>
+                <span>Название, которое увидит игрок</span>
+                <input
+                  value={eventTemplateDraft.title}
+                  onChange={(event) => setEventTemplateDraft({
+                    ...eventTemplateDraft,
+                    title: event.target.value,
+                  })}
+                  placeholder="Шорох в чаще"
+                />
+              </label>
+
+              <label>
+                <span>Что происходит</span>
+                <textarea
+                  rows={4}
+                  value={eventTemplateDraft.player_prompt}
+                  onChange={(event) => setEventTemplateDraft({
+                    ...eventTemplateDraft,
+                    player_prompt: event.target.value,
+                  })}
+                  placeholder="Текст, который игрок увидит при срабатывании события."
+                />
+              </label>
+
+              {!eventTemplateDraft.requires_gm && (
+                <label>
+                  <span>Автоматический итог</span>
+                  <textarea
+                    rows={3}
+                    value={eventTemplateDraft.automatic_result}
+                    onChange={(event) => setEventTemplateDraft({
+                      ...eventTemplateDraft,
+                      automatic_result: event.target.value,
+                    })}
+                    placeholder="Чем закончилось событие. После этого сектор откроется автоматически."
+                  />
+                </label>
+              )}
+
+              <label>
+                <span>Секретная подсказка GM</span>
+                <textarea
+                  rows={3}
+                  value={eventTemplateDraft.gm_notes}
+                  onChange={(event) => setEventTemplateDraft({
+                    ...eventTemplateDraft,
+                    gm_notes: event.target.value,
+                  })}
+                  placeholder="Игрок это не видит."
+                />
+              </label>
+            </div>
+
+            <div className="gm-event-template-actions">
+              <button
+                className="primary-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void saveEventTemplate()}
+              >
+                {busy ? 'Сохраняем…' : eventTemplateDraft.id ? 'Сохранить изменения' : 'Создать шаблон'}
+              </button>
+
+              {eventTemplateDraft.id && (
+                <button
+                  className="ghost-button danger"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void deleteEventTemplate(eventTemplateDraft.id!)}
+                >
+                  Удалить
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </article>
+
       <article className="panel">
         <div className="section-heading">
           <div>
@@ -1179,10 +1465,17 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     <strong>{event.title}</strong>
                     <span>{character?.name ?? 'Неизвестный персонаж'} · сектор #{event.sector_id}</span>
                   </div>
-                  <span className="badge">ожидает</span>
+                  <span className="badge">
+                    {event.source_kind === 'random' ? 'случайное' : 'секторное'}
+                  </span>
                 </div>
 
                 <p>{event.player_prompt || 'Описание события для игрока не задано.'}</p>
+                {event.gm_notes && (
+                  <p className="gm-event-secret-note">
+                    <strong>GM:</strong> {event.gm_notes}
+                  </p>
+                )}
 
                 <textarea
                   rows={3}
