@@ -826,10 +826,12 @@ export function AdventuresPanel({
   }
 
   async function leaveDungeon(runId: string) {
-    setBusy(true)
-    setMessage('')
+    if (!window.confirm('Попытаться сбежать из подземелья? Шанс успеха — 80%. При провале HP упадёт до 1, а персонаж останется внутри.')) return
 
-    const { error } = await supabase.rpc('leave_dungeon_run', {
+    setBusy(true)
+    setMessage('Пытаемся выбраться из подземелья…')
+
+    const { data, error } = await supabase.rpc('attempt_leave_dungeon_run', {
       p_run_id: runId,
     })
 
@@ -839,8 +841,18 @@ export function AdventuresPanel({
       return
     }
 
-    await loadAdventures()
-    setMessage('Персонаж покинул подземелье. Его можно начать заново позже.')
+    const result = data as { escaped?: boolean; hp_current?: number; message?: string } | null
+
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      loadAdventures(),
+    ])
+
+    setMessage(
+      result?.escaped
+        ? 'Побег удался. Персонаж покинул подземелье; прохождение можно начать заново позже.'
+        : 'Побег провален. Персонаж остаётся в подземелье с 1 HP.',
+    )
     setBusy(false)
   }
 
@@ -1359,7 +1371,7 @@ export function AdventuresPanel({
                     : `Зал ${nextRoom} из ${totalRooms}`}
                 </strong>
                 <p className="muted">
-                  Здоровье между залами не восстанавливается автоматически. Можно продолжить или выйти и начать прохождение заново позже.
+                  Здоровье между залами не восстанавливается автоматически. Побег не гарантирован: 80% успеха, а при провале HP падает до 1 и персонаж остаётся внутри.
                 </p>
               </div>
 
@@ -1396,9 +1408,10 @@ export function AdventuresPanel({
                   className="ghost-button danger-button"
                   type="button"
                   disabled={busy}
+                  title="80% шанс успешно покинуть подземелье. При провале HP снизится до 1, и персонаж останется внутри."
                   onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
                 >
-                  Покинуть подземелье
+                  Попытаться уйти · 80%
                 </button>
               </div>
             </>
@@ -1594,9 +1607,10 @@ export function AdventuresPanel({
                   className="ghost-button danger-button"
                   type="button"
                   disabled={busy}
+                  title="80% шанс успешно сбежать. При провале HP снизится до 1, и бой продолжится."
                   onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
                 >
-                  Отступить
+                  Побег · 80%
                 </button>
               </div>
 
