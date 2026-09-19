@@ -93,6 +93,7 @@ function spellKindLabel(spell: CharacterSpell) {
   if (spell.spell_kind === 'guard') return 'Магический щит'
   if (spell.spell_kind === 'cleanse') return 'Очищение'
   if (spell.spell_kind === 'buff') return 'Усиление'
+  if (spell.spell_kind === 'taunt') return 'Провокация · только группа'
   return spell.damage_type ? damageTypeLabels[spell.damage_type] : 'Магия'
 }
 
@@ -223,7 +224,10 @@ export function AdventuresPanel({
 
     setSites(nextSites)
     setEncounters(nextEncounters)
-    setSpells((spellResult.data as CharacterSpell[] | null) ?? [])
+    setSpells(
+      ((spellResult.data as CharacterSpell[] | null) ?? [])
+        .filter((spell) => spell.spell_kind !== 'taunt'),
+    )
     const combatInventory = (scrollResult.data as CombatScroll[] | null) ?? []
     setCombatScrolls(
       combatInventory.filter((item) => {
