@@ -107,6 +107,16 @@ export type DamageType =
 export type PhysicalDamageType = Extract<DamageType, 'slashing' | 'piercing' | 'blunt'>
 export type ElementalDamageType = Extract<DamageType, 'fire' | 'water' | 'earth' | 'air' | 'lightning' | 'ice'>
 export type WeaponScaling = 'strength' | 'agility' | 'hybrid'
+export type BowWeaponFamily = 'short_bow' | 'long_bow'
+export type BowDistance = 'close' | 'medium' | 'far'
+
+export type BowProfile = {
+  weapon_family: BowWeaponFamily | null
+  full_draw_armor_penetration_percent: number
+  bloodshed_chance_percent: number
+  arrow_element_type: ElementalDamageType | null
+  arrow_element_percent: number
+}
 
 export type CombatStatusEffectType =
   | 'burn'
@@ -159,6 +169,12 @@ export type ItemDefinition = {
   damage_type: DamageType | null
   weapon_base_damage: number
   weapon_scaling: WeaponScaling | null
+  weapon_family: BowWeaponFamily | null
+  bow_full_draw_armor_penetration_percent: number
+  bloodshed_chance_percent: number
+  arrow_element_type: ElementalDamageType | null
+  arrow_element_percent: number
+  shop_sector_id: number | null
   damage_resistances: Partial<Record<DamageType, number>>
   damage_bonuses: Partial<Record<DamageType, number>>
   scroll_spell_id: string | null
@@ -416,6 +432,9 @@ export type CombatEncounter = {
   player_counter_blocked_damage: number
   player_spell_damage_bonus_percent: number
   player_spell_damage_bonus_hits: number
+  player_bow_distance: BowDistance
+  player_bow_draw_pending: boolean
+  enemy_bloodshed_stacks: number
   enemy_on_hit_effect_type: CombatStatusEffectType | null
   enemy_on_hit_effect_chance: number
   enemy_on_hit_effect_turns: number
@@ -475,6 +494,9 @@ export type SettlementShopItem = {
   damage_type: DamageType | null
   weapon_base_damage: number
   weapon_scaling: WeaponScaling | null
+  weapon_family: BowWeaponFamily | null
+  bow_full_draw_armor_penetration_percent: number
+  bloodshed_chance_percent: number
   damage_resistances: Partial<Record<DamageType, number>>
   damage_bonuses: Partial<Record<DamageType, number>>
   scroll_mode: 'learn' | 'cast' | null
@@ -629,7 +651,7 @@ export type DungeonLootDrop = {
 
 export type LootPoolEntry = {
   id: string
-  source_type: 'enemy' | 'dungeon'
+  source_type: 'enemy' | 'boss' | 'dungeon'
   enemy_template_id: string | null
   enemy_name: string | null
   sector_id: number | null
