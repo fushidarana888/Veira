@@ -319,6 +319,35 @@ export function WorldMap({
     return () => window.clearTimeout(timeout)
   }, [activeExpedition, activeSiteAction, now])
 
+  async function cancelExploration(expeditionId: string) {
+    if (!window.confirm('Отменить текущую экспедицию? Прогресс этого исследования будет потерян.')) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('cancel_sector_expedition', {
+      p_expedition_id: expeditionId,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('EXPEDITION_NOT_CANCELLABLE')) {
+        setMessage('Эту экспедицию уже нельзя отменить.')
+      } else if (raw.includes('EXPEDITION_ALREADY_FINISHED_OR_RESOLVING')) {
+        setMessage('Экспедиция уже завершает исследование. Обнови карту через несколько секунд.')
+      } else {
+        setMessage(raw)
+      }
+
+      setBusy(false)
+      return
+    }
+
+    await loadMapData()
+    setMessage('Экспедиция отменена. Можно выбрать другой сектор.')
+    setBusy(false)
+  }
+
   async function startExploration() {
     if (!selectedSector?.is_explorable) return
 
@@ -471,6 +500,14 @@ export function WorldMap({
           <div className="expedition-timer">
             <span>Осталось</span>
             <strong>{formatRemaining(remaining)}</strong>
+            <button
+              className="ghost-button danger-button expedition-cancel-button"
+              type="button"
+              disabled={busy}
+              onClick={() => void cancelExploration(activeExpedition.id)}
+            >
+              Отменить экспедицию
+            </button>
           </div>
         </article>
       )}
