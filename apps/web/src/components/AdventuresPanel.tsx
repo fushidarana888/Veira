@@ -93,7 +93,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
@@ -932,7 +932,7 @@ export function AdventuresPanel({
               </div>
 
               <div className="autobattle-note">
-                Автобой не придумывает билд за тебя. Если выключить физические атаки, маг никогда не ударит рукой. Если настроить защиту каждые 2 хода для босса, танк будет соблюдать эту ротацию. Заклинания используются строго по заданному тобой приоритету. Боевые свитки автоматически не тратятся.
+                Автобой не придумывает билд за тебя. Если выключить физические атаки, маг никогда не ударит рукой. После успешной защиты физический билд сначала тратит подготовленную контратаку, а уже потом снова может уйти в блок. Заклинания используются строго по заданному тобой приоритету. Боевые свитки автоматически не тратятся.
               </div>
 
               <button
@@ -1022,6 +1022,17 @@ export function AdventuresPanel({
                     <strong>{activeCombat.player_mana_current} / {activeCombat.player_mana_max}</strong>
                   </div>
                   <div className="combat-hp-meter mana"><span style={{ width: playerManaPercent + '%' }} /></div>
+                  {activeCombat.player_counter_bonus_percent > 0 && (
+                    <div className="combat-counter-ready">
+                      <strong>Контратака +{activeCombat.player_counter_bonus_percent}%</strong>
+                      <span>
+                        Следующая физическая атака усилена
+                        {activeCombat.player_counter_blocked_damage > 0
+                          ? ` · заблокировано ${activeCombat.player_counter_blocked_damage} урона`
+                          : ''}
+                      </span>
+                    </div>
+                  )}
                   {playerStatusEffects.length > 0 && (
                     <div className="combat-status-list">
                       {playerStatusEffects.map((effect) => (
@@ -1101,6 +1112,7 @@ export function AdventuresPanel({
                   className="ghost-button"
                   type="button"
                   disabled={busy}
+                  title="Снижает урон этого хода. Если удар реально заблокирован, следующая физическая атака получает +25–50% урона."
                   onClick={() => void performCombatAction('guard')}
                 >
                   Защита
@@ -1113,6 +1125,11 @@ export function AdventuresPanel({
                 >
                   Отступить
                 </button>
+              </div>
+
+              <div className="combat-guard-help">
+                <strong>Защита в соло:</strong> уменьшает входящий урон и, если враг действительно пробил по тебе,
+                подготавливает <b>только физическую</b> контратаку. Магия и заклинания бонус не получают.
               </div>
 
               {message && (
