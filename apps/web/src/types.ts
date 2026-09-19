@@ -503,3 +503,38 @@ export type CombatStatusEffect = {
   created_at: string
   updated_at: string
 }
+
+
+export type DungeonLootDrop = {
+  drop_id: string
+  source_type: 'enemy' | 'boss' | 'dungeon'
+  item_id: string
+  item_name: string
+  item_slug: string
+  category: ItemCategory
+  rarity: ItemRarity
+  quantity: number
+  combat_encounter_id: string | null
+  created_at: string
+}
+
+export type LootPoolEntry = {
+  id: string
+  source_type: 'enemy' | 'dungeon'
+  enemy_template_id: string | null
+  enemy_name: string | null
+  sector_id: number | null
+  sector_name: string | null
+  terrain_type: SectorTerrain | null
+  min_danger: number
+  max_danger: number
+  item_definition_id: string
+  item_name: string
+  item_rarity: ItemRarity
+  chance_percent: number
+  min_quantity: number
+  max_quantity: number
+  enabled: boolean
+  created_at: string
+  updated_at: string
+}
