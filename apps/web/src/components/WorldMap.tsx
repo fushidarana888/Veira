@@ -2,9 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
   CharacterMapSector,
+  DungeonRun,
   ExpeditionEventInstance,
   ExpeditionResult,
   SectorExpedition,
+  SectorSiteAction,
+  SectorSiteProgress,
 } from '../types'
 
 type Props = {
@@ -61,6 +64,9 @@ export function WorldMap({ characterId }: Props) {
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
   const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
   const [results, setResults] = useState<ExpeditionResult[]>([])
+  const [siteActions, setSiteActions] = useState<SectorSiteAction[]>([])
+  const [siteProgress, setSiteProgress] = useState<SectorSiteProgress[]>([])
+  const [dungeonRuns, setDungeonRuns] = useState<DungeonRun[]>([])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -72,7 +78,15 @@ export function WorldMap({ characterId }: Props) {
     setLoading(true)
     setMessage('')
 
-    const [mapResult, expeditionResult, eventResult, resultResult] = await Promise.all([
+    const [
+      mapResult,
+      expeditionResult,
+      eventResult,
+      resultResult,
+      siteActionResult,
+      siteProgressResult,
+      dungeonRunResult,
+    ] = await Promise.all([
       supabase.rpc('get_character_map_state', {
         p_character_id: characterId,
       }),
@@ -94,9 +108,32 @@ export function WorldMap({ characterId }: Props) {
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
+      supabase
+        .from('sector_site_actions')
+        .select('id, character_id, sector_id, action_type, status, started_at, ends_at, completed_at, result_title, result_text, created_at')
+        .eq('character_id', characterId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('character_sector_site_progress')
+        .select('character_id, sector_id, site_type, status, first_interacted_at, completed_at, updated_at')
+        .eq('character_id', characterId),
+      supabase
+        .from('dungeon_runs')
+        .select('id, character_id, sector_id, status, current_stage, rooms_cleared, started_at, ended_at, created_at')
+        .eq('character_id', characterId)
+        .order('created_at', { ascending: false })
+        .limit(20),
     ])
 
-    const error = mapResult.error ?? expeditionResult.error ?? eventResult.error ?? resultResult.error
+    const error =
+      mapResult.error ??
+      expeditionResult.error ??
+      eventResult.error ??
+      resultResult.error ??
+      siteActionResult.error ??
+      siteProgressResult.error ??
+      dungeonRunResult.error
 
     if (error) {
       setMessage(error.message)
@@ -108,6 +145,9 @@ export function WorldMap({ characterId }: Props) {
     setExpeditions((expeditionResult.data as SectorExpedition[] | null) ?? [])
     setEvents((eventResult.data as ExpeditionEventInstance[] | null) ?? [])
     setResults((resultResult.data as ExpeditionResult[] | null) ?? [])
+    setSiteActions((siteActionResult.data as SectorSiteAction[] | null) ?? [])
+    setSiteProgress((siteProgressResult.data as SectorSiteProgress[] | null) ?? [])
+    setDungeonRuns((dungeonRunResult.data as DungeonRun[] | null) ?? [])
     setLoading(false)
   }
 
@@ -144,14 +184,29 @@ export function WorldMap({ characterId }: Props) {
 
   const latestResult = results[0] ?? null
 
+  const activeSiteAction =
+    siteActions.find((entry) => entry.status === 'active') ?? null
+  const recentSiteResult =
+    siteActions.find((entry) => entry.status === 'completed' && entry.result_text.trim()) ?? null
+  const activeDungeonRun =
+    dungeonRuns.find((entry) => entry.status === 'active') ?? null
+
+  const siteProgressBySector = useMemo(
+    () => new Map(siteProgress.map((entry) => [entry.sector_id, entry])),
+    [siteProgress],
+  )
+
+  const anyBlockingActivity = Boolean(openExpedition || activeSiteAction || activeDungeonRun)
+
   const selectedSector = selectedSectorId
     ? sectorById.get(selectedSectorId) ?? null
     : null
 
   useEffect(() => {
-    if (!activeExpedition) return
+    const activeTimedAction = activeExpedition ?? activeSiteAction
+    if (!activeTimedAction) return
 
-    const endsAt = new Date(activeExpedition.ends_at).getTime()
+    const endsAt = new Date(activeTimedAction.ends_at).getTime()
     if (now < endsAt) return
 
     const timeout = window.setTimeout(() => {
@@ -159,7 +214,7 @@ export function WorldMap({ characterId }: Props) {
     }, 700)
 
     return () => window.clearTimeout(timeout)
-  }, [activeExpedition, now])
+  }, [activeExpedition, activeSiteAction, now])
 
   async function startExploration() {
     if (!selectedSector?.is_explorable) return
@@ -191,6 +246,74 @@ export function WorldMap({ characterId }: Props) {
     setBusy(false)
   }
 
+  async function startSiteAction(actionType: 'explore_ruins' | 'scout_dungeon') {
+    if (!selectedSector?.is_discovered) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('start_sector_site_action', {
+      p_character_id: characterId,
+      p_sector_id: selectedSector.id,
+      p_action_type: actionType,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('EXPEDITION_ALREADY_ACTIVE')) {
+        setMessage('Сначала заверши текущую экспедицию.')
+      } else if (raw.includes('SITE_ACTION_ALREADY_ACTIVE')) {
+        setMessage('Персонаж уже занят исследованием найденного места.')
+      } else if (raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
+        setMessage('Персонаж уже находится в подземелье.')
+      } else if (raw.includes('RUINS_ALREADY_EXPLORED')) {
+        setMessage('Эти руины уже исследованы.')
+      } else if (raw.includes('DUNGEON_ALREADY_SCOUTED')) {
+        setMessage('Вход в это подземелье уже разведан.')
+      } else {
+        setMessage(raw)
+      }
+
+      setBusy(false)
+      return
+    }
+
+    await loadMapData()
+    setBusy(false)
+  }
+
+  async function enterDungeon() {
+    if (!selectedSector?.is_discovered) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('start_dungeon_run', {
+      p_character_id: characterId,
+      p_sector_id: selectedSector.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('DUNGEON_NOT_SCOUTED')) {
+        setMessage('Сначала разведай вход в подземелье.')
+      } else if (raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
+        setMessage('У персонажа уже есть активное прохождение подземелья.')
+      } else if (raw.includes('EXPEDITION_ALREADY_ACTIVE') || raw.includes('SITE_ACTION_ALREADY_ACTIVE')) {
+        setMessage('Сначала заверши текущее исследование.')
+      } else {
+        setMessage(raw)
+      }
+
+      setBusy(false)
+      return
+    }
+
+    await loadMapData()
+    setMessage('Прохождение подземелья начато. Продолжение доступно в разделе «Приключения».')
+    setBusy(false)
+  }
+
   if (loading && sectors.length === 0) {
     return (
       <section className="panel world-loading-panel">
@@ -202,6 +325,10 @@ export function WorldMap({ characterId }: Props) {
 
   const remaining = activeExpedition
     ? new Date(activeExpedition.ends_at).getTime() - now
+    : 0
+
+  const siteActionRemaining = activeSiteAction
+    ? new Date(activeSiteAction.ends_at).getTime() - now
     : 0
 
   return (
