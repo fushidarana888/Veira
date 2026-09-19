@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { SettlementShopItem } from '../types'
+import type { DamageType, SettlementShopItem } from '../types'
 
 type Props = {
   characterId: string
@@ -25,6 +25,18 @@ const rarityLabels: Record<string, string> = {
   epic: 'Эпический',
   legendary: 'Легендарный',
   unique: 'Уникальный',
+}
+
+const damageTypeLabels: Record<DamageType, string> = {
+  slashing: 'Режущий',
+  piercing: 'Колющий',
+  blunt: 'Дробящий',
+  fire: 'Огненный',
+  water: 'Водный',
+  earth: 'Земляной',
+  air: 'Воздушный',
+  lightning: 'Электрический',
+  ice: 'Ледяной',
 }
 
 const statLabels: Record<string, string> = {
@@ -169,6 +181,8 @@ export function SettlementShop({
               {categoryItems.map((item) => {
                 const modifiers = Object.entries(item.stat_modifiers ?? {})
                   .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
+                const resistances = Object.entries(item.damage_resistances ?? {})
+                  .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
                 const locked = !item.level_unlocked
                 const busy = busyItemId === item.item_id
 
@@ -193,6 +207,22 @@ export function SettlementShop({
 
                     {item.heal_amount > 0 && (
                       <div className="shop-item-effect">+{item.heal_amount} HP</div>
+                    )}
+
+                    {item.damage_type && (
+                      <div className="damage-type-chip">
+                        Тип урона · {damageTypeLabels[item.damage_type]}
+                      </div>
+                    )}
+
+                    {resistances.length > 0 && (
+                      <div className="resistance-list">
+                        {resistances.map(([type, value]) => (
+                          <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
+                            {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                          </span>
+                        ))}
+                      </div>
                     )}
 
                     {modifiers.length > 0 && (
