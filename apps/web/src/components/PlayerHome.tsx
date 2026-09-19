@@ -9,6 +9,7 @@ import type {
   CharacterItem,
   CharacterProgress,
   EquipmentSlot,
+  DamageType,
   ItemDefinition,
   Profile,
 } from '../types'
@@ -41,6 +42,18 @@ const rarityLabels: Record<ItemDefinition['rarity'], string> = {
   epic: 'Эпический',
   legendary: 'Легендарный',
   unique: 'Уникальный',
+}
+
+const damageTypeLabels: Record<DamageType, string> = {
+  slashing: 'Режущий',
+  piercing: 'Колющий',
+  blunt: 'Дробящий',
+  fire: 'Огненный',
+  water: 'Водный',
+  earth: 'Земляной',
+  air: 'Воздушный',
+  lightning: 'Электрический',
+  ice: 'Ледяной',
 }
 
 const statLabels: Record<StatKey, string> = {
@@ -79,18 +92,22 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
   }, [character.character_progress])
 
   async function loadProgress() {
-    const { data, error } = await supabase
-      .from('character_progress')
-      .select('character_id, level, experience, hp_current, hp_max, strength, agility, intellect, vitality, luck, gold, unspent_stat_points, updated_at')
-      .eq('character_id', character.id)
-      .single()
+    const { data, error } = await supabase.rpc('get_character_progress_state', {
+      p_character_id: character.id,
+    })
 
     if (error) {
       setProgressMessage(error.message)
       return null
     }
 
-    const nextProgress = data as CharacterProgress
+    const nextProgress = (Array.isArray(data) ? data[0] : data) as CharacterProgress | null
+
+    if (!nextProgress) {
+      setProgressMessage('Прогресс персонажа не найден.')
+      return null
+    }
+
     setProgress(nextProgress)
     return nextProgress
   }
@@ -130,7 +147,9 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
               required_level,
               shop_tier,
               shop_price,
-              shop_enabled
+              shop_enabled,
+              damage_type,
+              damage_resistances
             )
           `)
           .eq('character_id', character.id)
@@ -153,6 +172,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
   }
 
   useEffect(() => {
+    void loadProgress()
     void loadInventory()
   }, [character.id])
 
@@ -554,6 +574,8 @@ function InventoryPanel({
             const modifiers = Object.entries(definition.stat_modifiers ?? {})
               .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
             const healingAmount = getHealingAmount(definition)
+            const resistances = Object.entries(definition.damage_resistances ?? {})
+              .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
 
             return (
               <article className={'item-card rarity-' + definition.rarity} key={item.id}>
@@ -569,6 +591,22 @@ function InventoryPanel({
                 </div>
 
                 <p>{definition.description}</p>
+
+                {definition.damage_type && (
+                  <div className="damage-type-chip">
+                    Тип урона · {damageTypeLabels[definition.damage_type]}
+                  </div>
+                )}
+
+                {resistances.length > 0 && (
+                  <div className="resistance-list">
+                    {resistances.map(([type, value]) => (
+                      <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
+                        {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {modifiers.length > 0 && (
                   <div className="modifier-list">
