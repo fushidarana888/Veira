@@ -123,6 +123,7 @@ type PartySpell = {
   flat_power: number
   learned_at: string
   source: string
+  combat_slot: number | null
 }
 
 type PartyStatus = {
@@ -222,6 +223,7 @@ function coopError(raw: string) {
   if (raw.includes('PARTY_ROOM_COMBAT_ALREADY_EXISTS')) return 'Этот зал уже был разыгран.'
   if (raw.includes('PARTY_DUNGEON_ACTIVE')) return 'Сначала заверши текущий групповой поход.'
   if (raw.includes('NOT_ENOUGH_MANA')) return 'Недостаточно маны для этого заклинания.'
+  if (raw.includes('SPELL_NOT_IN_LOADOUT')) return 'Это заклинание не входит в текущий боевой набор.'
   if (raw.includes('SPELL_NOT_LEARNED')) return 'Это заклинание не изучено персонажем.'
   if (raw.includes('ALREADY_FULL_HEALTH')) return 'У выбранного союзника уже полное здоровье.'
   if (raw.includes('PARTY_TARGET_DOWNED')) return 'На мёртвого союзника сейчас можно применить только лечение-воскрешение.'
@@ -336,7 +338,7 @@ export function PartyDungeonPanel({
     setState(nextState)
     setSpells(
       ((spellResult.data as PartySpell[] | null) ?? [])
-        .filter((spell) => ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt'].includes(spell.spell_kind)),
+        .filter((spell) => spell.combat_slot !== null && ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt'].includes(spell.spell_kind)),
     )
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
 
