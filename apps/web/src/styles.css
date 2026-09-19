@@ -2086,7 +2086,7 @@ textarea {
 .gm-map-sector.configured {
   border-color: rgba(143, 176, 121, .28);
   color: #ff4b4b;
-  font-size: 10px;
+  font-size: 15px;
 }
 
 .gm-map-sector.has-event {
