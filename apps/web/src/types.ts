@@ -307,3 +307,37 @@ export type CharacterAdventureSite = {
   run_stage: string | null
   run_started_at: string | null
 }
+
+
+export type CombatEncounter = {
+  id: string
+  dungeon_run_id: string
+  character_id: string
+  sector_id: number
+  status: 'active' | 'victory' | 'defeat' | 'cancelled'
+  round: number
+  enemy_name: string
+  enemy_level: number
+  enemy_hp_current: number
+  enemy_hp_max: number
+  enemy_attack: number
+  enemy_defense: number
+  enemy_initiative: number
+  player_hp_current: number
+  player_hp_max: number
+  created_at: string
+  ended_at: string | null
+}
+
+export type CombatTurn = {
+  id: number
+  encounter_id: string
+  round: number
+  actor: 'player' | 'enemy' | 'system'
+  action_type: string
+  damage: number
+  player_hp_after: number
+  enemy_hp_after: number
+  message: string
+  created_at: string
+}
