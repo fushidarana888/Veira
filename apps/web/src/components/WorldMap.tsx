@@ -13,6 +13,10 @@ type Props = {
 const TOTAL_SECTORS = 300
 const EXPLORATION_HOURS = 12
 
+const ORIGINAL_MAP_URL = supabase.storage
+  .from('veira-assets')
+  .getPublicUrl('eilar-map-original.png').data.publicUrl + '?v=original-1'
+
 function isAdjacent(a: MapSector, b: MapSector) {
   return (
     Math.abs(a.grid_col - b.grid_col) <= 1 &&
@@ -42,6 +46,7 @@ export function WorldMap({ characterId }: Props) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [now, setNow] = useState(() => Date.now())
+  const [mapSrc, setMapSrc] = useState(ORIGINAL_MAP_URL)
 
   async function loadMapData() {
     setLoading(true)
@@ -227,9 +232,13 @@ export function WorldMap({ characterId }: Props) {
       <div className="eilar-map-frame">
         <div className="eilar-map-stage">
           <img
-            src={import.meta.env.BASE_URL + 'eilar-map.webp?v=20260919-2'}
+            src={mapSrc}
             alt="Карта Эйлара"
             draggable={false}
+            onError={() => {
+              const fallback = import.meta.env.BASE_URL + 'eilar-map.webp?v=20260919-2'
+              if (mapSrc !== fallback) setMapSrc(fallback)
+            }}
           />
 
           <div className="fog-grid" aria-label="Сектора карты Эйлара">
