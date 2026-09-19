@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { DamageType, EnemyTemplate, SectorTerrain } from '../types'
+import type { CombatStatusEffectType, DamageType, EnemyTemplate, SectorTerrain } from '../types'
 
 const damageTypes: DamageType[] = [
   'slashing',
@@ -12,6 +12,16 @@ const damageTypes: DamageType[] = [
   'air',
   'lightning',
   'ice',
+]
+
+const statusEffectOptions: Array<{ value: CombatStatusEffectType; label: string }> = [
+  { value: 'burn', label: 'Горение' },
+  { value: 'bleed', label: 'Кровотечение' },
+  { value: 'poison', label: 'Яд' },
+  { value: 'chill', label: 'Охлаждение' },
+  { value: 'stun', label: 'Оглушение' },
+  { value: 'weaken', label: 'Ослабление' },
+  { value: 'vulnerable', label: 'Уязвимость' },
 ]
 
 const damageLabels: Record<DamageType, string> = {
@@ -55,6 +65,10 @@ type Draft = {
   attack_multiplier: number
   defense_multiplier: number
   initiative_multiplier: number
+  on_hit_effect_type: CombatStatusEffectType | null
+  on_hit_effect_chance: number
+  on_hit_effect_turns: number
+  on_hit_effect_potency: number
 }
 
 function emptyDraft(): Draft {
@@ -75,6 +89,10 @@ function emptyDraft(): Draft {
     attack_multiplier: 1,
     defense_multiplier: 1,
     initiative_multiplier: 1,
+    on_hit_effect_type: null,
+    on_hit_effect_chance: 0,
+    on_hit_effect_turns: 0,
+    on_hit_effect_potency: 0,
   }
 }
 
@@ -117,6 +135,10 @@ export function GmEnemyTemplates() {
       attack_multiplier: Number(template.attack_multiplier),
       defense_multiplier: Number(template.defense_multiplier),
       initiative_multiplier: Number(template.initiative_multiplier),
+      on_hit_effect_type: template.on_hit_effect_type,
+      on_hit_effect_chance: template.on_hit_effect_chance,
+      on_hit_effect_turns: template.on_hit_effect_turns,
+      on_hit_effect_potency: template.on_hit_effect_potency,
     })
     setMessage('')
   }
@@ -147,6 +169,10 @@ export function GmEnemyTemplates() {
       p_attack_multiplier: draft.attack_multiplier,
       p_defense_multiplier: draft.defense_multiplier,
       p_initiative_multiplier: draft.initiative_multiplier,
+      p_on_hit_effect_type: draft.on_hit_effect_type,
+      p_on_hit_effect_chance: draft.on_hit_effect_chance,
+      p_on_hit_effect_turns: draft.on_hit_effect_turns,
+      p_on_hit_effect_potency: draft.on_hit_effect_potency,
     })
 
     if (error) {
@@ -386,6 +412,87 @@ export function GmEnemyTemplates() {
               <input type="number" min={0.25} max={5} step={0.05} value={draft.initiative_multiplier}
                 onChange={(event) => setDraft({ ...draft, initiative_multiplier: Number(event.target.value) })} />
             </label>
+          </div>
+
+          <div className="gm-enemy-resistances">
+            <div>
+              <strong>Эффект при попадании</strong>
+              <span>Необязательный статус, который враг может наложить своей обычной атакой.</span>
+            </div>
+
+            <div className="gm-enemy-resistance-grid">
+              <label>
+                <span>Эффект</span>
+                <select
+                  value={draft.on_hit_effect_type ?? ''}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    on_hit_effect_type: event.target.value
+                      ? event.target.value as CombatStatusEffectType
+                      : null,
+                    on_hit_effect_chance: event.target.value
+                      ? Math.max(1, draft.on_hit_effect_chance || 25)
+                      : 0,
+                    on_hit_effect_turns: event.target.value
+                      ? Math.max(1, draft.on_hit_effect_turns || 1)
+                      : 0,
+                    on_hit_effect_potency: event.target.value
+                      ? draft.on_hit_effect_potency
+                      : 0,
+                  })}
+                >
+                  <option value="">Нет</option>
+                  {statusEffectOptions.map((effect) => (
+                    <option key={effect.value} value={effect.value}>{effect.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Шанс %</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  disabled={!draft.on_hit_effect_type}
+                  value={draft.on_hit_effect_chance}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    on_hit_effect_chance: Math.max(0, Math.min(100, Number(event.target.value))),
+                  })}
+                />
+              </label>
+
+              <label>
+                <span>Ходов</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  disabled={!draft.on_hit_effect_type}
+                  value={draft.on_hit_effect_turns}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    on_hit_effect_turns: Math.max(0, Math.min(10, Number(event.target.value))),
+                  })}
+                />
+              </label>
+
+              <label>
+                <span>Сила</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1000}
+                  disabled={!draft.on_hit_effect_type}
+                  value={draft.on_hit_effect_potency}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    on_hit_effect_potency: Math.max(0, Number(event.target.value)),
+                  })}
+                />
+              </label>
+            </div>
           </div>
 
           <div className="gm-enemy-resistances">
