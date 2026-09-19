@@ -28,19 +28,39 @@ type CombatScroll = {
     id: string
     name: string
     required_level: number
-    scroll_mode: 'cast' | null
+    category: 'consumable'
+    effects: unknown[]
+    scroll_mode: 'learn' | 'cast' | null
     scroll_spell_id: string | null
   } | {
     id: string
     name: string
     required_level: number
-    scroll_mode: 'cast' | null
+    category: 'consumable'
+    effects: unknown[]
+    scroll_mode: 'learn' | 'cast' | null
     scroll_spell_id: string | null
   }[] | null
 }
 
 function normalizeCombatScrollDefinition(value: CombatScroll['item_definitions']) {
   return Array.isArray(value) ? value[0] ?? null : value
+}
+
+function combatResourceAmounts(value: CombatScroll['item_definitions']) {
+  const definition = normalizeCombatScrollDefinition(value)
+  let heal = 0
+  let mana = 0
+
+  for (const effect of definition?.effects ?? []) {
+    if (!effect || typeof effect !== 'object' || !('type' in effect) || !('amount' in effect)) continue
+    const type = String((effect as { type?: unknown }).type ?? '')
+    const amount = Math.max(0, Number((effect as { amount?: unknown }).amount) || 0)
+    if (type === 'heal_hp') heal += amount
+    if (type === 'restore_mana') mana += amount
+  }
+
+  return { heal, mana }
 }
 
 const statusEffectLabels: Record<CombatStatusEffectType, string> = {
@@ -76,6 +96,7 @@ export function AdventuresPanel({
   const [statusEffects, setStatusEffects] = useState<CombatStatusEffect[]>([])
   const [spells, setSpells] = useState<CharacterSpell[]>([])
   const [combatScrolls, setCombatScrolls] = useState<CombatScroll[]>([])
+  const [combatConsumables, setCombatConsumables] = useState<CombatScroll[]>([])
   const [lootDrops, setLootDrops] = useState<DungeonLootDrop[]>([])
   const [autobattleSettings, setAutobattleSettings] = useState<AutobattleSettings | null>(null)
   const [autobattleSpellRules, setAutobattleSpellRules] = useState<AutobattleSpellRule[]>([])
@@ -93,7 +114,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
@@ -102,7 +123,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('character_items')
-        .select('id, quantity, item_definitions(id, name, required_level, scroll_mode, scroll_spell_id)')
+        .select('id, quantity, item_definitions(id, name, required_level, category, effects, scroll_mode, scroll_spell_id)')
         .eq('character_id', characterId),
       supabase.rpc('get_character_autobattle_settings', {
         p_character_id: characterId,
@@ -132,11 +153,19 @@ export function AdventuresPanel({
     setSites(nextSites)
     setEncounters(nextEncounters)
     setSpells((spellResult.data as CharacterSpell[] | null) ?? [])
+    const combatInventory = (scrollResult.data as CombatScroll[] | null) ?? []
     setCombatScrolls(
-      (((scrollResult.data as CombatScroll[] | null) ?? []).filter((item) => {
+      combatInventory.filter((item) => {
         const definition = normalizeCombatScrollDefinition(item.item_definitions)
         return definition?.scroll_mode === 'cast' && Boolean(definition.scroll_spell_id)
-      }))
+      }),
+    )
+    setCombatConsumables(
+      combatInventory.filter((item) => {
+        const definition = normalizeCombatScrollDefinition(item.item_definitions)
+        const resources = combatResourceAmounts(item.item_definitions)
+        return definition?.scroll_mode == null && (resources.heal > 0 || resources.mana > 0)
+      }),
     )
     setAutobattleSettings(
       (Array.isArray(autobattleResult.data)
@@ -329,6 +358,8 @@ export function AdventuresPanel({
         setMessage('Недостаточно маны для этого заклинания.')
       } else if (raw.includes('SPELL_NOT_LEARNED')) {
         setMessage('Это заклинание не изучено персонажем.')
+      } else if (raw.includes('ALREADY_FULL_HEALTH')) {
+        setMessage('Здоровье уже полное.')
       } else {
         setMessage(raw)
       }
@@ -368,6 +399,40 @@ export function AdventuresPanel({
         setMessage(raw)
       }
 
+      setBusy(false)
+      return
+    }
+
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      Promise.resolve(onInventoryChanged?.()),
+    ])
+    await loadAdventures()
+    setBusy(false)
+  }
+
+  async function useCombatConsumable(item: CombatScroll) {
+    if (!activeCombat) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('use_combat_consumable', {
+      p_encounter_id: activeCombat.id,
+      p_character_item_id: item.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('ALREADY_FULL_RESOURCES')) {
+        setMessage('HP и мана уже заполнены настолько, что этот предмет ничего не восстановит.')
+      } else if (raw.includes('ITEM_IS_NOT_COMBAT_CONSUMABLE')) {
+        setMessage('Этот расходник нельзя использовать в бою.')
+      } else if (raw.includes('LEVEL_TOO_LOW')) {
+        setMessage('Уровень персонажа слишком низкий для этого расходника.')
+      } else {
+        setMessage(raw)
+      }
       setBusy(false)
       return
     }
@@ -932,7 +997,7 @@ export function AdventuresPanel({
               </div>
 
               <div className="autobattle-note">
-                Автобой не придумывает билд за тебя. Если выключить физические атаки, маг никогда не ударит рукой. После успешной защиты физический билд сначала тратит подготовленную контратаку, а уже потом снова может уйти в блок. Заклинания используются строго по заданному тобой приоритету. Боевые свитки автоматически не тратятся.
+                Автобой не придумывает билд за тебя и не знает будущие действия врага. Но если противник уже начал явно готовить особую атаку, автобой может уйти в защиту — только при включённом режиме защиты. Физическая контратака после блока тратится первой. Боевые свитки и зелья автоматически не расходуются.
               </div>
 
               <button
@@ -1081,6 +1146,23 @@ export function AdventuresPanel({
                 </div>
               </div>
 
+              {activeCombat.enemy_special_charging && (
+                <div className="enemy-special-warning" role="status" aria-live="polite">
+                  <span>ПОДГОТОВКА ОСОБОЙ АТАКИ</span>
+                  <strong>{activeCombat.enemy_special_name || 'Усиленная атака'}</strong>
+                  <p>
+                    Противник уже начал подготовку. На следующем его действии атака сработает, если её не сорвать.
+                    {activeCombat.enemy_special_damage_type
+                      ? ' Тип урона: ' + damageTypeLabels[activeCombat.enemy_special_damage_type] + '.'
+                      : ''}
+                    {Number(activeCombat.enemy_special_damage_multiplier) > 0
+                      ? ' Сила: ×' + Number(activeCombat.enemy_special_damage_multiplier).toFixed(2) + '.'
+                      : ''}
+                  </p>
+                  <small>Это не скрытая информация: подготовка уже произошла в истории боя. Защита сейчас уменьшит этот удар.</small>
+                </div>
+              )}
+
               <div className="combat-actions">
                 <button
                   className="autobattle-button"
@@ -1138,7 +1220,7 @@ export function AdventuresPanel({
                 </p>
               )}
 
-              {(spells.length > 0 || combatScrolls.length > 0) && (
+              {(spells.length > 0 || combatScrolls.length > 0 || combatConsumables.length > 0) && (
                 <div className="combat-special-actions">
                   {spells.length > 0 && (
                     <div className="combat-spell-section">
@@ -1147,19 +1229,25 @@ export function AdventuresPanel({
                         <span>расходуют ману</span>
                       </div>
                       <div className="combat-spell-grid">
-                        {spells
-                          .filter((spell) => spell.spell_kind === 'damage' && spell.damage_type)
-                          .map((spell) => (
+                        {spells.map((spell) => (
                             <button
                               className="spell-action-button"
                               type="button"
                               key={spell.id}
-                              disabled={busy || activeCombat.player_mana_current < spell.mana_cost}
+                              disabled={
+                                busy
+                                || activeCombat.player_mana_current < spell.mana_cost
+                                || (spell.spell_kind === 'heal' && activeCombat.player_hp_current >= activeCombat.player_hp_max)
+                              }
                               onClick={() => void castSpell(spell)}
                             >
                               <strong>{spell.name}</strong>
                               <span>
-                                {spell.damage_type ? damageTypeLabels[spell.damage_type] : 'Магия'}
+                                {spell.spell_kind === 'heal'
+                                  ? 'Лечение'
+                                  : spell.damage_type
+                                    ? damageTypeLabels[spell.damage_type]
+                                    : 'Магия'}
                                 {' · '}{spell.mana_cost} маны
                                 {spell.status_effect_type
                                   ? ' · ' + statusEffectLabels[spell.status_effect_type] + ' ' + spell.status_effect_chance + '%'
@@ -1192,6 +1280,42 @@ export function AdventuresPanel({
                             >
                               <strong>{definition.name}</strong>
                               <span>×{scroll.quantity} · одно применение</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {combatConsumables.length > 0 && (
+                    <div className="combat-spell-section">
+                      <div className="combat-special-heading">
+                        <strong>Зелья и расходники</strong>
+                        <span>использование занимает ход</span>
+                      </div>
+                      <div className="combat-spell-grid">
+                        {combatConsumables.map((item) => {
+                          const definition = normalizeCombatScrollDefinition(item.item_definitions)
+                          if (!definition) return null
+                          const resources = combatResourceAmounts(item.item_definitions)
+                          const noUsefulHeal = resources.heal <= 0 || activeCombat.player_hp_current >= activeCombat.player_hp_max
+                          const noUsefulMana = resources.mana <= 0 || activeCombat.player_mana_current >= activeCombat.player_mana_max
+                          const disabled = busy || (noUsefulHeal && noUsefulMana)
+
+                          return (
+                            <button
+                              className="spell-action-button consumable"
+                              type="button"
+                              key={item.id}
+                              disabled={disabled}
+                              onClick={() => void useCombatConsumable(item)}
+                            >
+                              <strong>{definition.name}</strong>
+                              <span>
+                                ×{item.quantity}
+                                {resources.heal > 0 ? ' · +' + resources.heal + ' HP' : ''}
+                                {resources.mana > 0 ? ' · +' + resources.mana + ' MP' : ''}
+                              </span>
                             </button>
                           )
                         })}
