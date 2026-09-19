@@ -76,6 +76,8 @@ export function App() {
           experience,
           hp_current,
           hp_max,
+          mana_current,
+          mana_max,
           strength,
           agility,
           intellect,
