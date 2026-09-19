@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { PartyPanel } from './PartyPanel'
+import { PartyDungeonPanel } from './PartyDungeonPanel'
 import type {
   AutobattleGuardMode,
   AutobattleResult,
@@ -349,6 +350,8 @@ export function AdventuresPanel({
         setMessage('Сначала разведай вход через карту мира.')
       } else if (raw.includes('EXPEDITION_ALREADY_ACTIVE') || raw.includes('SITE_ACTION_ALREADY_ACTIVE')) {
         setMessage('Сначала заверши текущее исследование.')
+      } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
+        setMessage('Сначала заверши текущий групповой поход.')
       } else {
         setMessage(raw)
       }
@@ -924,7 +927,13 @@ export function AdventuresPanel({
 
       <PartyPanel characterId={characterId} />
 
-      {message && <p className="gm-notice" aria-live="polite">{message}</p>}
+      <PartyDungeonPanel
+        characterId={characterId}
+        onProgressChanged={onProgressChanged}
+        onInventoryChanged={onInventoryChanged}
+      />
+
+      {message && <p className="gm-notice" aria-live="polite">{message}</p>
 
       {activeDungeon && activeDungeon.active_run_id && (
         <article className="panel active-dungeon-panel">
