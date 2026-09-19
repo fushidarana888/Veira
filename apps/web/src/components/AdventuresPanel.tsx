@@ -167,6 +167,7 @@ export function AdventuresPanel({
   const [turns, setTurns] = useState<CombatTurn[]>([])
   const [statusEffects, setStatusEffects] = useState<CombatStatusEffect[]>([])
   const [spells, setSpells] = useState<CharacterSpell[]>([])
+  const [preparedSpells, setPreparedSpells] = useState<CharacterSpell[]>([])
   const [combatScrolls, setCombatScrolls] = useState<CombatScroll[]>([])
   const [combatConsumables, setCombatConsumables] = useState<CombatScroll[]>([])
   const [lootDrops, setLootDrops] = useState<DungeonLootDrop[]>([])
@@ -234,9 +235,14 @@ export function AdventuresPanel({
 
     setSites(nextSites)
     setEncounters(nextEncounters)
+    const allCharacterSpells = (spellResult.data as CharacterSpell[] | null) ?? []
+    const nextPreparedSpells = allCharacterSpells
+      .filter((spell) => spell.combat_slot !== null && spell.spell_kind !== 'sacrifice')
+      .sort((a, b) => (a.combat_slot ?? 99) - (b.combat_slot ?? 99))
+    setPreparedSpells(nextPreparedSpells)
     setSpells(
-      ((spellResult.data as CharacterSpell[] | null) ?? [])
-        .filter((spell) => spell.combat_slot !== null && !['taunt', 'sacrifice'].includes(spell.spell_kind)),
+      nextPreparedSpells
+        .filter((spell) => spell.spell_kind !== 'taunt'),
     )
     const combatInventory = (scrollResult.data as CombatScroll[] | null) ?? []
     setCombatScrolls(
@@ -1959,9 +1965,13 @@ export function AdventuresPanel({
           </div>
 
           <div className="dungeon-reward-preview">
-            <span>Боевой набор · {spells.length}/3</span>
-            <strong>{spells.length > 0 ? spells.map((spell) => spell.name).join(' · ') : 'без заклинаний'}</strong>
-            <small>Набор фиксируется после входа в подземелье. Изменить его можно заранее в разделе «Магия».</small>
+            <span>Боевой набор · {preparedSpells.length}/3</span>
+            <strong>{preparedSpells.length > 0 ? preparedSpells.map((spell) => spell.name).join(' · ') : 'без заклинаний'}</strong>
+            <small>
+              {preparedSpells.length === 1
+                ? 'Концентрация активна. Набор фиксируется после входа в подземелье.'
+                : 'Набор фиксируется после входа в подземелье. Изменить его можно заранее в разделе «Магия».'}
+            </small>
           </div>
 
           <div className="adventure-site-list">
