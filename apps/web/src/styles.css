@@ -2505,3 +2505,21 @@ textarea {
 .gm-map-sector.unconfigured-highlight:hover {
   background: rgba(255, 193, 61, .42);
 }
+
+
+.gm-unconfigured-filter {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #aeb5bf;
+  font-size: 11px;
+}
+
+.gm-unconfigured-filter select {
+  min-height: 34px;
+  border: 1px solid #343b45;
+  border-radius: 9px;
+  background: #10151b;
+  color: #e7e9ec;
+  padding: 6px 9px;
+}
