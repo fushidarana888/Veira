@@ -286,8 +286,8 @@ export function PartyDungeonPanel({
     const nextOptions = (optionResult.data as DungeonOption[] | null) ?? []
     const rawState = (dungeonResult.data as Partial<PartyDungeonState> | null) ?? {}
     const nextState: PartyDungeonState = {
-      ...emptyState,
-      ...rawState,
+      run: rawState.run ?? null,
+      encounter: rawState.encounter ?? null,
       members: Array.isArray(rawState.members) ? rawState.members : [],
       statuses: Array.isArray(rawState.statuses) ? rawState.statuses : [],
       turns: Array.isArray(rawState.turns) ? rawState.turns : [],
