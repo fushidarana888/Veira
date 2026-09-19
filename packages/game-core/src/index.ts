@@ -25,6 +25,9 @@ export type StatModifiers = Partial<Record<StatKey, number>>
 export type DerivedCombatStats = {
   physicalPower: number
   magicPower: number
+  physicalDefense: number
+  magicDefense: number
+  /** @deprecated Legacy alias for physicalDefense. */
   defense: number
   initiative: number
 }
@@ -46,10 +49,15 @@ export function calculateDerivedCombatStats(
 ): DerivedCombatStats {
   const safeLevel = Math.max(1, Math.floor(level))
 
+  const physicalDefense = stats.vitality * 2 + stats.agility + safeLevel
+  const magicDefense = stats.vitality + stats.intellect + safeLevel
+
   return {
     physicalPower: stats.strength * 3 + stats.agility + safeLevel * 2,
     magicPower: stats.intellect * 3 + stats.luck + safeLevel * 2,
-    defense: stats.vitality * 2 + stats.agility + safeLevel,
+    physicalDefense,
+    magicDefense,
+    defense: physicalDefense,
     initiative: stats.agility * 2 + stats.luck,
   }
 }
