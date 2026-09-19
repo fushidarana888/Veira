@@ -157,6 +157,7 @@ export type ItemDefinition = {
   shop_enabled: boolean
   damage_type: DamageType | null
   damage_resistances: Partial<Record<DamageType, number>>
+  damage_bonuses: Partial<Record<DamageType, number>>
   scroll_spell_id: string | null
   scroll_mode: 'learn' | 'cast' | null
   unique_property_name: string | null
