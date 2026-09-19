@@ -22,11 +22,24 @@ export type CharacterProgress = {
   updated_at: string
 }
 
+export type RaceDefinition = {
+  id: string
+  slug: string
+  name: string
+  category: string
+  description: string
+  sort_order: number
+  playable: boolean
+  stat_modifiers: Record<string, number>
+  traits: unknown[]
+}
+
 export type Character = {
   id: string
   owner_user_id: string
   name: string
   race: string
+  race_id: string
   bio: string
   avatar_url: string | null
   created_at: string
