@@ -488,7 +488,13 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
         </>
       )}
 
-      {tab === 'world' && <WorldMap characterId={character.id} />}
+      {tab === 'world' && (
+        <WorldMap
+          characterId={character.id}
+          onProgressChanged={loadProgress}
+          onInventoryChanged={loadInventory}
+        />
+      )}
       {tab === 'adventures' && (
         <AdventuresPanel
           characterId={character.id}
