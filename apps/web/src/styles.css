@@ -4164,3 +4164,244 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Crafting, affixes and unique equipment */
+.crafting-section {
+  display: grid;
+  gap: 14px;
+}
+
+.crafting-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+}
+
+.crafting-header h2 {
+  margin: 4px 0 6px;
+}
+
+.crafting-header p {
+  max-width: 760px;
+  line-height: 1.55;
+}
+
+.crafting-wallet {
+  display: grid;
+  gap: 3px;
+  min-width: 120px;
+  border: 1px solid #4b402f;
+  border-radius: 12px;
+  background: rgba(124, 91, 45, .09);
+  padding: 10px 12px;
+  text-align: right;
+}
+
+.crafting-wallet span {
+  color: #91836e;
+  font-size: 9px;
+}
+
+.crafting-wallet strong {
+  color: #e2c28d;
+  font-size: 18px;
+}
+
+.crafting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crafting-card {
+  display: grid;
+  gap: 10px;
+}
+
+.crafting-card-head,
+.crafting-output,
+.crafting-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.crafting-card h3 {
+  margin: 3px 0 0;
+  font-size: 14px;
+}
+
+.crafting-card > p {
+  margin: 0;
+  color: #929ca8;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.crafting-output {
+  border: 1px solid #303843;
+  border-radius: 9px;
+  background: #0f141a;
+  padding: 8px 9px;
+}
+
+.crafting-output span {
+  color: #818c98;
+  font-size: 9px;
+}
+
+.crafting-output strong {
+  color: #e2e6eb;
+  font-size: 10px;
+  text-align: right;
+}
+
+.crafting-ingredients {
+  display: grid;
+  gap: 5px;
+}
+
+.crafting-ingredients > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #303842;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 9px;
+}
+
+.crafting-ingredients .ready {
+  border-color: #354d3d;
+  background: rgba(59, 91, 67, .08);
+}
+
+.crafting-ingredients .missing {
+  border-color: #583a3a;
+  background: rgba(99, 55, 55, .09);
+}
+
+.crafting-ingredients span {
+  color: #aeb6c0;
+}
+
+.crafting-ingredients .ready strong {
+  color: #9ec0a7;
+}
+
+.crafting-ingredients .missing strong,
+.missing-gold {
+  color: #d59696 !important;
+}
+
+.crafting-affix-note {
+  border: 1px solid #514361;
+  border-radius: 8px;
+  background: rgba(88, 65, 107, .12);
+  color: #c7afd3;
+  padding: 6px 8px;
+  font-size: 9px;
+}
+
+.crafting-card-actions {
+  margin-top: auto;
+  border-top: 1px solid #2b323b;
+  padding-top: 9px;
+}
+
+.crafting-card-actions > span {
+  color: #d1b27f;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.item-affix-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.item-affix-list span {
+  border: 1px solid #514564;
+  border-radius: 999px;
+  background: rgba(87, 67, 105, .12);
+  color: #cbb7d6;
+  padding: 4px 7px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.item-affix-list.compact span {
+  padding: 3px 6px;
+  font-size: 8px;
+}
+
+.affix-modifiers span {
+  border-color: #514564 !important;
+  color: #c7b4d3 !important;
+}
+
+.unique-property {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #715934;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(123, 88, 37, .13), rgba(79, 56, 28, .05));
+  padding: 8px 9px;
+}
+
+.unique-property strong {
+  color: #e0bd7c;
+  font-size: 10px;
+}
+
+.unique-property span {
+  color: #ad9b7b;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.unique-property.compact {
+  padding: 6px 7px;
+}
+
+.gm-crafting-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.recipe-ingredient-editor {
+  display: grid;
+  gap: 6px;
+}
+
+.recipe-ingredient-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.recipe-ingredient-row select,
+.recipe-ingredient-row input {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .crafting-header,
+  .crafting-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crafting-wallet {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .recipe-ingredient-row {
+    grid-template-columns: minmax(0, 1fr) 72px auto;
+  }
+}
