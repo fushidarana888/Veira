@@ -49,7 +49,7 @@ const createEmptyEventTemplateDraft = () => ({
   terrain_type: null as SectorTerrain | null,
   content_type: null as SectorContentType | null,
   min_danger: 0,
-  max_danger: 5,
+  max_danger: 10,
   chance_percent: 25,
   weight: 1,
   requires_gm: true,
@@ -705,8 +705,8 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     aria-label="Какая сложность подсвечивается"
                   >
                     <option value="">Выбрать</option>
-                    {[0, 1, 2, 3, 4, 5].map((level) => (
-                      <option key={level} value={String(level)}>Опасность {level}/5</option>
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                      <option key={level} value={String(level)}>Опасность {level}/10</option>
                     ))}
                   </select>
                 )}
@@ -907,7 +907,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     <input
                       type="range"
                       min={0}
-                      max={5}
+                      max={10}
                       disabled={!bulkApply.danger}
                       value={bulkValues.danger_level}
                       onChange={(event) => setBulkValues({
@@ -1114,7 +1114,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                   <input
                     type="range"
                     min={0}
-                    max={5}
+                    max={10}
                     value={form.danger_level}
                     onChange={(event) => setForm({
                       ...form,
@@ -1371,11 +1371,11 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                   <input
                     type="number"
                     min={0}
-                    max={5}
+                    max={10}
                     value={eventTemplateDraft.min_danger}
                     onChange={(event) => setEventTemplateDraft({
                       ...eventTemplateDraft,
-                      min_danger: Math.max(0, Math.min(5, Number(event.target.value))),
+                      min_danger: Math.max(0, Math.min(10, Number(event.target.value))),
                     })}
                   />
                 </label>
@@ -1385,11 +1385,11 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                   <input
                     type="number"
                     min={0}
-                    max={5}
+                    max={10}
                     value={eventTemplateDraft.max_danger}
                     onChange={(event) => setEventTemplateDraft({
                       ...eventTemplateDraft,
-                      max_danger: Math.max(0, Math.min(5, Number(event.target.value))),
+                      max_danger: Math.max(0, Math.min(10, Number(event.target.value))),
                     })}
                   />
                 </label>
