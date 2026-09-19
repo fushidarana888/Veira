@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: https://iqaawaweihvcapzwiecf.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_APhdwg2MR03wLBdDu4FN2Q_GNjI2X2S
+        run: npm run build
