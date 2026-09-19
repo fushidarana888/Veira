@@ -65,6 +65,7 @@ export function GmHome({ profile, onSignOut }: Props) {
             vitality,
             luck,
             gold,
+            unspent_stat_points,
             updated_at
           )
         `)
