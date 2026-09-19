@@ -286,7 +286,9 @@ export function AdventuresPanel({
 
     if (error) {
       const raw = error.message
-      if (raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
+      if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
         setMessage('У персонажа уже есть активное прохождение подземелья.')
       } else if (raw.includes('DUNGEON_NOT_SCOUTED')) {
         setMessage('Сначала разведай вход через карту мира.')
@@ -315,7 +317,9 @@ export function AdventuresPanel({
 
     if (error) {
       const raw = error.message
-      if (raw.includes('COMBAT_ALREADY_ACTIVE')) {
+      if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('COMBAT_ALREADY_ACTIVE')) {
         setMessage('В этом подземелье уже идёт бой.')
       } else if (raw.includes('ROOM_COMBAT_ALREADY_EXISTS')) {
         setMessage('Этот зал уже был разыгран.')
