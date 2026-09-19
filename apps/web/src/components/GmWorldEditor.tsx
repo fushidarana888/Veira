@@ -478,6 +478,19 @@ export function GmWorldEditor({ characters, profiles }: Props) {
       return
     }
 
+    if (form.content_type === 'settlement') {
+      const { error: settlementError } = await supabase.rpc('gm_set_settlement_level', {
+        p_sector_id: form.id,
+        p_level: form.settlement_level,
+      })
+
+      if (settlementError) {
+        setMessage(settlementError.message)
+        setBusy(false)
+        return
+      }
+    }
+
     setMessage(`Сектор ${form.grid_col}:${form.grid_row} сохранён.`)
     await loadWorld()
     setBusy(false)
@@ -1122,6 +1135,28 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     })}
                   />
                 </label>
+
+                {form.content_type === 'settlement' && (
+                  <div className="gm-settlement-level-box">
+                    <div>
+                      <span className="eyebrow">ПОСЕЛЕНИЕ</span>
+                      <strong>Уровень поселения {form.settlement_level}/10</strong>
+                      <p className="muted">
+                        Уровень определяет качество магазина. Высокий уровень открывает более сильные и дорогие предметы.
+                      </p>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={10}
+                      value={form.settlement_level}
+                      onChange={(event) => setForm({
+                        ...form,
+                        settlement_level: Number(event.target.value),
+                      })}
+                    />
+                  </div>
+                )}
 
                 <label>
                   <span>Описание для игрока после открытия</span>
