@@ -333,23 +333,25 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     await loadInventory()
   }
 
-  async function useHealingItem(item: CharacterItem) {
+  async function useResourceItem(item: CharacterItem) {
     const definition = normalizeDefinition(item.item_definitions)
     if (!definition) return
 
     setInventoryBusy(true)
     setInventoryMessage('')
 
-    const { data, error } = await supabase.rpc('use_healing_consumable', {
+    const { data, error } = await supabase.rpc('use_resource_consumable', {
       p_character_item_id: item.id,
     })
 
     if (error) {
       const raw = error.message
-      if (raw.includes('ALREADY_FULL_HEALTH')) {
-        setInventoryMessage('Здоровье уже полное.')
+      if (raw.includes('ALREADY_FULL_RESOURCES')) {
+        setInventoryMessage('HP и мана уже полные.')
       } else if (raw.includes('COMBAT_ACTIVE')) {
-        setInventoryMessage('Во время активного боя использовать зелье из инвентаря нельзя.')
+        setInventoryMessage('Во время боя используй расходник прямо в интерфейсе боя.')
+      } else if (raw.includes('ITEM_IS_NOT_RESOURCE_CONSUMABLE')) {
+        setInventoryMessage('Этот предмет не восстанавливает HP или ману.')
       } else {
         setInventoryMessage(raw)
       }
@@ -357,9 +359,17 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       return
     }
 
-    const healed = Array.isArray(data) ? Number(data[0]?.healed ?? 0) : 0
+    const row = Array.isArray(data) ? data[0] : data
+    const healed = Number(row?.healed ?? 0)
+    const manaRestored = Number(row?.mana_restored ?? 0)
     await Promise.all([loadInventory(), loadProgress()])
-    setInventoryMessage(healed > 0 ? `Восстановлено ${healed} HP.` : 'Зелье использовано.')
+
+    const restored = [
+      healed > 0 ? `+${healed} HP` : '',
+      manaRestored > 0 ? `+${manaRestored} маны` : '',
+    ].filter(Boolean).join(' · ')
+
+    setInventoryMessage(restored ? `Восстановлено: ${restored}.` : 'Расходник использован.')
     setInventoryBusy(false)
   }
 
@@ -698,7 +708,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               busy={inventoryBusy}
               message={inventoryMessage}
               onEquip={equipItem}
-              onUseHealing={useHealingItem}
+              onUseResource={useResourceItem}
               onLearnScroll={learnSpellFromScroll}
             />
           )}
@@ -816,7 +826,7 @@ function InventoryPanel({
   busy,
   message,
   onEquip,
-  onUseHealing,
+  onUseResource,
   onLearnScroll,
 }: {
   items: CharacterItem[]
@@ -824,7 +834,7 @@ function InventoryPanel({
   busy: boolean
   message: string
   onEquip: (item: CharacterItem) => Promise<void>
-  onUseHealing: (item: CharacterItem) => Promise<void>
+  onUseResource: (item: CharacterItem) => Promise<void>
   onLearnScroll: (item: CharacterItem) => Promise<void>
 }) {
   return (
@@ -850,7 +860,7 @@ function InventoryPanel({
             const equipped = equippedItemIds.has(item.id)
             const modifiers = Object.entries(definition.stat_modifiers ?? {})
               .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
-            const healingAmount = getHealingAmount(definition)
+            const resourceAmounts = getResourceAmounts(definition)
             const affixes = itemAffixes(item)
             const affixModifiers = Object.entries(affixStatModifiers(item))
               .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
@@ -951,14 +961,16 @@ function InventoryPanel({
                     <span className="muted item-state">
                       Боевой свиток · используется во время боя
                     </span>
-                  ) : healingAmount > 0 ? (
+                  ) : resourceAmounts.heal > 0 || resourceAmounts.mana > 0 ? (
                     <button
                       className="primary-button"
                       type="button"
                       disabled={busy}
-                      onClick={() => void onUseHealing(item)}
+                      onClick={() => void onUseResource(item)}
                     >
-                      Использовать · +{healingAmount} HP
+                      Использовать
+                      {resourceAmounts.heal > 0 ? ' · +' + resourceAmounts.heal + ' HP' : ''}
+                      {resourceAmounts.mana > 0 ? ' · +' + resourceAmounts.mana + ' MP' : ''}
                     </button>
                   ) : (
                     <span className="muted item-state">
@@ -1115,21 +1127,20 @@ function NavButton({
   )
 }
 
-function getHealingAmount(definition: ItemDefinition) {
+function getResourceAmounts(definition: ItemDefinition) {
+  let heal = 0
+  let mana = 0
+
   for (const effect of definition.effects ?? []) {
-    if (
-      effect &&
-      typeof effect === 'object' &&
-      'type' in effect &&
-      'amount' in effect &&
-      (effect as { type?: unknown }).type === 'heal_hp'
-    ) {
-      const amount = Number((effect as { amount?: unknown }).amount)
-      if (Number.isFinite(amount) && amount > 0) return amount
-    }
+    if (!effect || typeof effect !== 'object' || !('type' in effect) || !('amount' in effect)) continue
+    const type = String((effect as { type?: unknown }).type ?? '')
+    const amount = Number((effect as { amount?: unknown }).amount)
+    if (!Number.isFinite(amount) || amount <= 0) continue
+    if (type === 'heal_hp') heal += amount
+    if (type === 'restore_mana') mana += amount
   }
 
-  return 0
+  return { heal, mana }
 }
 
 function getItemGlyph(category: ItemDefinition['category']) {
