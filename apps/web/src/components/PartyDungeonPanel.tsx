@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import type { BowDistance, BowProfile } from '../types'
 
 type PartySummary = {
   id: string
@@ -54,6 +55,7 @@ type PartyEncounter = {
   enemy_attack: number
   enemy_defense: number
   enemy_damage_type: string
+  enemy_bloodshed_stacks: number
   acted_character_ids: string[]
   created_at: string
   ended_at: string | null
@@ -79,6 +81,8 @@ type PartyCombatMember = {
   damage_bonus_percent: number
   damage_bonus_hits: number
   taunt_chance: number
+  bow_distance: BowDistance
+  bow_draw_pending: boolean
   acted: boolean
   is_leader: boolean
   joined_order: number
@@ -222,6 +226,8 @@ function coopError(raw: string) {
   if (raw.includes('ALREADY_FULL_HEALTH')) return 'У выбранного союзника уже полное здоровье.'
   if (raw.includes('PARTY_TARGET_DOWNED')) return 'На мёртвого союзника сейчас можно применить только лечение-воскрешение.'
   if (raw.includes('PARTY_MEMBER_STUNNED')) return 'Персонаж оглушён. В этом раунде действие будет пропущено.'
+  if (raw.includes('BOW_FULL_DRAW_LOCKED')) return 'Полный натяг уже подготовлен: следующий доступный ход обязан быть выстрелом.'
+  if (raw.includes('BOW_DISTANCE_LOCKED')) return 'Во время полного натяга дистанцию менять нельзя.'
   if (raw.includes('PARTY_MEMBER_NOT_STUNNED')) return 'Оглушение уже прошло.'
   if (raw.includes('PARTY_SPELL_NOT_SUPPORTED')) return 'Это заклинание пока не поддерживается в групповом бою.'
   return raw
@@ -241,6 +247,7 @@ export function PartyDungeonPanel({
   const [options, setOptions] = useState<DungeonOption[]>([])
   const [state, setState] = useState<PartyDungeonState>(emptyState)
   const [spells, setSpells] = useState<PartySpell[]>([])
+  const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
   const [spellTargets, setSpellTargets] = useState<Record<string, string>>({})
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -250,7 +257,7 @@ export function PartyDungeonPanel({
   async function loadState(silent = false) {
     if (!silent) setLoading(true)
 
-    const [partyResult, optionResult, dungeonResult, spellResult] = await Promise.all([
+    const [partyResult, optionResult, dungeonResult, spellResult, bowProfileResult] = await Promise.all([
       supabase.rpc('get_party_overview', {
         p_character_id: characterId,
       }),
@@ -263,9 +270,12 @@ export function PartyDungeonPanel({
       supabase.rpc('get_character_spells', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_character_bow_profile', {
+        p_character_id: characterId,
+      }),
     ])
 
-    const error = partyResult.error ?? optionResult.error ?? dungeonResult.error ?? spellResult.error
+    const error = partyResult.error ?? optionResult.error ?? dungeonResult.error ?? spellResult.error ?? bowProfileResult.error
     if (error) {
       if (!silent) setMessage(coopError(error.message))
       if (!silent) setLoading(false)
@@ -283,6 +293,7 @@ export function PartyDungeonPanel({
       ((spellResult.data as PartySpell[] | null) ?? [])
         .filter((spell) => ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt'].includes(spell.spell_kind)),
     )
+    setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
 
     if (
       selectedSectorId == null
@@ -355,7 +366,7 @@ export function PartyDungeonPanel({
     setBusy(false)
   }
 
-  async function performAction(action: 'physical' | 'magic' | 'guard') {
+  async function performAction(action: 'physical' | 'bow_draw' | 'magic' | 'guard') {
     if (!state.encounter) return
 
     setBusy(true)
@@ -392,6 +403,20 @@ export function PartyDungeonPanel({
       setMessage('Ход принят. Ждём остальных участников группы.')
     }
 
+    setBusy(false)
+  }
+
+  async function setBowDistance(distance: BowDistance) {
+    if (!state.encounter || !me || !bowProfile?.weapon_family || me.bow_draw_pending || me.acted) return
+    setBusy(true)
+    setMessage('')
+    const { error } = await supabase.rpc('set_party_bow_distance', {
+      p_character_id: characterId,
+      p_encounter_id: state.encounter.id,
+      p_distance: distance,
+    })
+    if (error) setMessage(coopError(error.message))
+    await loadState(true)
     setBusy(false)
   }
 
@@ -814,7 +839,7 @@ export function PartyDungeonPanel({
                   <button
                     className="ghost-button danger-button"
                     type="button"
-                    disabled={busy || escapeLocked}
+                    disabled={busy || escapeLocked || Boolean(me?.bow_draw_pending)}
                     title={escapeLocked
                       ? 'Попытка побега на этом этапе уже использована.'
                       : '80% успеха. При провале HP всей группы станет 1.'}
@@ -864,19 +889,63 @@ export function PartyDungeonPanel({
                       : 'Твой ход в этом раунде.'}
               </div>
 
+              {bowProfile?.weapon_family && me && (
+                <div className="party-turn-status">
+                  <strong>Дистанция:</strong>{' '}
+                  {([
+                    ['close', 'Ближняя · +10% урон · +3% dodge'],
+                    ['medium', 'Средняя · +9% dodge'],
+                    ['far', 'Дальняя · −10% урон · +15% dodge'],
+                  ] as Array<[BowDistance, string]>).map(([distance, label]) => (
+                    <button
+                      className={me.bow_distance === distance ? 'primary-button' : 'ghost-button'}
+                      type="button"
+                      key={distance}
+                      disabled={!canAct || me.bow_draw_pending}
+                      onClick={() => void setBowDistance(distance)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  {me.bow_draw_pending && <span> · Натяг подготовлен, дистанция зафиксирована.</span>}
+                  {(activeEncounter.enemy_bloodshed_stacks ?? 0) > 0 && (
+                    <span> · Кровопролитие на враге: {activeEncounter.enemy_bloodshed_stacks}</span>
+                  )}
+                </div>
+              )}
+
               <div className="party-combat-actions">
+                {bowProfile?.weapon_family ? (
+                  me?.bow_draw_pending ? (
+                    <button className="primary-button" type="button" disabled={!canAct} onClick={() => void performAction('physical')}>
+                      Выпустить стрелу · полный натяг
+                    </button>
+                  ) : (
+                    <>
+                      {bowProfile.weapon_family === 'short_bow' && (
+                        <button className="primary-button" type="button" disabled={!canAct} onClick={() => void performAction('physical')}>
+                          Быстрый выстрел
+                        </button>
+                      )}
+                      <button className="primary-button" type="button" disabled={!canAct} onClick={() => void performAction('bow_draw')}>
+                        Полный натяг · пробитие {bowProfile.full_draw_armor_penetration_percent}%
+                      </button>
+                    </>
+                  )
+                ) : (
+                  <button
+                    className="primary-button"
+                    type="button"
+                    disabled={!canAct}
+                    onClick={() => void performAction('physical')}
+                  >
+                    Физическая атака
+                  </button>
+                )}
                 <button
                   className="primary-button"
                   type="button"
-                  disabled={!canAct}
-                  onClick={() => void performAction('physical')}
-                >
-                  Физическая атака
-                </button>
-                <button
-                  className="primary-button"
-                  type="button"
-                  disabled={!canAct}
+                  disabled={!canAct || Boolean(me?.bow_draw_pending)}
                   onClick={() => void performAction('magic')}
                 >
                   Врождённая магия
@@ -884,7 +953,7 @@ export function PartyDungeonPanel({
                 <button
                   className="ghost-button"
                   type="button"
-                  disabled={!canAct}
+                  disabled={!canAct || Boolean(me?.bow_draw_pending)}
                   onClick={() => void performAction('guard')}
                 >
                   Защита
@@ -933,6 +1002,7 @@ export function PartyDungeonPanel({
                         type="button"
                         disabled={
                           !canAct
+                          || Boolean(me?.bow_draw_pending)
                           || state.run?.sacrifice_scroll_used
                           || (me?.hp_current ?? 0) <= 200
                         }
@@ -1008,7 +1078,7 @@ export function PartyDungeonPanel({
                           {support && (
                             <select
                               value={targetId}
-                              disabled={!canAct}
+                              disabled={!canAct || Boolean(me?.bow_draw_pending)}
                               onChange={(event) => setSpellTargets((current) => ({
                                 ...current,
                                 [spell.id]: event.target.value,
@@ -1031,7 +1101,7 @@ export function PartyDungeonPanel({
                           <button
                             className={spell.spell_kind === 'damage' ? 'primary-button' : 'ghost-button'}
                             type="button"
-                            disabled={!canAct || noMana || targetInvalid || fullHeal}
+                            disabled={!canAct || Boolean(me?.bow_draw_pending) || noMana || targetInvalid || fullHeal}
                             onClick={() => void castPartySpell(spell)}
                           >
                             {noMana
