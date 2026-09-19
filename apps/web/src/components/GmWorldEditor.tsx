@@ -740,7 +740,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                   const unconfiguredHighlighted =
                     (unconfiguredHighlightMode === 'terrain' && sector.terrain_type === 'unassigned') ||
                     (unconfiguredHighlightMode === 'content' && sector.content_type === 'unassigned') ||
-                    (unconfiguredHighlightMode === 'danger' && sector.danger_level === 0)
+                    (unconfiguredHighlightMode === 'danger' && !sector.danger_configured)
 
                   const attributeHighlighted =
                     Boolean(attributeHighlightValue) &&
