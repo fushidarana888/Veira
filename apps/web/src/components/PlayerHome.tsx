@@ -390,6 +390,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
                     <strong>{progress.hp_current} / {progress.hp_max}</strong>
                   </div>
                   <div className="meter"><span style={{ width: hpPercent + '%' }} /></div>
+                  <small className="passive-regen-note">Пассивное восстановление: +8 HP в час вне активного боя</small>
                 </article>
 
                 <article className="panel vital-card">
@@ -697,6 +698,24 @@ function EquipmentPanel({
                   <span className={'rarity-label rarity-text-' + definition.rarity}>
                     {rarityLabels[definition.rarity]}
                   </span>
+                  {definition.damage_type && (
+                    <span className="equipment-damage-type">
+                      {damageTypeLabels[definition.damage_type]}
+                    </span>
+                  )}
+                  {Object.entries(definition.damage_resistances ?? {})
+                    .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                    .length > 0 && (
+                      <div className="resistance-list">
+                        {Object.entries(definition.damage_resistances ?? {})
+                          .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                          .map(([type, value]) => (
+                            <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
+                              {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                            </span>
+                          ))}
+                      </div>
+                    )}
                   <button
                     className="ghost-button"
                     type="button"
