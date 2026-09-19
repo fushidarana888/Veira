@@ -299,6 +299,25 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     )
   }, [equipment, itemById, progress])
 
+  const equipmentPercentModifiers = useMemo(() => {
+    let maxHpPercent = 0
+    let defensePercent = 0
+
+    for (const entry of equipment) {
+      const item = itemById.get(entry.character_item_id)
+      const definition = item ? normalizeDefinition(item.item_definitions) : null
+      if (!definition) continue
+
+      maxHpPercent += Number(definition.stat_modifiers?.max_hp_percent ?? 0)
+      defensePercent += Number(definition.stat_modifiers?.defense_percent ?? 0)
+    }
+
+    return {
+      maxHpPercent: Math.max(-80, Math.min(200, maxHpPercent)),
+      defensePercent: Math.max(-75, Math.min(100, defensePercent)),
+    }
+  }, [equipment, itemById])
+
   const derivedCombatStats = useMemo(
     () => progress && effectiveStats
       ? calculateDerivedCombatStats(progress.level, effectiveStats)
@@ -319,7 +338,26 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
 
   const nextLevel = experienceForNextLevel(progress.level)
   const expPercent = Math.min(100, Math.round((progress.experience / nextLevel) * 100))
-  const hpPercent = Math.min(100, Math.round((progress.hp_current / progress.hp_max) * 100))
+  const effectiveHpMax = Math.max(
+    1,
+    Math.round(progress.hp_max * (100 + equipmentPercentModifiers.maxHpPercent) / 100),
+  )
+  const effectiveHpCurrent = Math.min(
+    effectiveHpMax,
+    Math.max(
+      0,
+      Math.round(progress.hp_current * effectiveHpMax / Math.max(1, progress.hp_max)),
+    ),
+  )
+  const hpPercent = Math.min(100, Math.round((effectiveHpCurrent / effectiveHpMax) * 100))
+  const effectivePhysicalDefense = Math.max(
+    0,
+    Math.round(derivedCombatStats.physicalDefense * (100 + equipmentPercentModifiers.defensePercent) / 100),
+  )
+  const effectiveMagicDefense = Math.max(
+    0,
+    Math.round(derivedCombatStats.magicDefense * (100 + equipmentPercentModifiers.defensePercent) / 100),
+  )
 
   async function equipItem(item: CharacterItem) {
     const definition = normalizeDefinition(item.item_definitions)
@@ -561,7 +599,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                 <article className="panel vital-card">
                   <div className="card-heading">
                     <span>Здоровье</span>
-                    <strong>{progress.hp_current} / {progress.hp_max}</strong>
+                    <strong>{effectiveHpCurrent} / {effectiveHpMax}</strong>
                   </div>
                   <div className="meter"><span style={{ width: hpPercent + '%' }} /></div>
                   <small className="passive-regen-note">
@@ -712,8 +750,8 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                 <div className="combat-stats-grid">
                   <CombatStat label="Физ. мощь" value={derivedCombatStats.physicalPower} />
                   <CombatStat label="Маг. мощь" value={derivedCombatStats.magicPower} />
-                  <CombatStat label="Физ. защита" value={derivedCombatStats.physicalDefense} />
-                  <CombatStat label="Маг. защита" value={derivedCombatStats.magicDefense} />
+                  <CombatStat label="Физ. защита" value={effectivePhysicalDefense} />
+                  <CombatStat label="Маг. защита" value={effectiveMagicDefense} />
                   <CombatStat label="Инициатива" value={derivedCombatStats.initiative} />
                 </div>
               </section>
