@@ -85,6 +85,14 @@ const damageTypeLabels: Record<DamageType, string> = {
   ice: 'Ледяной',
 }
 
+function spellKindLabel(spell: CharacterSpell) {
+  if (spell.spell_kind === 'heal') return 'Лечение'
+  if (spell.spell_kind === 'guard') return 'Магический щит'
+  if (spell.spell_kind === 'cleanse') return 'Очищение'
+  if (spell.spell_kind === 'buff') return 'Усиление'
+  return spell.damage_type ? damageTypeLabels[spell.damage_type] : 'Магия'
+}
+
 const enemySpecialLabels: Record<CombatEncounter['enemy_special_kind'], string> = {
   attack: 'Усиленная атака',
   heal: 'Самолечение',
@@ -132,7 +140,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
@@ -1120,6 +1128,12 @@ export function AdventuresPanel({
                       </span>
                     </div>
                   )}
+                  {activeCombat.player_spell_damage_bonus_percent > 0 && activeCombat.player_spell_damage_bonus_hits > 0 && (
+                    <div className="combat-counter-ready">
+                      <strong>Магическое усиление +{activeCombat.player_spell_damage_bonus_percent}%</strong>
+                      <span>Осталось усиленных атак: {activeCombat.player_spell_damage_bonus_hits}</span>
+                    </div>
+                  )}
                   {playerStatusEffects.length > 0 && (
                     <div className="combat-status-list">
                       {playerStatusEffects.map((effect) => (
@@ -1292,11 +1306,7 @@ export function AdventuresPanel({
                             >
                               <strong>{spell.name}</strong>
                               <span>
-                                {spell.spell_kind === 'heal'
-                                  ? 'Лечение'
-                                  : spell.damage_type
-                                    ? damageTypeLabels[spell.damage_type]
-                                    : 'Магия'}
+                                {spellKindLabel(spell)}
                                 {' · '}{spell.mana_cost} маны
                                 {spell.status_effect_type
                                   ? ' · ' + statusEffectLabels[spell.status_effect_type] + ' ' + spell.status_effect_chance + '%'
