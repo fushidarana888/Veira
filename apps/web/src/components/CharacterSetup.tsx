@@ -1,5 +1,6 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import type { RaceDefinition } from '../types'
 
 type Props = {
   userId: string
@@ -18,20 +19,81 @@ async function sha256Hex(value: string) {
 
 export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Props) {
   const [name, setName] = useState('')
-  const [race, setRace] = useState('Человек')
   const [bio, setBio] = useState('')
+  const [races, setRaces] = useState<RaceDefinition[]>([])
+  const [raceId, setRaceId] = useState('')
+  const [raceQuery, setRaceQuery] = useState('')
+  const [raceCategory, setRaceCategory] = useState('Все')
+  const [raceLoading, setRaceLoading] = useState(true)
   const [gmCode, setGmCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [gmBusy, setGmBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [gmMessage, setGmMessage] = useState('')
 
+  useEffect(() => {
+    let active = true
+
+    async function loadRaces() {
+      const { data, error } = await supabase
+        .from('race_definitions')
+        .select('id, slug, name, category, description, sort_order, playable, stat_modifiers, traits')
+        .eq('playable', true)
+        .order('sort_order', { ascending: true })
+
+      if (!active) return
+
+      if (error) {
+        setMessage('Не удалось загрузить список рас: ' + error.message)
+        setRaceLoading(false)
+        return
+      }
+
+      const nextRaces = (data as RaceDefinition[] | null) ?? []
+      setRaces(nextRaces)
+
+      const human = nextRaces.find((race) => race.slug === 'human')
+      if (human) setRaceId(human.id)
+
+      setRaceLoading(false)
+    }
+
+    void loadRaces()
+    return () => { active = false }
+  }, [])
+
+  const categories = useMemo(
+    () => ['Все', ...Array.from(new Set(races.map((race) => race.category)))],
+    [races],
+  )
+
+  const filteredRaces = useMemo(() => {
+    const query = raceQuery.trim().toLocaleLowerCase('ru-RU')
+
+    return races.filter((race) => {
+      const categoryMatches = raceCategory === 'Все' || race.category === raceCategory
+      const queryMatches =
+        !query ||
+        race.name.toLocaleLowerCase('ru-RU').includes(query) ||
+        race.description.toLocaleLowerCase('ru-RU').includes(query)
+
+      return categoryMatches && queryMatches
+    })
+  }, [races, raceQuery, raceCategory])
+
+  const selectedRace = races.find((race) => race.id === raceId) ?? null
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMessage('')
 
-    if (!name.trim() || !race.trim()) {
-      setMessage('Имя и раса обязательны.')
+    if (!name.trim()) {
+      setMessage('Укажи имя персонажа.')
+      return
+    }
+
+    if (!raceId) {
+      setMessage('Выбери расу персонажа.')
       return
     }
 
@@ -40,7 +102,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
     const { error } = await supabase.from('characters').insert({
       owner_user_id: userId,
       name: name.trim(),
-      race: race.trim(),
+      race_id: raceId,
       bio: bio.trim(),
     })
 
@@ -120,15 +182,67 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
               />
             </label>
 
-            <label>
-              <span>Раса</span>
+            <div className="race-picker-block">
+              <div className="race-picker-heading">
+                <div>
+                  <span className="form-label">Раса</span>
+                  <p className="muted">Раса выбирается из народов Эйлара. Характеристики и расовые особенности добавим позже.</p>
+                </div>
+                {selectedRace && <span className="selected-race-badge">Выбрано: {selectedRace.name}</span>}
+              </div>
+
               <input
-                value={race}
-                onChange={(event) => setRace(event.target.value)}
-                maxLength={60}
-                placeholder="Можно указать свою расу"
+                className="race-search"
+                value={raceQuery}
+                onChange={(event) => setRaceQuery(event.target.value)}
+                placeholder="Поиск расы…"
+                aria-label="Поиск расы"
               />
-            </label>
+
+              <div className="race-category-tabs" aria-label="Категории рас">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={raceCategory === category ? 'active' : ''}
+                    onClick={() => setRaceCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              {raceLoading ? (
+                <div className="race-loading">Загружаем народы Эйлара…</div>
+              ) : (
+                <div className="race-grid" role="radiogroup" aria-label="Выбор расы">
+                  {filteredRaces.map((race) => (
+                    <button
+                      key={race.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={race.id === raceId}
+                      className={'race-card' + (race.id === raceId ? ' selected' : '')}
+                      onClick={() => setRaceId(race.id)}
+                    >
+                      <div className="race-card-top">
+                        <strong>{race.name}</strong>
+                        {race.id === raceId && <span>✓</span>}
+                      </div>
+                      <small>{race.category}</small>
+                      <p>{race.description}</p>
+                    </button>
+                  ))}
+
+                  {filteredRaces.length === 0 && (
+                    <div className="race-empty">
+                      <strong>Ничего не найдено</strong>
+                      <span>Попробуй другую категорию или запрос.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <label>
               <span>Короткая биография</span>
@@ -141,7 +255,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
               />
             </label>
 
-            <button className="primary-button" type="submit" disabled={busy}>
+            <button className="primary-button" type="submit" disabled={busy || raceLoading || !raceId}>
               {busy ? 'Создаём…' : 'Начать игру'}
             </button>
           </form>
