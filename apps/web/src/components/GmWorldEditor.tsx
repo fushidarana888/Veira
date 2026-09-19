@@ -398,14 +398,18 @@ export function GmWorldEditor({ characters, profiles }: Props) {
       return
     }
 
-    setMessage(eventTemplateDraft.id ? 'Шаблон события обновлён.' : 'Шаблон события создан.')
-    await loadWorld()
+    const wasEditing = Boolean(eventTemplateDraft.id)
+    const savedId = data ? String(data) : eventTemplateDraft.id
 
-    if (!eventTemplateDraft.id && data) {
-      const created = eventTemplates.find((template) => template.id === String(data))
-      if (created) editEventTemplate(created)
+    if (!eventTemplateDraft.id && savedId) {
+      setEventTemplateDraft({
+        ...eventTemplateDraft,
+        id: savedId,
+      })
     }
 
+    await loadWorld()
+    setMessage(wasEditing ? 'Шаблон события обновлён.' : 'Шаблон события создан.')
     setBusy(false)
   }
 
@@ -427,8 +431,8 @@ export function GmWorldEditor({ characters, profiles }: Props) {
       setEventTemplateDraft(createEmptyEventTemplateDraft())
     }
 
-    setMessage('Шаблон события удалён.')
     await loadWorld()
+    setMessage('Шаблон события удалён.')
     setBusy(false)
   }
 
