@@ -52,6 +52,7 @@ const spellKindLabels: Record<SpellDefinition['spell_kind'], string> = {
   cleanse: 'Очищение',
   buff: 'Усиление',
   taunt: 'Провокация',
+  sacrifice: 'Последняя жертва',
 }
 
 const categories: Array<{ value: ItemCategory; label: string }> = [
@@ -177,7 +178,7 @@ type SpellDraft = {
   name: string
   description: string
   enabled: boolean
-  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice'
   damage_type: ElementalDamageType | null
   mana_cost: number
   required_level: number
@@ -187,7 +188,7 @@ type SpellDraft = {
   status_effect_chance: number
   status_effect_turns: number
   status_effect_potency: number
-  support_effect_type: 'guard' | 'cleanse' | 'empower' | 'taunt' | null
+  support_effect_type: 'guard' | 'cleanse' | 'empower' | 'taunt' | 'sacrifice' | null
   support_value: number
   support_turns: number
 }
@@ -1085,16 +1086,20 @@ export function GmItemsAndSpells() {
                           : kind === 'cleanse' ? 'cleanse'
                             : kind === 'buff' ? 'empower'
                               : kind === 'taunt' ? 'taunt'
-                                : null,
+                                : kind === 'sacrifice' ? 'sacrifice'
+                                  : null,
                       support_value:
                         kind === 'guard' ? Math.max(70, spellDraft.support_value)
                           : kind === 'buff' ? Math.max(20, spellDraft.support_value)
                             : kind === 'taunt' ? Math.max(90, spellDraft.support_value)
-                              : 0,
+                              : kind === 'sacrifice' ? 30
+                                : 0,
                       support_turns:
                         kind === 'buff' ? Math.max(2, spellDraft.support_turns)
                           : kind === 'guard' ? 1
-                            : 0,
+                            : kind === 'sacrifice' ? 3
+                              : 0,
+                      mana_cost: kind === 'sacrifice' ? 0 : spellDraft.mana_cost,
                     })
                   }}
                 >
@@ -1104,6 +1109,7 @@ export function GmItemsAndSpells() {
                   <option value="cleanse">Очищение дебаффов</option>
                   <option value="buff">Усиление урона</option>
                   <option value="taunt">Провокация союзника</option>
+                  <option value="sacrifice">Последняя жертва · только боевой свиток</option>
                 </select>
               </label>
               <label>
@@ -1201,6 +1207,23 @@ export function GmItemsAndSpells() {
   
             )}
 
+            {spellDraft.spell_kind === 'sacrifice' && (
+              <div className="gm-editor-box">
+                <div>
+                  <strong>Последняя жертва</strong>
+                  <small>Фиксированная эндгейм-механика одноразового группового свитка</small>
+                </div>
+                <div className="gm-form-grid three">
+                  <label><span>Мана</span><input disabled value="0" /></label>
+                  <label><span>Снижение входящего урона</span><input disabled value="30%" /></label>
+                  <label><span>Длительность</span><input disabled value="3 раунда" /></label>
+                </div>
+                <p className="muted">
+                  Условие применения — больше 200 текущего HP. Использующий становится Потерянным до конца всего похода. Эффект можно активировать только один раз за бой-поход.
+                </p>
+              </div>
+            )}
+
             {['guard', 'buff', 'taunt'].includes(spellDraft.spell_kind) && (
               <div className="gm-editor-box">
                 <div>
@@ -1261,7 +1284,7 @@ export function GmItemsAndSpells() {
                       <span>Длительность</span>
                       <input
                         disabled
-                        value={spellDraft.spell_kind === 'taunt' ? 'до конца боя / нокаута цели' : '1 входящий удар'}
+                        value={spellDraft.spell_kind === 'taunt' ? 'до конца битвы / смерти цели' : '1 входящий удар'}
                       />
                     </label>
                   )}
@@ -1280,8 +1303,10 @@ export function GmItemsAndSpells() {
                     : spellDraft.spell_kind === 'buff'
                       ? 'Усиление повышает прямой физический и магический урон на заданное число следующих атак.'
                       : spellDraft.spell_kind === 'taunt'
-                        ? 'Провокация работает только в групповом бою: выбранный живой союзник становится целью врага с указанным шансом до своего нокаута или конца боя.'
-                        : 'Базовая магическая атака остаётся стихией расы. Это заклинание использует собственную стихию и расходует ману.'}
+                        ? 'Провокация работает только в групповой битве: выбранный живой союзник становится целью врага с указанным шансом до своей смерти или конца текущей битвы.'
+                        : spellDraft.spell_kind === 'sacrifice'
+                          ? '«Последняя жертва» существует только в одноразовом боевом свитке: >200 HP, использующий становится Потерянным до конца всего похода; живые союзники полностью лечатся и получают −30% входящего урона на 3 раунда. Мёртвых не воскрешает.'
+                          : 'Базовая магическая атака остаётся стихией расы. Это заклинание использует собственную стихию и расходует ману.'}
             </p>
 
             <div className="gm-form-actions">
