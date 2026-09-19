@@ -450,7 +450,12 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
       )}
 
       {tab === 'world' && <WorldMap characterId={character.id} />}
-      {tab === 'adventures' && <AdventuresPanel characterId={character.id} />}
+      {tab === 'adventures' && (
+        <AdventuresPanel
+          characterId={character.id}
+          onProgressChanged={loadProgress}
+        />
+      )}
       {tab === 'community' && <Placeholder title="Сообщество" text="Здесь появятся гильдии, игроки и социальные механики." />}
       {tab === 'more' && <Placeholder title="Ещё" text="Настройки, достижения, журнал и другие разделы Veira." />}
 
