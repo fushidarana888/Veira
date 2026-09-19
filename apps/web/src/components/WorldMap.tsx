@@ -236,7 +236,9 @@ export function WorldMap({
 
     if (error) {
       const raw = error.message
-      if (raw.includes('EXPEDITION_ALREADY_ACTIVE')) {
+      if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('EXPEDITION_ALREADY_ACTIVE')) {
         setMessage('У персонажа уже идёт экспедиция или ожидается решение события.')
       } else if (raw.includes('SECTOR_NOT_ADJACENT_TO_DISCOVERED')) {
         setMessage('Этот сектор пока нельзя исследовать: сначала открой соседнюю область.')
@@ -267,7 +269,9 @@ export function WorldMap({
 
     if (error) {
       const raw = error.message
-      if (raw.includes('EXPEDITION_ALREADY_ACTIVE')) {
+      if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('EXPEDITION_ALREADY_ACTIVE')) {
         setMessage('Сначала заверши текущую экспедицию.')
       } else if (raw.includes('SITE_ACTION_ALREADY_ACTIVE')) {
         setMessage('Персонаж уже занят исследованием найденного места.')
@@ -302,7 +306,9 @@ export function WorldMap({
 
     if (error) {
       const raw = error.message
-      if (raw.includes('DUNGEON_NOT_SCOUTED')) {
+      if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('DUNGEON_NOT_SCOUTED')) {
         setMessage('Сначала разведай вход в подземелье.')
       } else if (raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
         setMessage('У персонажа уже есть активное прохождение подземелья.')
