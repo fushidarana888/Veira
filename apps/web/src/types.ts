@@ -651,3 +651,30 @@ export type RaceAccessGrant = {
   granted_at: string
   granted_by: string
 }
+
+
+export type AutobattleStrategy = 'conservative' | 'balanced' | 'aggressive'
+
+export type AutobattleSettings = {
+  character_id: string
+  strategy: AutobattleStrategy
+  stop_hp_percent: number
+  mana_reserve_percent: number
+  use_learned_spells: boolean
+  include_boss: boolean
+  updated_at: string
+}
+
+export type AutobattleResult = {
+  status: 'active' | 'victory' | 'defeat' | 'completed' | 'abandoned' | 'stopped' | string
+  reason: string
+  actions: number
+  encounter_id?: string
+  run_id?: string
+  rooms_cleared?: number
+  player_hp?: number
+  player_hp_max?: number
+  player_mana?: number
+  player_mana_max?: number
+  hp_percent?: number
+}
