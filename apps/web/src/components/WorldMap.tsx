@@ -380,6 +380,34 @@ export function WorldMap({
     setBusy(false)
   }
 
+  async function cancelSiteAction(actionId: string) {
+    if (!window.confirm('Отменить это исследование? Уже прошедшее время будет потеряно.')) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('cancel_sector_site_action', {
+      p_action_id: actionId,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('SITE_ACTION_NOT_CANCELLABLE')) {
+        setMessage('Это исследование уже нельзя отменить.')
+      } else if (raw.includes('SITE_ACTION_ALREADY_FINISHED_OR_RESOLVING')) {
+        setMessage('Исследование уже завершает результат. Обнови карту через несколько секунд.')
+      } else {
+        setMessage(raw)
+      }
+      setBusy(false)
+      return
+    }
+
+    await loadMapData()
+    setMessage('Исследование отменено.')
+    setBusy(false)
+  }
+
   async function startSiteAction(actionType: 'explore_ruins' | 'scout_dungeon') {
     if (!selectedSector?.is_discovered) return
 
@@ -530,6 +558,14 @@ export function WorldMap({
           <div className="expedition-timer">
             <span>Осталось</span>
             <strong>{formatRemaining(siteActionRemaining)}</strong>
+            <button
+              className="ghost-button danger-button expedition-cancel-button"
+              type="button"
+              disabled={busy}
+              onClick={() => void cancelSiteAction(activeSiteAction.id)}
+            >
+              Отменить исследование
+            </button>
           </div>
         </article>
       )}
