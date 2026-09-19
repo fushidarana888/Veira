@@ -20,6 +20,7 @@ import type {
 type Props = {
   profile: Profile
   character: Character
+  userEmail: string
   onSignOut: () => Promise<void> | void
 }
 
@@ -111,7 +112,7 @@ function combinedResistances(item: CharacterItem, definition: ItemDefinition) {
   return result
 }
 
-export function PlayerHome({ profile, character, onSignOut }: Props) {
+export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) {
   const [tab, setTab] = useState<Tab>('character')
   const [characterTab, setCharacterTab] = useState<CharacterTab>('overview')
   const [items, setItems] = useState<CharacterItem[]>([])
@@ -121,6 +122,8 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
   const [inventoryMessage, setInventoryMessage] = useState('')
   const [statBusy, setStatBusy] = useState(false)
   const [progressMessage, setProgressMessage] = useState('')
+  const [securityBusy, setSecurityBusy] = useState(false)
+  const [securityMessage, setSecurityMessage] = useState('')
   const [progress, setProgress] = useState<CharacterProgress | null>(
     () => normalizeProgress(character.character_progress),
   )
@@ -407,6 +410,33 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
     }
 
     await loadInventory()
+  }
+
+  async function sendEmailVerification() {
+    if (!userEmail || profile.email_verified) return
+
+    setSecurityBusy(true)
+    setSecurityMessage('')
+
+    const redirectTo = window.location.origin + import.meta.env.BASE_URL
+    const { error } = await supabase.auth.signInWithOtp({
+      email: userEmail,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: redirectTo,
+      },
+    })
+
+    if (error) {
+      setSecurityMessage(error.message)
+      setSecurityBusy(false)
+      return
+    }
+
+    setSecurityMessage(
+      'Письмо отправлено. Открой ссылку в нём — после возвращения в Veira почта станет подтверждённой.',
+    )
+    setSecurityBusy(false)
   }
 
   async function allocateStatPoint(stat: StatKey) {
@@ -716,7 +746,58 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
         />
       )}
       {tab === 'community' && <Placeholder title="Сообщество" text="Здесь появятся гильдии, игроки и социальные механики." />}
-      {tab === 'more' && <Placeholder title="Ещё" text="Настройки, достижения, журнал и другие разделы Veira." />}
+      {tab === 'more' && (
+        <div className="more-section">
+          <section className="panel account-security-panel">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">АККАУНТ</span>
+                <h2>Безопасность и почта</h2>
+              </div>
+              <span className={'badge ' + (profile.email_verified ? 'ready' : '')}>
+                {profile.email_verified ? 'почта подтверждена' : 'почта не подтверждена'}
+              </span>
+            </div>
+
+            <div className="account-email-row">
+              <div>
+                <span>Почта аккаунта</span>
+                <strong>{userEmail || 'не указана'}</strong>
+              </div>
+
+              {!profile.email_verified && userEmail && (
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={securityBusy}
+                  onClick={() => void sendEmailVerification()}
+                >
+                  {securityBusy ? 'Отправляем…' : 'Подтвердить почту'}
+                </button>
+              )}
+            </div>
+
+            {profile.email_verified ? (
+              <p className="account-security-note verified">
+                Эта почта подтверждена. Её можно использовать как доверенный способ восстановления доступа
+                и для будущих чувствительных действий аккаунта.
+              </p>
+            ) : (
+              <p className="account-security-note">
+                Подтверждение добровольное: играть, создавать персонажа и пользоваться обычными механиками
+                можно сразу. Проверенная почта понадобится для восстановления доступа и отдельных
+                чувствительных действий, когда они появятся.
+              </p>
+            )}
+
+            {securityMessage && (
+              <p className="form-message" aria-live="polite">{securityMessage}</p>
+            )}
+          </section>
+
+          <Placeholder title="Ещё" text="Здесь позже появятся достижения, журнал и остальные настройки Veira." />
+        </div>
+      )}
 
       <nav className="bottom-nav" aria-label="Основная навигация">
         <NavButton active={tab === 'world'} onClick={() => setTab('world')}>Мир</NavButton>
