@@ -586,6 +586,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
         <AdventuresPanel
           characterId={character.id}
           onProgressChanged={loadProgress}
+          onInventoryChanged={loadInventory}
         />
       )}
       {tab === 'community' && <Placeholder title="Сообщество" text="Здесь появятся гильдии, игроки и социальные механики." />}
