@@ -102,6 +102,8 @@ export function MagicPanel({ characterId, progress }: Props) {
     .filter((spell) => spell.combat_slot !== null)
     .sort((a, b) => (a.combat_slot ?? 99) - (b.combat_slot ?? 99))
 
+  const concentrationActive = selectedSpells.length === 1
+
   const manaPercent = progress.mana_max > 0
     ? Math.max(0, Math.min(100, Math.round((progress.mana_current / progress.mana_max) * 100)))
     : 0
@@ -141,6 +143,27 @@ export function MagicPanel({ characterId, progress }: Props) {
         <p className="muted">
           Этот набор используется в боях, данжах и дуэлях. Во время активного боя или похода менять его нельзя.
         </p>
+
+        {concentrationActive && (
+          <>
+            <div className="spell-stats">
+              <span>Концентрация <strong>активна</strong></span>
+              <span>Урон и лечение <strong>+30%</strong></span>
+              <span>DoT <strong>+20%</strong></span>
+              <span>Щиты и % баффы <strong>+15%</strong></span>
+              <span>Мягкие дебаффы <strong>+10%</strong></span>
+            </div>
+            <p className="muted">
+              Шанс срабатывания, длительность, стан, провокация, очищение и стоимость маны не усиливаются.
+            </p>
+          </>
+        )}
+
+        {selectedSpells.length > 1 && (
+          <p className="muted">
+            Концентрация неактивна: она включается только когда занят ровно один из трёх слотов.
+          </p>
+        )}
 
         {selectedSpells.length === 0 ? (
           <div className="empty-state magic-empty-state">
@@ -206,6 +229,12 @@ export function MagicPanel({ characterId, progress }: Props) {
                     </span>
                   )}
                 </div>
+
+                {concentrationActive && spell.combat_slot !== null && (
+                  <div className="spell-stats">
+                    <span>Концентрация <strong>усиливает это заклинание</strong></span>
+                  </div>
+                )}
 
                 <button
                   className="ghost-button"
