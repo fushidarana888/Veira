@@ -186,7 +186,13 @@ export function DuelPanel({ characterId }: Props) {
 
     const nextOverview = (overviewResult.data as DuelOverview | null) ?? { players: [], duels: [] }
     setOverview(nextOverview)
-    setSpells(((spellsResult.data as CharacterSpell[] | null) ?? []).filter((spell) => spell.combat_slot !== null))
+    setSpells(
+      ((spellsResult.data as CharacterSpell[] | null) ?? [])
+        .filter((spell) => (
+          spell.combat_slot !== null
+          && ['damage', 'heal', 'guard', 'cleanse', 'buff'].includes(spell.spell_kind)
+        )),
+    )
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
 
     const active = nextOverview.duels.find((duel) => duel.status === 'active') ?? null
