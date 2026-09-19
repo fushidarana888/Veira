@@ -209,6 +209,12 @@ export function SettlementShop({
                       <div className="shop-item-effect">+{item.heal_amount} HP</div>
                     )}
 
+                    {item.scroll_mode && item.scroll_spell_name && (
+                      <div className="shop-item-effect scroll-effect">
+                        {item.scroll_mode === 'learn' ? 'Изучает' : 'Одноразово применяет'} · {item.scroll_spell_name}
+                      </div>
+                    )}
+
                     {item.damage_type && (
                       <div className="damage-type-chip">
                         Тип урона · {damageTypeLabels[item.damage_type]}
