@@ -723,7 +723,7 @@ export function PartyDungeonPanel({
             <div className="party-dungeon-start">
               <div className="party-dungeon-waiting">
                 Твой боевой набор: {spells.length}/3 · {spells.length > 0 ? spells.map((spell) => spell.name).join(' · ') : 'без заклинаний'}.
-                После начала похода изменить его нельзя.
+                {spells.length === 1 ? ' Концентрация активна.' : ''} После начала похода изменить его нельзя.
               </div>
 
               <label>
