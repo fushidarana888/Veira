@@ -161,6 +161,7 @@ type ItemDraft = {
   shop_enabled: boolean
   damage_type: DamageType | null
   damage_resistances: Partial<Record<DamageType, number>>
+  damage_bonuses: Partial<Record<DamageType, number>>
   scroll_spell_id: string | null
   scroll_mode: 'learn' | 'cast' | null
   unique_property_name: string
@@ -211,6 +212,7 @@ function emptyItem(): ItemDraft {
     shop_enabled: false,
     damage_type: 'slashing',
     damage_resistances: {},
+    damage_bonuses: {},
     scroll_spell_id: null,
     scroll_mode: null,
     unique_property_name: '',
@@ -327,6 +329,7 @@ export function GmItemsAndSpells() {
       shop_enabled: item.shop_enabled,
       damage_type: item.damage_type,
       damage_resistances: item.damage_resistances ?? {},
+      damage_bonuses: item.damage_bonuses ?? {},
       scroll_spell_id: item.scroll_spell_id,
       scroll_mode: item.scroll_mode,
       unique_property_name: item.unique_property_name ?? '',
@@ -377,6 +380,52 @@ export function GmItemsAndSpells() {
     setItemDraft({ ...itemDraft, damage_resistances: next })
   }
 
+  function updateDamageBonus(type: DamageType, raw: string) {
+    const value = Math.max(0, Math.min(75, Number(raw) || 0))
+    const next = { ...itemDraft.damage_bonuses }
+    if (value === 0) delete next[type]
+    else next[type] = value
+    setItemDraft({ ...itemDraft, damage_bonuses: next })
+  }
+
+  function changeItemCategory(category: ItemCategory) {
+    const defaultEquipGroup: ItemEquipGroup | null =
+      category === 'weapon'
+        ? 'weapon'
+        : category === 'armor'
+          ? 'chest'
+          : category === 'accessory'
+            ? 'accessory'
+            : null
+
+    setItemDraft((current) => ({
+      ...current,
+      category,
+      equip_group: defaultEquipGroup,
+      stackable: defaultEquipGroup ? false : current.stackable,
+      max_stack: defaultEquipGroup ? 1 : current.max_stack,
+      damage_type: category === 'weapon' ? current.damage_type ?? 'slashing' : null,
+      damage_resistances: defaultEquipGroup ? current.damage_resistances : {},
+      damage_bonuses: defaultEquipGroup ? current.damage_bonuses : {},
+      unique_effect_type: defaultEquipGroup ? current.unique_effect_type : null,
+      unique_effect_value: defaultEquipGroup ? current.unique_effect_value : 0,
+      unique_property_name: defaultEquipGroup ? current.unique_property_name : '',
+      unique_property_description: defaultEquipGroup ? current.unique_property_description : '',
+      heal_amount: category === 'consumable' ? current.heal_amount : 0,
+      mana_amount: category === 'consumable' ? current.mana_amount : 0,
+      scroll_spell_id: category === 'consumable' ? current.scroll_spell_id : null,
+      scroll_mode: category === 'consumable' ? current.scroll_mode : null,
+    }))
+  }
+
+  const itemEquipGroups = itemDraft.category === 'weapon'
+    ? equipGroups.filter((entry) => entry.value === 'weapon' || entry.value === 'offhand')
+    : itemDraft.category === 'armor'
+      ? equipGroups.filter((entry) => ['offhand', 'head', 'chest', 'hands', 'legs', 'feet'].includes(entry.value))
+      : itemDraft.category === 'accessory'
+        ? equipGroups.filter((entry) => entry.value === 'accessory')
+        : []
+
   async function saveItem() {
     setBusy(true)
     setMessage('')
@@ -389,7 +438,7 @@ export function GmItemsAndSpells() {
       return
     }
 
-    const { data, error } = await supabase.rpc('gm_save_item_definition', {
+    const { data, error } = await supabase.rpc('gm_save_item_definition_v2', {
       p_id: itemDraft.id,
       p_slug: normalizedSlug,
       p_name: itemDraft.name.trim(),
@@ -408,6 +457,7 @@ export function GmItemsAndSpells() {
       p_shop_enabled: itemDraft.shop_enabled,
       p_damage_type: itemDraft.damage_type,
       p_damage_resistances: itemDraft.damage_resistances,
+      p_damage_bonuses: itemDraft.damage_bonuses,
       p_scroll_spell_id: itemDraft.scroll_spell_id,
       p_scroll_mode: itemDraft.scroll_mode,
       p_unique_property_name: itemDraft.unique_property_name || null,
@@ -670,9 +720,10 @@ export function GmItemsAndSpells() {
             <div className="gm-form-grid three">
               <label>
                 <span>Категория</span>
-                <select value={itemDraft.category} onChange={(e) => setItemDraft({ ...itemDraft, category: e.target.value as ItemCategory })}>
+                <select value={itemDraft.category} onChange={(e) => changeItemCategory(e.target.value as ItemCategory)}>
                   {categories.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
                 </select>
+                <small className="gm-field-hint">Что это за предмет в инвентаре.</small>
               </label>
               <label>
                 <span>Редкость</span>
@@ -681,11 +732,22 @@ export function GmItemsAndSpells() {
                 </select>
               </label>
               <label>
-                <span>Слот</span>
-                <select value={itemDraft.equip_group ?? ''} onChange={(e) => setItemDraft({ ...itemDraft, equip_group: e.target.value ? e.target.value as ItemEquipGroup : null })}>
-                  <option value="">Не экипируется</option>
-                  {equipGroups.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+                <span>Слот экипировки</span>
+                <select
+                  value={itemDraft.equip_group ?? ''}
+                  disabled={itemEquipGroups.length === 0}
+                  onChange={(e) => setItemDraft({
+                    ...itemDraft,
+                    equip_group: e.target.value ? e.target.value as ItemEquipGroup : null,
+                  })}
+                >
+                  {itemEquipGroups.length === 0
+                    ? <option value="">Не экипируется</option>
+                    : itemEquipGroups.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
                 </select>
+                <small className="gm-field-hint">
+                  Куда предмет надевается. Категория и слот — разные вещи.
+                </small>
               </label>
             </div>
 
@@ -716,50 +778,88 @@ export function GmItemsAndSpells() {
               </div>
             </div>
 
-            <div className="gm-form-grid three">
-              <label>
-                <span>Тип урона оружия</span>
-                <select value={itemDraft.damage_type ?? ''} onChange={(e) => setItemDraft({ ...itemDraft, damage_type: e.target.value ? e.target.value as DamageType : null })}>
-                  <option value="">Нет</option>
-                  {damageTypes.map((type) => <option key={type} value={type}>{damageLabels[type]}</option>)}
-                </select>
-              </label>
-              <label>
-                <span>Лечение HP</span>
-                <input
-                  type="number"
-                  min={0}
-                  disabled={itemDraft.category !== 'consumable' || itemDraft.scroll_mode != null}
-                  value={itemDraft.heal_amount}
-                  onChange={(e) => setItemDraft({ ...itemDraft, heal_amount: Math.max(0, Number(e.target.value)) })}
-                />
-              </label>
-              <label>
-                <span>Восстановление маны</span>
-                <input
-                  type="number"
-                  min={0}
-                  disabled={itemDraft.category !== 'consumable' || itemDraft.scroll_mode != null}
-                  value={itemDraft.mana_amount}
-                  onChange={(e) => setItemDraft({ ...itemDraft, mana_amount: Math.max(0, Number(e.target.value)) })}
-                />
-              </label>
-            </div>
+            {itemDraft.category === 'weapon' && (
+              <div className="gm-form-grid two">
+                <label>
+                  <span>Тип урона оружия</span>
+                  <select value={itemDraft.damage_type ?? ''} onChange={(e) => setItemDraft({ ...itemDraft, damage_type: e.target.value ? e.target.value as DamageType : null })}>
+                    <option value="">Нет</option>
+                    {damageTypes.filter((type) => ['slashing', 'piercing', 'blunt'].includes(type)).map((type) => (
+                      <option key={type} value={type}>{damageLabels[type]}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
 
-            <div className="gm-editor-box">
-              <div>
-                <strong>Сопротивления / уязвимости</strong>
-                <small>От −75% до +75%</small>
-              </div>
-              <div className="gm-form-grid three">
-                {damageTypes.map((type) => (
-                  <label key={type}>
-                    <span>{damageLabels[type]}</span>
-                    <input type="number" min={-75} max={75} value={itemDraft.damage_resistances[type] ?? 0} onChange={(e) => updateResistance(type, e.target.value)} />
+            {itemDraft.equip_group && (
+              <>
+                <div className="gm-editor-box">
+                  <div>
+                    <strong>Бонус к наносимому урону</strong>
+                    <small>Суммируется с другими вещами, максимум +75% на один тип</small>
+                  </div>
+                  <div className="gm-form-grid three">
+                    {damageTypes.map((type) => (
+                      <label key={'damage-bonus-' + type}>
+                        <span>{damageLabels[type]}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={75}
+                          value={itemDraft.damage_bonuses[type] ?? 0}
+                          onChange={(e) => updateDamageBonus(type, e.target.value)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="gm-editor-box">
+                  <div>
+                    <strong>Сопротивления / уязвимости</strong>
+                    <small>Получаемый урон · от −75% до +75%</small>
+                  </div>
+                  <div className="gm-form-grid three">
+                    {damageTypes.map((type) => (
+                      <label key={type}>
+                        <span>{damageLabels[type]}</span>
+                        <input type="number" min={-75} max={75} value={itemDraft.damage_resistances[type] ?? 0} onChange={(e) => updateResistance(type, e.target.value)} />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {itemDraft.category === 'consumable' && itemDraft.scroll_mode == null && (
+              <div className="gm-editor-box">
+                <div>
+                  <strong>Восстановление ресурсов</strong>
+                  <small>Для зелий и других одноразовых расходников</small>
+                </div>
+                <div className="gm-form-grid two">
+                  <label>
+                    <span>Лечение HP</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={itemDraft.heal_amount}
+                      onChange={(e) => setItemDraft({ ...itemDraft, heal_amount: Math.max(0, Number(e.target.value)) })}
+                    />
                   </label>
-                ))}
+                  <label>
+                    <span>Восстановление маны</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={itemDraft.mana_amount}
+                      onChange={(e) => setItemDraft({ ...itemDraft, mana_amount: Math.max(0, Number(e.target.value)) })}
+                    />
+                  </label>
+                </div>
               </div>
-            </div>
+            )}
 
             {itemDraft.category === 'consumable' && (
               <div className="gm-editor-box">
