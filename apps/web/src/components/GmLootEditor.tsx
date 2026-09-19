@@ -22,7 +22,7 @@ const terrainOptions: Array<{ value: SectorTerrain; label: string }> = [
 
 type Draft = {
   id: string | null
-  source_type: 'enemy' | 'dungeon'
+  source_type: 'enemy' | 'boss' | 'dungeon'
   enemy_template_id: string | null
   sector_id: number | null
   terrain_type: SectorTerrain | null
@@ -96,6 +96,7 @@ export function GmLootEditor() {
   const grouped = useMemo(() => {
     return {
       enemy: entries.filter((entry) => entry.source_type === 'enemy'),
+      boss: entries.filter((entry) => entry.source_type === 'boss'),
       dungeon: entries.filter((entry) => entry.source_type === 'dungeon'),
     }
   }, [entries])
@@ -130,7 +131,7 @@ export function GmLootEditor() {
     const { data, error } = await supabase.rpc('gm_save_loot_entry', {
       p_id: draft.id,
       p_source_type: draft.source_type,
-      p_enemy_template_id: draft.source_type === 'enemy' ? draft.enemy_template_id : null,
+      p_enemy_template_id: ['enemy', 'boss'].includes(draft.source_type) ? draft.enemy_template_id : null,
       p_sector_id: draft.source_type === 'dungeon' ? draft.sector_id : null,
       p_terrain_type: draft.terrain_type,
       p_min_danger: draft.min_danger,
@@ -225,6 +226,25 @@ export function GmLootEditor() {
           </div>
 
           <div className="gm-content-list-group">
+            <strong>Боссы · {grouped.boss.length}</strong>
+            {grouped.boss.map((entry) => (
+              <button
+                type="button"
+                key={entry.id}
+                className={draft.id === entry.id ? 'active' : ''}
+                onClick={() => edit(entry)}
+              >
+                <span>{entry.item_name}</span>
+                <small>
+                  {entry.enemy_name ?? entry.terrain_type ?? 'Любой босс'}
+                  {' · '}{Number(entry.chance_percent)}%
+                  {' · '}{entry.min_danger}–{entry.max_danger}/10
+                </small>
+              </button>
+            ))}
+          </div>
+
+          <div className="gm-content-list-group">
             <strong>Подземелья · {grouped.dungeon.length}</strong>
             {grouped.dungeon.map((entry) => (
               <button
@@ -267,12 +287,13 @@ export function GmLootEditor() {
                 value={draft.source_type}
                 onChange={(event) => setDraft({
                   ...draft,
-                  source_type: event.target.value as 'enemy' | 'dungeon',
+                  source_type: event.target.value as 'enemy' | 'boss' | 'dungeon',
                   enemy_template_id: null,
                   sector_id: null,
                 })}
               >
                 <option value="enemy">Победа над врагом</option>
+                <option value="boss">Победа над боссом</option>
                 <option value="dungeon">Финальная награда подземелья</option>
               </select>
             </label>
@@ -293,7 +314,7 @@ export function GmLootEditor() {
             </label>
           </div>
 
-          {draft.source_type === 'enemy' ? (
+          {['enemy', 'boss'].includes(draft.source_type) ? (
             <label>
               <span>Конкретный враг</span>
               <select
@@ -303,8 +324,10 @@ export function GmLootEditor() {
                   enemy_template_id: event.target.value || null,
                 })}
               >
-                <option value="">Любой враг</option>
-                {enemies.map((enemy) => (
+                <option value="">{draft.source_type === 'boss' ? 'Любой босс' : 'Любой враг'}</option>
+                {enemies
+                  .filter((enemy) => draft.source_type !== 'boss' || enemy.is_boss)
+                  .map((enemy) => (
                   <option key={enemy.id} value={enemy.id}>
                     {enemy.name}{enemy.is_boss ? ' · босс' : ''}
                   </option>
