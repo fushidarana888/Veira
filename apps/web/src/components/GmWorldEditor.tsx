@@ -49,6 +49,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
   const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
+  const [highlightUnconfigured, setHighlightUnconfigured] = useState(false)
   const [selectionMode, setSelectionMode] = useState<'single' | 'multi' | 'rectangle'>('single')
   const [selectedSectorIds, setSelectedSectorIds] = useState<Set<number>>(new Set())
   const [rectangleAnchorId, setRectangleAnchorId] = useState<number | null>(null)
@@ -482,6 +483,14 @@ export function GmWorldEditor({ characters, profiles }: Props) {
             </div>
 
             <div className="gm-map-selection-status">
+              <button
+                className={highlightUnconfigured ? 'ghost-button active' : 'ghost-button'}
+                type="button"
+                aria-pressed={highlightUnconfigured}
+                onClick={() => setHighlightUnconfigured((current) => !current)}
+              >
+                {highlightUnconfigured ? 'Не настроенные: подсвечены' : 'Подсветить не настроенные'}
+              </button>
               <strong>{selectedSectorIds.size}</strong>
               <span>выбрано</span>
               <button
@@ -508,6 +517,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     sector.terrain_type !== 'unassigned' ||
                     Boolean(sector.title)
                   const event = sector.event_enabled
+                  const unconfiguredHighlighted = highlightUnconfigured && !configured
 
                   return (
                     <button
@@ -519,6 +529,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                         groupSelected ? 'group-selected' : '',
                         rectangleAnchor ? 'rectangle-anchor' : '',
                         configured ? 'configured' : '',
+                        unconfiguredHighlighted ? 'unconfigured-highlight' : '',
                         event ? 'has-event' : '',
                       ].filter(Boolean).join(' ')}
                       title={`${sector.grid_col}:${sector.grid_row} · ${sector.title ?? 'без названия'}`}
