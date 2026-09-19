@@ -185,7 +185,7 @@ export function AdventuresPanel({
       if (turnResult.error) {
         setMessage(turnResult.error.message)
       } else {
-        setTurns(((turnResult.data as CombatTurn[] | null) ?? []).reverse())
+        setTurns((turnResult.data as CombatTurn[] | null) ?? [])
       }
 
       if (statusResult.error) {
