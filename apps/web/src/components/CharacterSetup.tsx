@@ -9,6 +9,43 @@ type Props = {
   onSignOut: () => Promise<void> | void
 }
 
+type InitialStatKey = 'strength' | 'agility' | 'intellect' | 'vitality' | 'luck'
+
+const INITIAL_STAT_MIN = 3
+const INITIAL_STAT_MAX = 8
+const FREE_STAT_POINTS = 10
+
+const statLabels: Record<InitialStatKey, { name: string; description: string }> = {
+  strength: {
+    name: 'Сила',
+    description: 'Физическая мощь персонажа.',
+  },
+  agility: {
+    name: 'Ловкость',
+    description: 'Скорость, реакция и точность движений.',
+  },
+  intellect: {
+    name: 'Интеллект',
+    description: 'Умственные способности и работа с магией.',
+  },
+  vitality: {
+    name: 'Живучесть',
+    description: 'Выносливость и способность переносить урон.',
+  },
+  luck: {
+    name: 'Удача',
+    description: 'Влияние случайности в пользу персонажа.',
+  },
+}
+
+const defaultStats: Record<InitialStatKey, number> = {
+  strength: INITIAL_STAT_MIN,
+  agility: INITIAL_STAT_MIN,
+  intellect: INITIAL_STAT_MIN,
+  vitality: INITIAL_STAT_MIN,
+  luck: INITIAL_STAT_MIN,
+}
+
 async function sha256Hex(value: string) {
   const bytes = new TextEncoder().encode(value)
   const digest = await crypto.subtle.digest('SHA-256', bytes)
@@ -25,6 +62,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
   const [raceQuery, setRaceQuery] = useState('')
   const [raceCategory, setRaceCategory] = useState('Все')
   const [raceLoading, setRaceLoading] = useState(true)
+  const [stats, setStats] = useState<Record<InitialStatKey, number>>(defaultStats)
   const [gmCode, setGmCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [gmBusy, setGmBusy] = useState(false)
@@ -82,6 +120,29 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
   }, [races, raceQuery, raceCategory])
 
   const selectedRace = races.find((race) => race.id === raceId) ?? null
+  const spentStatPoints = Object.values(stats).reduce(
+    (sum, value) => sum + (value - INITIAL_STAT_MIN),
+    0,
+  )
+  const remainingStatPoints = FREE_STAT_POINTS - spentStatPoints
+
+  function changeStat(stat: InitialStatKey, delta: number) {
+    setStats((current) => {
+      const nextValue = current[stat] + delta
+
+      if (nextValue < INITIAL_STAT_MIN || nextValue > INITIAL_STAT_MAX) return current
+      if (delta > 0 && remainingStatPoints <= 0) return current
+
+      return {
+        ...current,
+        [stat]: nextValue,
+      }
+    })
+  }
+
+  function resetStats() {
+    setStats({ ...defaultStats })
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -97,17 +158,37 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
       return
     }
 
+    if (remainingStatPoints !== 0) {
+      setMessage(`Распредели все очки характеристик. Осталось: ${remainingStatPoints}.`)
+      return
+    }
+
     setBusy(true)
 
-    const { error } = await supabase.from('characters').insert({
-      owner_user_id: userId,
-      name: name.trim(),
-      race_id: raceId,
-      bio: bio.trim(),
+    const { error } = await supabase.rpc('create_character_with_stats', {
+      p_name: name.trim(),
+      p_race_id: raceId,
+      p_bio: bio.trim(),
+      p_strength: stats.strength,
+      p_agility: stats.agility,
+      p_intellect: stats.intellect,
+      p_vitality: stats.vitality,
+      p_luck: stats.luck,
     })
 
     if (error) {
-      setMessage(error.message)
+      const raw = error.message
+
+      if (raw.includes('INVALID_INITIAL_STAT_TOTAL')) {
+        setMessage('Нужно распределить ровно 10 свободных очков.')
+      } else if (raw.includes('INVALID_INITIAL_STAT_RANGE')) {
+        setMessage('При создании каждая характеристика должна быть от 3 до 8.')
+      } else if (raw.includes('CHARACTER_ALREADY_EXISTS')) {
+        setMessage('На этом аккаунте уже есть персонаж.')
+      } else {
+        setMessage(raw)
+      }
+
       setBusy(false)
       return
     }
@@ -244,6 +325,66 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
               )}
             </div>
 
+            <div className="stat-allocation-block">
+              <div className="stat-allocation-heading">
+                <div>
+                  <span className="form-label">Характеристики</span>
+                  <p className="muted">
+                    Каждая характеристика начинается с 3. Распредели ещё 10 очков. При создании максимум — 8.
+                  </p>
+                </div>
+                <div className={'stat-points-counter' + (remainingStatPoints === 0 ? ' complete' : '')}>
+                  <span>Осталось</span>
+                  <strong>{remainingStatPoints}</strong>
+                </div>
+              </div>
+
+              <div className="initial-stats-grid">
+                {(Object.keys(statLabels) as InitialStatKey[]).map((stat) => (
+                  <article className="initial-stat-card" key={stat}>
+                    <div className="initial-stat-copy">
+                      <strong>{statLabels[stat].name}</strong>
+                      <span>{statLabels[stat].description}</span>
+                    </div>
+
+                    <div className="stat-stepper">
+                      <button
+                        type="button"
+                        aria-label={'Уменьшить ' + statLabels[stat].name}
+                        disabled={stats[stat] <= INITIAL_STAT_MIN}
+                        onClick={() => changeStat(stat, -1)}
+                      >
+                        −
+                      </button>
+                      <strong>{stats[stat]}</strong>
+                      <button
+                        type="button"
+                        aria-label={'Увеличить ' + statLabels[stat].name}
+                        disabled={stats[stat] >= INITIAL_STAT_MAX || remainingStatPoints <= 0}
+                        onClick={() => changeStat(stat, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="stat-allocation-footer">
+                <span>
+                  Распределено: <strong>{spentStatPoints} / {FREE_STAT_POINTS}</strong>
+                </span>
+                <button
+                  className="ghost-button stat-reset-button"
+                  type="button"
+                  disabled={spentStatPoints === 0}
+                  onClick={resetStats}
+                >
+                  Сбросить очки
+                </button>
+              </div>
+            </div>
+
             <label>
               <span>Короткая биография</span>
               <textarea
@@ -255,8 +396,12 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
               />
             </label>
 
-            <button className="primary-button" type="submit" disabled={busy || raceLoading || !raceId}>
-              {busy ? 'Создаём…' : 'Начать игру'}
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={busy || raceLoading || !raceId || remainingStatPoints !== 0}
+            >
+              {busy ? 'Создаём…' : remainingStatPoints === 0 ? 'Начать игру' : `Распредели ещё ${remainingStatPoints}`}
             </button>
           </form>
 
