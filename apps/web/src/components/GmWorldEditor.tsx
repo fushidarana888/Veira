@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type {
   Character,
   ExpeditionEventInstance,
+  ExplorationEventTemplate,
   GmMapSector,
   Profile,
   SectorContentType,
@@ -40,6 +41,23 @@ const contentOptions: Array<{ value: SectorContentType; label: string }> = [
   { value: 'event', label: 'Событие' },
 ]
 
+const createEmptyEventTemplateDraft = () => ({
+  id: null as string | null,
+  name: '',
+  enabled: true,
+  terrain_type: null as SectorTerrain | null,
+  content_type: null as SectorContentType | null,
+  min_danger: 0,
+  max_danger: 5,
+  chance_percent: 25,
+  weight: 1,
+  requires_gm: true,
+  title: '',
+  player_prompt: '',
+  automatic_result: '',
+  gm_notes: '',
+})
+
 const mapUrl = supabase.storage
   .from('veira-assets')
   .getPublicUrl('eilar-map-original.png').data.publicUrl + '?v=original-1'
@@ -48,6 +66,8 @@ export function GmWorldEditor({ characters, profiles }: Props) {
   const [sectors, setSectors] = useState<GmMapSector[]>([])
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
   const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
+  const [eventTemplates, setEventTemplates] = useState<ExplorationEventTemplate[]>([])
+  const [eventTemplateDraft, setEventTemplateDraft] = useState(createEmptyEventTemplateDraft)
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [unconfiguredHighlightMode, setUnconfiguredHighlightMode] = useState<'off' | 'terrain' | 'danger' | 'content'>('off')
   const [selectionMode, setSelectionMode] = useState<'single' | 'multi' | 'rectangle'>('single')
@@ -96,7 +116,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
     setLoading(true)
     setMessage('')
 
-    const [mapResult, expeditionResult, eventResult] = await Promise.all([
+    const [mapResult, expeditionResult, eventResult, templateResult] = await Promise.all([
       supabase.rpc('get_gm_map_state'),
       supabase
         .from('sector_expeditions')
@@ -105,12 +125,13 @@ export function GmWorldEditor({ characters, profiles }: Props) {
         .order('created_at', { ascending: false }),
       supabase
         .from('expedition_event_instances')
-        .select('id, expedition_id, event_definition_id, character_id, sector_id, title, player_prompt, status, resolution_text, outcome, created_at, resolved_at, resolved_by')
+        .select('id, expedition_id, event_definition_id, encounter_template_id, source_kind, character_id, sector_id, title, player_prompt, gm_notes, status, resolution_text, outcome, created_at, resolved_at, resolved_by')
         .eq('status', 'pending')
         .order('created_at', { ascending: true }),
+      supabase.rpc('get_gm_exploration_event_templates'),
     ])
 
-    const error = mapResult.error ?? expeditionResult.error ?? eventResult.error
+    const error = mapResult.error ?? expeditionResult.error ?? eventResult.error ?? templateResult.error
 
     if (error) {
       setMessage(error.message)
@@ -122,6 +143,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
     setSectors(nextSectors)
     setExpeditions((expeditionResult.data as SectorExpedition[] | null) ?? [])
     setEvents((eventResult.data as ExpeditionEventInstance[] | null) ?? [])
+    setEventTemplates((templateResult.data as ExplorationEventTemplate[] | null) ?? [])
 
     if (!selectedSectorId && nextSectors[0]) {
       setSelectedSectorId(nextSectors[0].id)
@@ -312,6 +334,100 @@ export function GmWorldEditor({ characters, profiles }: Props) {
     }
 
     setMessage(`Одинаковые параметры применены к ${Number(data ?? selectedSectorIds.size)} секторам.`)
+    await loadWorld()
+    setBusy(false)
+  }
+
+  function editEventTemplate(template: ExplorationEventTemplate) {
+    setEventTemplateDraft({
+      id: template.id,
+      name: template.name,
+      enabled: template.enabled,
+      terrain_type: template.terrain_type,
+      content_type: template.content_type,
+      min_danger: template.min_danger,
+      max_danger: template.max_danger,
+      chance_percent: template.chance_percent,
+      weight: template.weight,
+      requires_gm: template.requires_gm,
+      title: template.title,
+      player_prompt: template.player_prompt,
+      automatic_result: template.automatic_result,
+      gm_notes: template.gm_notes,
+    })
+  }
+
+  function newEventTemplate() {
+    setEventTemplateDraft(createEmptyEventTemplateDraft())
+  }
+
+  async function saveEventTemplate() {
+    if (!eventTemplateDraft.name.trim()) {
+      setMessage('Задай внутреннее название шаблона события.')
+      return
+    }
+
+    if (!eventTemplateDraft.title.trim()) {
+      setMessage('Задай название события для игрока.')
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('gm_save_exploration_event_template', {
+      p_id: eventTemplateDraft.id,
+      p_name: eventTemplateDraft.name.trim(),
+      p_enabled: eventTemplateDraft.enabled,
+      p_terrain_type: eventTemplateDraft.terrain_type,
+      p_content_type: eventTemplateDraft.content_type,
+      p_min_danger: eventTemplateDraft.min_danger,
+      p_max_danger: eventTemplateDraft.max_danger,
+      p_chance_percent: eventTemplateDraft.chance_percent,
+      p_weight: eventTemplateDraft.weight,
+      p_requires_gm: eventTemplateDraft.requires_gm,
+      p_title: eventTemplateDraft.title.trim(),
+      p_player_prompt: eventTemplateDraft.player_prompt,
+      p_automatic_result: eventTemplateDraft.automatic_result,
+      p_gm_notes: eventTemplateDraft.gm_notes,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    setMessage(eventTemplateDraft.id ? 'Шаблон события обновлён.' : 'Шаблон события создан.')
+    await loadWorld()
+
+    if (!eventTemplateDraft.id && data) {
+      const created = eventTemplates.find((template) => template.id === String(data))
+      if (created) editEventTemplate(created)
+    }
+
+    setBusy(false)
+  }
+
+  async function deleteEventTemplate(templateId: string) {
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('gm_delete_exploration_event_template', {
+      p_id: templateId,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    if (eventTemplateDraft.id === templateId) {
+      setEventTemplateDraft(createEmptyEventTemplateDraft())
+    }
+
+    setMessage('Шаблон события удалён.')
     await loadWorld()
     setBusy(false)
   }
