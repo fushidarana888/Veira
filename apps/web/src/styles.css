@@ -3992,3 +3992,71 @@ textarea {
     gap: 2px;
   }
 }
+
+
+/* Combat status effects */
+.combat-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.combat-status-chip {
+  border: 1px solid #39414c;
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: rgba(74, 82, 94, .14);
+  color: #c3cad2;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.combat-status-chip.burn {
+  border-color: #6b4934;
+  background: rgba(122, 71, 39, .18);
+  color: #e0ad7f;
+}
+
+.combat-status-chip.bleed {
+  border-color: #66393d;
+  background: rgba(111, 49, 57, .16);
+  color: #dda2a9;
+}
+
+.combat-status-chip.poison {
+  border-color: #465a35;
+  background: rgba(72, 96, 50, .16);
+  color: #b6ce91;
+}
+
+.combat-status-chip.chill {
+  border-color: #3c586c;
+  background: rgba(53, 91, 119, .16);
+  color: #9ec6df;
+}
+
+.combat-status-chip.stun {
+  border-color: #685a35;
+  background: rgba(114, 91, 42, .17);
+  color: #ddc783;
+}
+
+.combat-status-chip.weaken,
+.combat-status-chip.vulnerable {
+  border-color: #5d405e;
+  background: rgba(91, 58, 94, .16);
+  color: #ceb0d1;
+}
+
+.enemy-on-hit-effect {
+  margin-top: 7px;
+  color: #b8a98e;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.spell-effect-stat {
+  border-color: #4a4058 !important;
+  color: #c8b5d6 !important;
+}
