@@ -7,6 +7,7 @@ import type {
   AutobattleSpellRule,
   CharacterAdventureSite,
   CombatEncounter,
+  CombatStyleProfile,
   CharacterSpell,
   CombatStatusEffect,
   CombatStatusEffectType,
@@ -111,6 +112,43 @@ function enemySpecialValueText(encounter: CombatEncounter) {
   return 'снимает негативные эффекты'
 }
 
+function combatStyleReady(profile: CombatStyleProfile | null | undefined) {
+  return Boolean(
+    profile
+    && profile.sample_battles >= 3
+    && profile.sample_actions >= 12
+    && profile.confidence_percent >= 50,
+  )
+}
+
+function combatStyleName(profile: CombatStyleProfile) {
+  const spellShare = profile.magic_weight + profile.damage_spell_weight
+  const defenseShare = profile.guard_weight + profile.shield_weight
+
+  if (defenseShare >= 28) return 'Осторожный защитник'
+  if (spellShare >= 55) return 'Боевой маг'
+  if (profile.physical_weight >= 55) return 'Физический боец'
+  if (profile.damage_spell_weight >= 35) return 'Заклинатель'
+  return 'Смешанный стиль'
+}
+
+function combatStyleTraits(profile: CombatStyleProfile) {
+  const traits: string[] = []
+
+  if (profile.physical_weight >= 35) traits.push('любит физические атаки')
+  if (profile.magic_weight + profile.damage_spell_weight >= 35) traits.push('часто использует магию')
+  if (profile.guard_weight + profile.shield_weight >= 18) traits.push('часто защищается')
+  if (profile.telegraph_guard_percent >= 60) traits.push('реагирует на подготовленные атаки')
+  if (profile.heal_weight > 0 && profile.heal_hp_percent > 0) {
+    traits.push(profile.heal_hp_percent >= 55 ? 'лечится рано' : profile.heal_hp_percent <= 30 ? 'лечится поздно' : 'лечится по ситуации')
+  }
+  if (profile.mana_reserve_percent >= 30) traits.push('бережёт ману')
+  if (profile.buff_weight > 0) traits.push('поддерживает усиления')
+  if (profile.cleanse_weight > 0) traits.push('снимает дебаффы')
+
+  return traits.slice(0, 4)
+}
+
 export function AdventuresPanel({
   characterId,
   onProgressChanged,
@@ -126,6 +164,7 @@ export function AdventuresPanel({
   const [lootDrops, setLootDrops] = useState<DungeonLootDrop[]>([])
   const [autobattleSettings, setAutobattleSettings] = useState<AutobattleSettings | null>(null)
   const [autobattleSpellRules, setAutobattleSpellRules] = useState<AutobattleSpellRule[]>([])
+  const [combatStyleProfiles, setCombatStyleProfiles] = useState<CombatStyleProfile[]>([])
   const [autobattleEditorMode, setAutobattleEditorMode] = useState<'normal' | 'boss'>('normal')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -134,7 +173,7 @@ export function AdventuresPanel({
   async function loadAdventures() {
     setLoading(true)
 
-    const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult, autobattleSpellResult] = await Promise.all([
+    const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult, autobattleSpellResult, combatStyleResult] = await Promise.all([
       supabase.rpc('get_character_adventures', {
         p_character_id: characterId,
       }),
@@ -157,6 +196,9 @@ export function AdventuresPanel({
       supabase.rpc('get_character_autobattle_spell_rules', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_character_combat_style', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
@@ -165,7 +207,8 @@ export function AdventuresPanel({
       spellResult.error ??
       scrollResult.error ??
       autobattleResult.error ??
-      autobattleSpellResult.error
+      autobattleSpellResult.error ??
+      combatStyleResult.error
 
     if (error) {
       setMessage(error.message)
@@ -200,6 +243,9 @@ export function AdventuresPanel({
     )
     setAutobattleSpellRules(
       (autobattleSpellResult.data as AutobattleSpellRule[] | null) ?? [],
+    )
+    setCombatStyleProfiles(
+      (combatStyleResult.data as CombatStyleProfile[] | null) ?? [],
     )
 
     const latestEncounter = nextEncounters[0] ?? null
@@ -713,6 +759,72 @@ export function AdventuresPanel({
     setBusy(false)
   }
 
+  async function runCombatStyleAutobattle() {
+    if (!activeCombat) return
+
+    setBusy(true)
+    setMessage('Veira повторяет твой изученный стиль боя…')
+
+    const { data, error } = await supabase.rpc('run_combat_style_autobattle', {
+      p_encounter_id: activeCombat.id,
+    })
+
+    if (error) {
+      setMessage(
+        error.message.includes('STYLE_PROFILE_NOT_READY')
+          ? 'Стиль ещё изучен недостаточно. Заверши вручную хотя бы 3 боя и сделай в них не меньше 12 действий.'
+          : error.message,
+      )
+      setBusy(false)
+      return
+    }
+
+    const result = data as AutobattleResult
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      Promise.resolve(onInventoryChanged?.()),
+    ])
+    await loadAdventures()
+    setMessage(
+      result.status === 'victory'
+        ? 'Veira завершила бой в твоём стиле.'
+        : autobattleMessage(result, false),
+    )
+    setBusy(false)
+  }
+
+  async function runDungeonStyleAutobattle(runId: string) {
+    setBusy(true)
+    setMessage('Veira проходит подземелье в твоём стиле…')
+
+    const { data, error } = await supabase.rpc('run_dungeon_style_autobattle', {
+      p_run_id: runId,
+    })
+
+    if (error) {
+      setMessage(
+        error.message.includes('STYLE_PROFILE_NOT_READY')
+          ? 'Стиль ещё изучен недостаточно. Сначала заверши вручную хотя бы 3 обычных боя.'
+          : error.message,
+      )
+      setBusy(false)
+      return
+    }
+
+    const result = data as AutobattleResult
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      Promise.resolve(onInventoryChanged?.()),
+    ])
+    await loadAdventures()
+    setMessage(
+      result.status === 'completed'
+        ? 'Veira полностью зачистила подземелье, повторяя твой стиль.'
+        : autobattleMessage(result, true),
+    )
+    setBusy(false)
+  }
+
   async function leaveDungeon(runId: string) {
     setBusy(true)
     setMessage('')
@@ -759,6 +871,17 @@ export function AdventuresPanel({
     ? Math.round((clearedRooms / totalRooms) * 100)
     : 0
   const nextRoomIsBoss = totalRooms > 0 && nextRoom === totalRooms
+
+  const normalStyleProfile = combatStyleProfiles.find((profile) => profile.context === 'normal') ?? null
+  const bossStyleProfile = combatStyleProfiles.find((profile) => profile.context === 'boss') ?? null
+  const normalStyleReady = combatStyleReady(normalStyleProfile)
+  const bossStyleReady = combatStyleReady(bossStyleProfile)
+  const activeStyleProfile = activeCombat?.is_boss && bossStyleReady
+    ? bossStyleProfile
+    : normalStyleProfile
+  const styleTraits = activeStyleProfile && combatStyleReady(activeStyleProfile)
+    ? combatStyleTraits(activeStyleProfile)
+    : []
 
   return (
     <section className="adventures-section">
@@ -829,6 +952,70 @@ export function AdventuresPanel({
               </div>
             </div>
           )}
+
+          <div className="style-autobattle-panel">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">VEIRA ИЗУЧАЕТ ТВОЙ БОЙ</span>
+                <h3>{normalStyleReady && normalStyleProfile
+                  ? combatStyleName(normalStyleProfile)
+                  : 'Стиль ещё формируется'}</h3>
+                <p className="muted">
+                  В обучение попадают только твои ручные действия. Обычный автобой и «Играть как я» сами себя не обучают.
+                </p>
+              </div>
+              <span className="badge">
+                {normalStyleProfile?.confidence_percent ?? 0}% уверенности
+              </span>
+            </div>
+
+            {normalStyleReady && normalStyleProfile ? (
+              <>
+                <div className="style-profile-stats">
+                  <span><strong>{normalStyleProfile.physical_weight}%</strong><small>физика</small></span>
+                  <span><strong>{normalStyleProfile.magic_weight}%</strong><small>врожд. магия</small></span>
+                  <span><strong>{normalStyleProfile.damage_spell_weight}%</strong><small>заклинания</small></span>
+                  <span><strong>{normalStyleProfile.guard_weight + normalStyleProfile.shield_weight}%</strong><small>защита</small></span>
+                </div>
+
+                {styleTraits.length > 0 && (
+                  <div className="style-traits">
+                    {styleTraits.map((trait) => <span key={trait}>{trait}</span>)}
+                  </div>
+                )}
+
+                <div className="style-learning-meta">
+                  <span>Обычные бои: {normalStyleProfile.sample_battles}/10</span>
+                  <span>Ручных решений: {normalStyleProfile.sample_actions}</span>
+                  <span>
+                    Боссы: {bossStyleReady && bossStyleProfile
+                      ? bossStyleProfile.sample_battles + '/10 · свой профиль'
+                      : 'пока используется обычный стиль'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="style-learning-progress">
+                <strong>
+                  {Math.min(3, normalStyleProfile?.sample_battles ?? 0)} / 3 ручных боя
+                </strong>
+                <span>
+                  Решений: {normalStyleProfile?.sample_actions ?? 0} / 12. После этого откроется полностью автоматический режим.
+                </span>
+              </div>
+            )}
+
+            <button
+              className="style-autobattle-button"
+              type="button"
+              disabled={busy || !normalStyleReady}
+              onClick={() => activeCombat
+                ? void runCombatStyleAutobattle()
+                : void runDungeonStyleAutobattle(activeDungeon.active_run_id!)}
+            >
+              {busy ? 'Veira играет…' : normalStyleReady ? 'Играть как я' : 'Стиль ещё изучается'}
+            </button>
+          </div>
 
           {autobattleSettings && (
             <details className="autobattle-panel">
@@ -1196,6 +1383,16 @@ export function AdventuresPanel({
                 </button>
 
                 <button
+                  className="style-autobattle-button compact"
+                  type="button"
+                  disabled={busy || !normalStyleReady}
+                  title={normalStyleReady ? 'Автоматически повторяет изученные привычки твоих ручных боёв.' : 'Сначала нужно минимум 3 завершённых ручных боя и 12 решений.'}
+                  onClick={() => void runDungeonStyleAutobattle(activeDungeon.active_run_id!)}
+                >
+                  Играть как я
+                </button>
+
+                <button
                   className="ghost-button danger-button"
                   type="button"
                   disabled={busy}
@@ -1355,6 +1552,16 @@ export function AdventuresPanel({
                   onClick={() => void runCombatAutobattle()}
                 >
                   {busy ? 'Автобой…' : 'Автобой'}
+                </button>
+
+                <button
+                  className="style-autobattle-button compact"
+                  type="button"
+                  disabled={busy || !normalStyleReady}
+                  title={normalStyleReady ? 'Повторяет твой изученный стиль в этом бою.' : 'Стиль ещё изучается на ручных боях.'}
+                  onClick={() => void runCombatStyleAutobattle()}
+                >
+                  Играть как я
                 </button>
 
                 <button
