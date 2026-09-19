@@ -1,0 +1,10 @@
+{
+  "name": "veira",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev -w @veira/web",
+    "build": "npm run build -w @veira/web",
+    "typecheck": "npm run typecheck -w @veira/web"
+  }
+}
