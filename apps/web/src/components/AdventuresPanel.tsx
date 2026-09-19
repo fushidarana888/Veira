@@ -4,6 +4,8 @@ import type {
   CharacterAdventureSite,
   CombatEncounter,
   CharacterSpell,
+  CombatStatusEffect,
+  CombatStatusEffectType,
   CombatTurn,
   DamageType,
 } from '../types'
@@ -36,6 +38,16 @@ function normalizeCombatScrollDefinition(value: CombatScroll['item_definitions']
   return Array.isArray(value) ? value[0] ?? null : value
 }
 
+const statusEffectLabels: Record<CombatStatusEffectType, string> = {
+  burn: 'Горение',
+  bleed: 'Кровотечение',
+  poison: 'Яд',
+  chill: 'Охлаждение',
+  stun: 'Оглушение',
+  weaken: 'Ослабление',
+  vulnerable: 'Уязвимость',
+}
+
 const damageTypeLabels: Record<DamageType, string> = {
   slashing: 'Режущий',
   piercing: 'Колющий',
@@ -56,6 +68,7 @@ export function AdventuresPanel({
   const [sites, setSites] = useState<CharacterAdventureSite[]>([])
   const [encounters, setEncounters] = useState<CombatEncounter[]>([])
   const [turns, setTurns] = useState<CombatTurn[]>([])
+  const [statusEffects, setStatusEffects] = useState<CombatStatusEffect[]>([])
   const [spells, setSpells] = useState<CharacterSpell[]>([])
   const [combatScrolls, setCombatScrolls] = useState<CombatScroll[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,7 +84,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
@@ -112,20 +125,34 @@ export function AdventuresPanel({
     const latestEncounter = nextEncounters[0] ?? null
 
     if (latestEncounter) {
-      const { data: turnData, error: turnError } = await supabase
-        .from('combat_turns')
-        .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
-        .eq('encounter_id', latestEncounter.id)
-        .order('id', { ascending: false })
-        .limit(18)
+      const [turnResult, statusResult] = await Promise.all([
+        supabase
+          .from('combat_turns')
+          .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
+          .eq('encounter_id', latestEncounter.id)
+          .order('id', { ascending: false })
+          .limit(18),
+        supabase
+          .from('combat_status_effects')
+          .select('id, encounter_id, target, effect_type, potency, remaining_turns, source, created_at, updated_at')
+          .eq('encounter_id', latestEncounter.id)
+          .order('created_at', { ascending: true }),
+      ])
 
-      if (turnError) {
-        setMessage(turnError.message)
+      if (turnResult.error) {
+        setMessage(turnResult.error.message)
       } else {
-        setTurns(((turnData as CombatTurn[] | null) ?? []).reverse())
+        setTurns(((turnResult.data as CombatTurn[] | null) ?? []).reverse())
+      }
+
+      if (statusResult.error) {
+        setMessage(statusResult.error.message)
+      } else {
+        setStatusEffects((statusResult.data as CombatStatusEffect[] | null) ?? [])
       }
     } else {
       setTurns([])
+      setStatusEffects([])
     }
 
     setLoading(false)
@@ -152,6 +179,8 @@ export function AdventuresPanel({
 
   const latestCombat = encounters[0] ?? null
   const activeCombat = latestCombat?.status === 'active' ? latestCombat : null
+  const playerStatusEffects = statusEffects.filter((effect) => effect.target === 'player')
+  const enemyStatusEffects = statusEffects.filter((effect) => effect.target === 'enemy')
   const latestCombatSite = latestCombat
     ? dungeons.find((site) => site.active_run_id === latestCombat.dungeon_run_id) ?? null
     : null
@@ -460,6 +489,16 @@ export function AdventuresPanel({
                     <strong>{activeCombat.player_mana_current} / {activeCombat.player_mana_max}</strong>
                   </div>
                   <div className="combat-hp-meter mana"><span style={{ width: playerManaPercent + '%' }} /></div>
+                  {playerStatusEffects.length > 0 && (
+                    <div className="combat-status-list">
+                      {playerStatusEffects.map((effect) => (
+                        <span className={'combat-status-chip ' + effect.effect_type} key={effect.id}>
+                          {statusEffectLabels[effect.effect_type]} · {effect.remaining_turns} х.
+                          {effect.potency > 0 ? ' · ' + effect.potency : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="combatant-card enemy">
@@ -477,6 +516,24 @@ export function AdventuresPanel({
                         </span>
                       ))}
                   </div>
+
+                  {enemyStatusEffects.length > 0 && (
+                    <div className="combat-status-list">
+                      {enemyStatusEffects.map((effect) => (
+                        <span className={'combat-status-chip ' + effect.effect_type} key={effect.id}>
+                          {statusEffectLabels[effect.effect_type]} · {effect.remaining_turns} х.
+                          {effect.potency > 0 ? ' · ' + effect.potency : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeCombat.enemy_on_hit_effect_type && (
+                    <div className="enemy-on-hit-effect">
+                      При попадании: {statusEffectLabels[activeCombat.enemy_on_hit_effect_type]}
+                      {' · '}{activeCombat.enemy_on_hit_effect_chance}%
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -545,6 +602,9 @@ export function AdventuresPanel({
                               <span>
                                 {spell.damage_type ? damageTypeLabels[spell.damage_type] : 'Магия'}
                                 {' · '}{spell.mana_cost} маны
+                                {spell.status_effect_type
+                                  ? ' · ' + statusEffectLabels[spell.status_effect_type] + ' ' + spell.status_effect_chance + '%'
+                                  : ''}
                               </span>
                             </button>
                           ))}
