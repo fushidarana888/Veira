@@ -4840,3 +4840,39 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* Guard -> physical counter */
+.combat-counter-ready {
+  display: grid;
+  gap: 3px;
+  margin-top: 8px;
+  border: 1px solid #5c4d34;
+  border-radius: 9px;
+  background: rgba(116, 84, 42, .12);
+  padding: 7px 8px;
+}
+
+.combat-counter-ready strong {
+  color: #e0be83;
+  font-size: 10px;
+}
+
+.combat-counter-ready span {
+  color: #a9916d;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.combat-guard-help {
+  border-left: 2px solid #59636f;
+  color: #8f99a5;
+  font-size: 9px;
+  line-height: 1.5;
+  padding: 5px 8px;
+}
+
+.combat-guard-help strong,
+.combat-guard-help b {
+  color: #bcc4cd;
+}
