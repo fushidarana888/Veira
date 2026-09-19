@@ -69,6 +69,16 @@ type Draft = {
   on_hit_effect_chance: number
   on_hit_effect_turns: number
   on_hit_effect_potency: number
+  special_name: string
+  special_damage_multiplier: number
+  special_every_n: number
+  special_damage_type: DamageType | null
+  special_effect_type: CombatStatusEffectType | null
+  special_effect_chance: number
+  special_effect_turns: number
+  special_effect_potency: number
+  special_telegraph_text: string
+  special_attack_text: string
 }
 
 function emptyDraft(): Draft {
@@ -93,6 +103,16 @@ function emptyDraft(): Draft {
     on_hit_effect_chance: 0,
     on_hit_effect_turns: 0,
     on_hit_effect_potency: 0,
+    special_name: '',
+    special_damage_multiplier: 0,
+    special_every_n: 0,
+    special_damage_type: null,
+    special_effect_type: null,
+    special_effect_chance: 0,
+    special_effect_turns: 0,
+    special_effect_potency: 0,
+    special_telegraph_text: '',
+    special_attack_text: '',
   }
 }
 
@@ -139,6 +159,16 @@ export function GmEnemyTemplates() {
       on_hit_effect_chance: template.on_hit_effect_chance,
       on_hit_effect_turns: template.on_hit_effect_turns,
       on_hit_effect_potency: template.on_hit_effect_potency,
+      special_name: template.special_name ?? '',
+      special_damage_multiplier: Number(template.special_damage_multiplier ?? 0),
+      special_every_n: template.special_every_n ?? 0,
+      special_damage_type: template.special_damage_type ?? null,
+      special_effect_type: template.special_effect_type ?? null,
+      special_effect_chance: template.special_effect_chance ?? 0,
+      special_effect_turns: template.special_effect_turns ?? 0,
+      special_effect_potency: template.special_effect_potency ?? 0,
+      special_telegraph_text: template.special_telegraph_text ?? '',
+      special_attack_text: template.special_attack_text ?? '',
     })
     setMessage('')
   }
@@ -182,8 +212,35 @@ export function GmEnemyTemplates() {
     }
 
     const savedId = data ? String(data) : draft.id
+
+    if (!savedId) {
+      setMessage('Шаблон сохранён, но не удалось получить его ID для настройки особой атаки.')
+      setBusy(false)
+      return
+    }
+
+    const { error: specialError } = await supabase.rpc('gm_set_enemy_special', {
+      p_enemy_id: savedId,
+      p_special_name: draft.special_name.trim(),
+      p_damage_multiplier: draft.special_damage_multiplier,
+      p_every_n: draft.special_every_n,
+      p_damage_type: draft.special_damage_type,
+      p_effect_type: draft.special_effect_type,
+      p_effect_chance: draft.special_effect_chance,
+      p_effect_turns: draft.special_effect_turns,
+      p_effect_potency: draft.special_effect_potency,
+      p_telegraph_text: draft.special_telegraph_text,
+      p_attack_text: draft.special_attack_text,
+    })
+
+    if (specialError) {
+      setMessage(specialError.message)
+      setBusy(false)
+      return
+    }
+
     await loadTemplates()
-    if (!draft.id && savedId) setDraft({ ...draft, id: savedId })
+    if (!draft.id) setDraft({ ...draft, id: savedId })
     setMessage(draft.id ? 'Шаблон врага обновлён.' : 'Шаблон врага создан.')
     setBusy(false)
   }
@@ -489,6 +546,177 @@ export function GmEnemyTemplates() {
                   onChange={(event) => setDraft({
                     ...draft,
                     on_hit_effect_potency: Math.max(0, Number(event.target.value)),
+                  })}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="gm-enemy-resistances enemy-special-editor">
+            <div>
+              <strong>Особая атака с подготовкой</strong>
+              <span>
+                Если интервал больше нуля, враг сначала явно готовит атаку один ход, а применяет её на следующем.
+                Автобой видит только уже начавшуюся подготовку.
+              </span>
+            </div>
+
+            <div className="gm-enemy-resistance-grid">
+              <label>
+                <span>Название</span>
+                <input
+                  value={draft.special_name}
+                  disabled={draft.special_every_n === 0}
+                  onChange={(event) => setDraft({ ...draft, special_name: event.target.value })}
+                  placeholder="Сокрушающий удар"
+                />
+              </label>
+
+              <label>
+                <span>Каждые N ходов</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={draft.special_every_n}
+                  onChange={(event) => {
+                    const value = Math.max(0, Math.min(20, Number(event.target.value)))
+                    setDraft({
+                      ...draft,
+                      special_every_n: value === 1 ? 2 : value,
+                      special_damage_multiplier: value > 0
+                        ? Math.max(1, draft.special_damage_multiplier || 1.75)
+                        : 0,
+                    })
+                  }}
+                />
+              </label>
+
+              <label>
+                <span>Урон ×</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={5}
+                  step={0.05}
+                  disabled={draft.special_every_n === 0}
+                  value={draft.special_damage_multiplier}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    special_damage_multiplier: Math.max(0, Math.min(5, Number(event.target.value))),
+                  })}
+                />
+              </label>
+
+              <label>
+                <span>Тип урона</span>
+                <select
+                  disabled={draft.special_every_n === 0}
+                  value={draft.special_damage_type ?? ''}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    special_damage_type: event.target.value ? event.target.value as DamageType : null,
+                  })}
+                >
+                  <option value="">Как обычная атака</option>
+                  {damageTypes.map((type) => (
+                    <option key={type} value={type}>{damageLabels[type]}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="gm-sector-form-grid">
+              <label>
+                <span>Текст подготовки</span>
+                <textarea
+                  rows={2}
+                  disabled={draft.special_every_n === 0}
+                  value={draft.special_telegraph_text}
+                  onChange={(event) => setDraft({ ...draft, special_telegraph_text: event.target.value })}
+                  placeholder="Колосс заносит обе руки. Удар будет на следующем ходу."
+                />
+              </label>
+              <label>
+                <span>Текст удара</span>
+                <textarea
+                  rows={2}
+                  disabled={draft.special_every_n === 0}
+                  value={draft.special_attack_text}
+                  onChange={(event) => setDraft({ ...draft, special_attack_text: event.target.value })}
+                  placeholder="Колосс обрушивает сокрушающий удар."
+                />
+              </label>
+            </div>
+
+            <div className="gm-enemy-resistance-grid">
+              <label>
+                <span>Эффект</span>
+                <select
+                  disabled={draft.special_every_n === 0}
+                  value={draft.special_effect_type ?? ''}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    special_effect_type: event.target.value
+                      ? event.target.value as CombatStatusEffectType
+                      : null,
+                    special_effect_chance: event.target.value
+                      ? Math.max(1, draft.special_effect_chance || 50)
+                      : 0,
+                    special_effect_turns: event.target.value
+                      ? Math.max(1, draft.special_effect_turns || 1)
+                      : 0,
+                    special_effect_potency: event.target.value ? draft.special_effect_potency : 0,
+                  })}
+                >
+                  <option value="">Нет</option>
+                  {statusEffectOptions.map((effect) => (
+                    <option key={effect.value} value={effect.value}>{effect.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Шанс %</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  disabled={draft.special_every_n === 0 || !draft.special_effect_type}
+                  value={draft.special_effect_chance}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    special_effect_chance: Math.max(0, Math.min(100, Number(event.target.value))),
+                  })}
+                />
+              </label>
+
+              <label>
+                <span>Ходов</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  disabled={draft.special_every_n === 0 || !draft.special_effect_type}
+                  value={draft.special_effect_turns}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    special_effect_turns: Math.max(0, Math.min(10, Number(event.target.value))),
+                  })}
+                />
+              </label>
+
+              <label>
+                <span>Сила</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1000}
+                  disabled={draft.special_every_n === 0 || !draft.special_effect_type}
+                  value={draft.special_effect_potency}
+                  onChange={(event) => setDraft({
+                    ...draft,
+                    special_effect_potency: Math.max(0, Number(event.target.value)),
                   })}
                 />
               </label>
