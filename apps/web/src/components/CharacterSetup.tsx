@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { RaceDefinition } from '../types'
+import type { DamageType, RaceDefinition } from '../types'
 
 type Props = {
   userId: string
@@ -38,6 +38,18 @@ const statLabels: Record<InitialStatKey, { name: string; description: string }> 
   },
 }
 
+const damageTypeLabels: Record<DamageType, string> = {
+  slashing: 'Режущий',
+  piercing: 'Колющий',
+  blunt: 'Дробящий',
+  fire: 'Огонь',
+  water: 'Вода',
+  earth: 'Земля',
+  air: 'Воздух',
+  lightning: 'Молния',
+  ice: 'Лёд',
+}
+
 const defaultStats: Record<InitialStatKey, number> = {
   strength: INITIAL_STAT_MIN,
   agility: INITIAL_STAT_MIN,
@@ -73,11 +85,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
     let active = true
 
     async function loadRaces() {
-      const { data, error } = await supabase
-        .from('race_definitions')
-        .select('id, slug, name, category, description, sort_order, playable, stat_modifiers, traits')
-        .eq('playable', true)
-        .order('sort_order', { ascending: true })
+      const { data, error } = await supabase.rpc('get_character_creation_races')
 
       if (!active) return
 
@@ -165,27 +173,36 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
 
     setBusy(true)
 
-    const { error } = await supabase.from('characters').insert({
-      owner_user_id: userId,
-      name: name.trim(),
-      race_id: raceId,
-      bio: bio.trim(),
-      initial_strength: stats.strength,
-      initial_agility: stats.agility,
-      initial_intellect: stats.intellect,
-      initial_vitality: stats.vitality,
-      initial_luck: stats.luck,
+    if (!bio.trim()) {
+      setMessage('Короткая биография обязательна.')
+      setBusy(false)
+      return
+    }
+
+    const { error } = await supabase.rpc('create_player_character', {
+      p_name: name.trim(),
+      p_race_id: raceId,
+      p_bio: bio.trim(),
+      p_strength: stats.strength,
+      p_agility: stats.agility,
+      p_intellect: stats.intellect,
+      p_vitality: stats.vitality,
+      p_luck: stats.luck,
     })
 
     if (error) {
       const raw = error.message
 
-      if (raw.includes('characters_initial_stats_total')) {
+      if (raw.includes('INITIAL_STATS_MUST_SPEND_TEN')) {
         setMessage('Нужно распределить ровно 10 свободных очков.')
-      } else if (raw.includes('characters_initial_') && raw.includes('_range')) {
+      } else if (raw.includes('INITIAL_STAT_OUT_OF_RANGE')) {
         setMessage('При создании каждая характеристика должна быть от 3 до 8.')
-      } else if (raw.includes('characters_one_per_owner_idx')) {
+      } else if (raw.includes('CHARACTER_ALREADY_EXISTS')) {
         setMessage('На этом аккаунте уже есть персонаж.')
+      } else if (raw.includes('RACE_REQUIRES_GM_ACCESS')) {
+        setMessage('Эта раса доступна только после разрешения GM.')
+      } else if (raw.includes('BIOGRAPHY_REQUIRED')) {
+        setMessage('Короткая биография обязательна.')
       } else {
         setMessage(raw)
       }
@@ -268,7 +285,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
               <div className="race-picker-heading">
                 <div>
                   <span className="form-label">Раса</span>
-                  <p className="muted">Раса выбирается из народов Эйлара. Характеристики и расовые особенности добавим позже.</p>
+                  <p className="muted">Раса влияет на запас HP/MP, восстановление, сопротивления, врождённую стихию и одну пассивную способность.</p>
                 </div>
                 {selectedRace && <span className="selected-race-badge">Выбрано: {selectedRace.name}</span>}
               </div>
@@ -304,15 +321,31 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
                       type="button"
                       role="radio"
                       aria-checked={race.id === raceId}
-                      className={'race-card' + (race.id === raceId ? ' selected' : '')}
-                      onClick={() => setRaceId(race.id)}
+                      aria-disabled={race.is_available === false}
+                      className={
+                        'race-card'
+                        + (race.id === raceId ? ' selected' : '')
+                        + (race.is_available === false ? ' locked' : '')
+                      }
+                      onClick={() => {
+                        if (race.is_available !== false) setRaceId(race.id)
+                      }}
                     >
                       <div className="race-card-top">
                         <strong>{race.name}</strong>
-                        {race.id === raceId && <span>✓</span>}
+                        {race.id === raceId ? <span>✓</span> : race.is_available === false ? <span>GM</span> : null}
                       </div>
                       <small>{race.category}</small>
                       <p>{race.description}</p>
+                      <div className="race-card-mechanics">
+                        <span>{damageTypeLabels[race.innate_magic_damage_type]} · врождённая магия</span>
+                        {race.hp_bonus !== 0 && <span>HP {race.hp_bonus > 0 ? '+' : ''}{race.hp_bonus}</span>}
+                        {race.mana_bonus !== 0 && <span>MP {race.mana_bonus > 0 ? '+' : ''}{race.mana_bonus}</span>}
+                        {race.passive_name && <span>{race.passive_name}</span>}
+                      </div>
+                      {race.is_available === false && (
+                        <div className="race-lock-note">Требуется разрешение GM</div>
+                      )}
                     </button>
                   ))}
 
@@ -325,6 +358,48 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
                 </div>
               )}
             </div>
+
+            {selectedRace && (
+              <div className="selected-race-details">
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">РАСОВЫЕ ОСОБЕННОСТИ</span>
+                    <h3>{selectedRace.name}</h3>
+                  </div>
+                  <span className="badge">
+                    {damageTypeLabels[selectedRace.innate_magic_damage_type]}
+                  </span>
+                </div>
+
+                <div className="race-mechanic-grid">
+                  <span><small>Макс. HP</small><strong>{selectedRace.hp_bonus >= 0 ? '+' : ''}{selectedRace.hp_bonus}</strong></span>
+                  <span><small>Макс. MP</small><strong>{selectedRace.mana_bonus >= 0 ? '+' : ''}{selectedRace.mana_bonus}</strong></span>
+                  <span><small>Реген HP/ч</small><strong>{selectedRace.hp_regen_per_hour}</strong></span>
+                  <span><small>Реген MP/ч</small><strong>{selectedRace.mana_regen_per_hour}</strong></span>
+                </div>
+
+                {Object.entries(selectedRace.damage_resistances ?? {})
+                  .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                  .length > 0 && (
+                    <div className="race-resistance-list">
+                      {Object.entries(selectedRace.damage_resistances ?? {})
+                        .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                        .map(([type, value]) => (
+                          <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
+                            {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                          </span>
+                        ))}
+                    </div>
+                  )}
+
+                {selectedRace.passive_name && (
+                  <div className="race-passive-card">
+                    <strong>{selectedRace.passive_name}</strong>
+                    <p>{selectedRace.passive_description}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="stat-allocation-block">
               <div className="stat-allocation-heading">
@@ -393,7 +468,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
                 onChange={(event) => setBio(event.target.value)}
                 maxLength={4000}
                 rows={7}
-                placeholder="Кем был персонаж до начала игры?"
+                placeholder="Кем был персонаж до начала игры? Биография обязательна."
               />
             </label>
 
