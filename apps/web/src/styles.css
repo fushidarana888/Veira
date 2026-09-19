@@ -2307,3 +2307,32 @@ textarea {
     width: 100%;
   }
 }
+
+
+.expedition-result-card {
+  border-color: #40513a;
+  background:
+    linear-gradient(145deg, rgba(93, 132, 76, .11), transparent 58%),
+    var(--panel);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.expedition-result-card h3 {
+  margin: 6px 0 8px;
+}
+
+.expedition-result-card p {
+  margin: 0;
+  max-width: 760px;
+  line-height: 1.6;
+  color: #c5cbbf;
+}
+
+@media (max-width: 760px) {
+  .expedition-result-card {
+    flex-direction: column;
+  }
+}
