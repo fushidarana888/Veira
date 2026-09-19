@@ -481,7 +481,7 @@ export function AdventuresPanel({
     setBusy(true)
     setMessage('')
 
-    const { data, error } = await supabase.rpc('save_character_autobattle_settings', {
+    const { error } = await supabase.rpc('save_character_autobattle_settings', {
       p_character_id: characterId,
       p_strategy: autobattleSettings.strategy,
       p_stop_hp_percent: autobattleSettings.stop_hp_percent,
