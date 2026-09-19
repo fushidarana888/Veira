@@ -94,6 +94,7 @@ type ItemDraft = {
   max_stack: number
   stat_modifiers: Record<string, number>
   heal_amount: number
+  mana_amount: number
   base_value: number
   required_level: number
   shop_tier: number
@@ -140,6 +141,7 @@ function emptyItem(): ItemDraft {
     max_stack: 1,
     stat_modifiers: {},
     heal_amount: 0,
+    mana_amount: 0,
     base_value: 0,
     required_level: 1,
     shop_tier: 0,
@@ -176,19 +178,28 @@ function emptySpell(): SpellDraft {
   }
 }
 
-function healingAmount(item: ItemDefinition) {
+function resourceAmount(item: ItemDefinition, type: 'heal_hp' | 'restore_mana') {
+  let total = 0
   for (const effect of item.effects ?? []) {
     if (
       effect &&
       typeof effect === 'object' &&
       'type' in effect &&
       'amount' in effect &&
-      (effect as { type?: unknown }).type === 'heal_hp'
+      (effect as { type?: unknown }).type === type
     ) {
-      return Number((effect as { amount?: unknown }).amount) || 0
+      total += Math.max(0, Number((effect as { amount?: unknown }).amount) || 0)
     }
   }
-  return 0
+  return total
+}
+
+function healingAmount(item: ItemDefinition) {
+  return resourceAmount(item, 'heal_hp')
+}
+
+function manaAmount(item: ItemDefinition) {
+  return resourceAmount(item, 'restore_mana')
 }
 
 export function GmItemsAndSpells() {
@@ -243,6 +254,7 @@ export function GmItemsAndSpells() {
       max_stack: item.max_stack,
       stat_modifiers: item.stat_modifiers ?? {},
       heal_amount: healingAmount(item),
+      mana_amount: manaAmount(item),
       base_value: item.base_value,
       required_level: item.required_level,
       shop_tier: item.shop_tier,
@@ -334,8 +346,29 @@ export function GmItemsAndSpells() {
       return
     }
 
+    const savedId = data ? String(data) : itemDraft.id
+
+    if (!savedId) {
+      setMessage('Предмет сохранён, но не удалось получить его ID.')
+      setBusy(false)
+      return
+    }
+
+    if (itemDraft.category === 'consumable') {
+      const { error: manaError } = await supabase.rpc('gm_set_item_mana_restore', {
+        p_item_id: savedId,
+        p_mana_amount: itemDraft.mana_amount,
+      })
+
+      if (manaError) {
+        setMessage(manaError.message)
+        setBusy(false)
+        return
+      }
+    }
+
     await loadData()
-    if (!itemDraft.id && data) setItemDraft({ ...itemDraft, id: String(data) })
+    if (!itemDraft.id) setItemDraft({ ...itemDraft, id: savedId })
     setMessage(itemDraft.id ? 'Предмет обновлён.' : 'Предмет создан.')
     setBusy(false)
   }
@@ -560,7 +593,7 @@ export function GmItemsAndSpells() {
               </div>
             </div>
 
-            <div className="gm-form-grid two">
+            <div className="gm-form-grid three">
               <label>
                 <span>Тип урона оружия</span>
                 <select value={itemDraft.damage_type ?? ''} onChange={(e) => setItemDraft({ ...itemDraft, damage_type: e.target.value ? e.target.value as DamageType : null })}>
@@ -570,7 +603,23 @@ export function GmItemsAndSpells() {
               </label>
               <label>
                 <span>Лечение HP</span>
-                <input type="number" min={0} value={itemDraft.heal_amount} onChange={(e) => setItemDraft({ ...itemDraft, heal_amount: Math.max(0, Number(e.target.value)) })} />
+                <input
+                  type="number"
+                  min={0}
+                  disabled={itemDraft.category !== 'consumable' || itemDraft.scroll_mode != null}
+                  value={itemDraft.heal_amount}
+                  onChange={(e) => setItemDraft({ ...itemDraft, heal_amount: Math.max(0, Number(e.target.value)) })}
+                />
+              </label>
+              <label>
+                <span>Восстановление маны</span>
+                <input
+                  type="number"
+                  min={0}
+                  disabled={itemDraft.category !== 'consumable' || itemDraft.scroll_mode != null}
+                  value={itemDraft.mana_amount}
+                  onChange={(e) => setItemDraft({ ...itemDraft, mana_amount: Math.max(0, Number(e.target.value)) })}
+                />
               </label>
             </div>
 
@@ -601,6 +650,8 @@ export function GmItemsAndSpells() {
                         ...itemDraft,
                         scroll_mode: e.target.value ? e.target.value as 'learn' | 'cast' : null,
                         scroll_spell_id: e.target.value ? itemDraft.scroll_spell_id : null,
+                        heal_amount: e.target.value ? 0 : itemDraft.heal_amount,
+                        mana_amount: e.target.value ? 0 : itemDraft.mana_amount,
                       })}
                     >
                       <option value="">Не свиток</option>
@@ -847,7 +898,9 @@ export function GmItemsAndSpells() {
             </div>
 
             <p className="muted">
-              Базовая магическая атака остаётся стихией расы. Это заклинание использует свою стихию и расходует ману.
+              {spellDraft.spell_kind === 'heal'
+                ? 'Лечащее заклинание тратит ход и ману, восстанавливает HP по формуле от магической силы и не наносит урон.'
+                : 'Базовая магическая атака остаётся стихией расы. Это заклинание использует свою стихию и расходует ману.'}
             </p>
 
             <div className="gm-form-actions">
