@@ -1480,6 +1480,47 @@ export function GmWorldEditor({ characters, profiles }: Props) {
         </div>
       </article>
 
+      <article className="panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">ЛОКАЛЬНЫЕ ИССЛЕДОВАНИЯ</span>
+            <h2>Руины и разведка входов</h2>
+          </div>
+          <span className="badge">{siteActions.length}</span>
+        </div>
+
+        <div className="gm-expedition-list">
+          {siteActions.length === 0 && (
+            <p className="muted">Активных исследований руин или входов сейчас нет.</p>
+          )}
+
+          {siteActions.map((action) => {
+            const character = characterById.get(action.character_id)
+            return (
+              <div className="gm-expedition-row" key={action.id}>
+                <div>
+                  <strong>{character?.name ?? 'Неизвестный персонаж'}</strong>
+                  <span>
+                    сектор #{action.sector_id} · {action.action_type === 'explore_ruins'
+                      ? 'исследует руины'
+                      : 'разведывает вход в подземелье'}
+                  </span>
+                </div>
+
+                <button
+                  className="ghost-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void finishSiteAction(action.id)}
+                >
+                  Завершить сейчас
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </article>
+
       <article className="panel gm-event-queue">
         <div className="section-heading">
           <div>
