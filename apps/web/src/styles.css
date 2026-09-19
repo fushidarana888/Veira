@@ -4095,6 +4095,13 @@ textarea {
   padding: 8px 9px;
 }
 
+.gm-field-hint {
+  color: #707b86;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+
 .gm-form-grid {
   display: grid;
   gap: 8px;
