@@ -126,7 +126,11 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
               icon_url,
               stat_modifiers,
               effects,
-              base_value
+              base_value,
+              required_level,
+              shop_tier,
+              shop_price,
+              shop_enabled
             )
           `)
           .eq('character_id', character.id)
@@ -228,12 +232,46 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
     })
 
     if (error) {
-      setInventoryMessage(error.message)
+      if (error.message.includes('LEVEL_TOO_LOW')) {
+        setInventoryMessage(`Недостаточный уровень персонажа для этой вещи. Требуется уровень ${definition.required_level}.`)
+      } else {
+        setInventoryMessage(error.message)
+      }
       setInventoryBusy(false)
       return
     }
 
     await loadInventory()
+  }
+
+  async function useHealingItem(item: CharacterItem) {
+    const definition = normalizeDefinition(item.item_definitions)
+    if (!definition) return
+
+    setInventoryBusy(true)
+    setInventoryMessage('')
+
+    const { data, error } = await supabase.rpc('use_healing_consumable', {
+      p_character_item_id: item.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('ALREADY_FULL_HEALTH')) {
+        setInventoryMessage('Здоровье уже полное.')
+      } else if (raw.includes('COMBAT_ACTIVE')) {
+        setInventoryMessage('Во время активного боя использовать зелье из инвентаря нельзя.')
+      } else {
+        setInventoryMessage(raw)
+      }
+      setInventoryBusy(false)
+      return
+    }
+
+    const healed = Array.isArray(data) ? Number(data[0]?.healed ?? 0) : 0
+    await Promise.all([loadInventory(), loadProgress()])
+    setInventoryMessage(healed > 0 ? `Восстановлено ${healed} HP.` : 'Зелье использовано.')
+    setInventoryBusy(false)
   }
 
   async function unequip(slot: EquipmentSlot) {
@@ -434,6 +472,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
               busy={inventoryBusy}
               message={inventoryMessage}
               onEquip={equipItem}
+              onUseHealing={useHealingItem}
             />
           )}
 
@@ -476,12 +515,14 @@ function InventoryPanel({
   busy,
   message,
   onEquip,
+  onUseHealing,
 }: {
   items: CharacterItem[]
   equippedItemIds: Set<string>
   busy: boolean
   message: string
   onEquip: (item: CharacterItem) => Promise<void>
+  onUseHealing: (item: CharacterItem) => Promise<void>
 }) {
   return (
     <section className="panel">
@@ -506,6 +547,7 @@ function InventoryPanel({
             const equipped = equippedItemIds.has(item.id)
             const modifiers = Object.entries(definition.stat_modifiers ?? {})
               .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
+            const healingAmount = getHealingAmount(definition)
 
             return (
               <article className={'item-card rarity-' + definition.rarity} key={item.id}>
@@ -534,13 +576,25 @@ function InventoryPanel({
 
                 <div className="item-actions">
                   {definition.equip_group ? (
+                    <>
+                      <span className="muted item-state">Требуется ур. {definition.required_level}</span>
+                      <button
+                        className={equipped ? 'ghost-button' : 'primary-button'}
+                        type="button"
+                        disabled={busy || equipped}
+                        onClick={() => void onEquip(item)}
+                      >
+                        {equipped ? 'Надето' : 'Экипировать'}
+                      </button>
+                    </>
+                  ) : healingAmount > 0 ? (
                     <button
-                      className={equipped ? 'ghost-button' : 'primary-button'}
+                      className="primary-button"
                       type="button"
-                      disabled={busy || equipped}
-                      onClick={() => void onEquip(item)}
+                      disabled={busy}
+                      onClick={() => void onUseHealing(item)}
                     >
-                      {equipped ? 'Надето' : 'Экипировать'}
+                      Использовать · +{healingAmount} HP
                     </button>
                   ) : (
                     <span className="muted item-state">
@@ -664,6 +718,23 @@ function NavButton({
       {children}
     </button>
   )
+}
+
+function getHealingAmount(definition: ItemDefinition) {
+  for (const effect of definition.effects ?? []) {
+    if (
+      effect &&
+      typeof effect === 'object' &&
+      'type' in effect &&
+      'amount' in effect &&
+      (effect as { type?: unknown }).type === 'heal_hp'
+    ) {
+      const amount = Number((effect as { amount?: unknown }).amount)
+      if (Number.isFinite(amount) && amount > 0) return amount
+    }
+  }
+
+  return 0
 }
 
 function getItemGlyph(category: ItemDefinition['category']) {
