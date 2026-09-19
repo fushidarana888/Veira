@@ -1,0 +1,1 @@
+# Eilar map build verification
