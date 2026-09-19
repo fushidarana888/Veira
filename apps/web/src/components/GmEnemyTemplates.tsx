@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { CombatStatusEffectType, DamageType, EnemyTemplate, SectorTerrain } from '../types'
+import type { CombatStatusEffectType, DamageType, EnemyAbility, EnemyTemplate, SectorTerrain } from '../types'
 
 const damageTypes: DamageType[] = [
   'slashing',
@@ -86,6 +86,7 @@ type Draft = {
   phase2_attack_bonus_percent: number
   phase2_defense_bonus_percent: number
   phase2_special_every_n: number
+  abilities: EnemyAbility[]
 }
 
 function emptyDraft(): Draft {
@@ -127,6 +128,34 @@ function emptyDraft(): Draft {
     phase2_attack_bonus_percent: 0,
     phase2_defense_bonus_percent: 0,
     phase2_special_every_n: 0,
+    abilities: [],
+  }
+}
+
+function createAbilityDraft(index: number): EnemyAbility {
+  return {
+    id: `ability_${Date.now()}_${index}`,
+    enabled: true,
+    name: 'Новая способность',
+    kind: 'attack',
+    priority: 50,
+    cooldown: 2,
+    max_uses: 0,
+    phase: 0,
+    min_enemy_hp_percent: 0,
+    max_enemy_hp_percent: 100,
+    min_player_hp_percent: 0,
+    max_player_hp_percent: 100,
+    min_debuffs: 0,
+    value: 0,
+    damage_multiplier: 1.5,
+    damage_type: null,
+    effect_type: null,
+    effect_chance: 0,
+    effect_turns: 0,
+    effect_potency: 0,
+    telegraph_text: '',
+    attack_text: '',
   }
 }
 
@@ -190,6 +219,7 @@ export function GmEnemyTemplates() {
       phase2_attack_bonus_percent: template.phase2_attack_bonus_percent ?? 0,
       phase2_defense_bonus_percent: template.phase2_defense_bonus_percent ?? 0,
       phase2_special_every_n: template.phase2_special_every_n ?? 0,
+      abilities: Array.isArray(template.abilities) ? template.abilities : [],
     })
     setMessage('')
   }
@@ -277,6 +307,17 @@ export function GmEnemyTemplates() {
       return
     }
 
+    const { error: abilitiesError } = await supabase.rpc('gm_set_enemy_abilities', {
+      p_enemy_id: savedId,
+      p_abilities: draft.abilities,
+    })
+
+    if (abilitiesError) {
+      setMessage(abilitiesError.message)
+      setBusy(false)
+      return
+    }
+
     await loadTemplates()
     if (!draft.id) setDraft({ ...draft, id: savedId })
     setMessage(draft.id ? 'Шаблон врага обновлён.' : 'Шаблон врага создан.')
@@ -303,6 +344,25 @@ export function GmEnemyTemplates() {
     await loadTemplates()
     setMessage('Шаблон врага удалён.')
     setBusy(false)
+  }
+
+  function addAbility() {
+    if (draft.abilities.length >= 12) {
+      setMessage('У одного врага может быть максимум 12 способностей.')
+      return
+    }
+    setDraft({ ...draft, abilities: [...draft.abilities, createAbilityDraft(draft.abilities.length)] })
+  }
+
+  function updateAbility(index: number, patch: Partial<EnemyAbility>) {
+    const abilities = draft.abilities.map((ability, abilityIndex) =>
+      abilityIndex === index ? { ...ability, ...patch } : ability,
+    )
+    setDraft({ ...draft, abilities })
+  }
+
+  function removeAbility(index: number) {
+    setDraft({ ...draft, abilities: draft.abilities.filter((_, abilityIndex) => abilityIndex !== index) })
   }
 
   function setResistance(type: DamageType, raw: string) {
@@ -588,6 +648,250 @@ export function GmEnemyTemplates() {
                 />
               </label>
             </div>
+          </div>
+
+          <div className="gm-enemy-resistances enemy-ability-editor">
+            <div className="section-heading">
+              <div>
+                <strong>Умный набор способностей</strong>
+                <span>
+                  Враг сам выбирает действие по приоритету и ситуации. Cooldown — сколько полных ходов
+                  должно пройти до повторного выбора; лимит 0 означает без ограничений.
+                </span>
+              </div>
+              <button className="ghost-button" type="button" onClick={addAbility}>
+                + Способность
+              </button>
+            </div>
+
+            {draft.abilities.length === 0 ? (
+              <p className="muted">Нет умных способностей — враг использует только обычную атаку и старую механику ниже.</p>
+            ) : draft.abilities.map((ability, index) => (
+              <div className="gm-enemy-resistances" key={ability.id}>
+                <div className="gm-enemy-toggle-row">
+                  <label className="gm-check-row">
+                    <input
+                      type="checkbox"
+                      checked={ability.enabled}
+                      onChange={(event) => updateAbility(index, { enabled: event.target.checked })}
+                    />
+                    <span>Включена</span>
+                  </label>
+                  <button className="ghost-button" type="button" onClick={() => removeAbility(index)}>
+                    Удалить
+                  </button>
+                </div>
+
+                <div className="gm-sector-form-grid">
+                  <label>
+                    <span>Название</span>
+                    <input
+                      value={ability.name}
+                      onChange={(event) => updateAbility(index, { name: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>Тип</span>
+                    <select
+                      value={ability.kind}
+                      onChange={(event) => {
+                        const kind = event.target.value as EnemyAbility['kind']
+                        updateAbility(index, {
+                          kind,
+                          value: kind === 'heal' ? Math.max(10, ability.value || 10)
+                            : kind === 'guard' ? Math.max(30, ability.value || 30)
+                            : kind === 'enrage' ? Math.max(15, ability.value || 15)
+                            : 0,
+                          damage_multiplier: kind === 'attack' ? Math.max(1, ability.damage_multiplier || 1.5) : 0,
+                          damage_type: kind === 'attack' ? ability.damage_type : null,
+                          effect_type: kind === 'attack' ? ability.effect_type : null,
+                        })
+                      }}
+                    >
+                      <option value="attack">Усиленная атака</option>
+                      <option value="heal">Самолечение</option>
+                      <option value="guard">Защитная стойка</option>
+                      <option value="enrage">Усиление атаки</option>
+                      <option value="cleanse">Очищение</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="gm-enemy-number-grid">
+                  <label>
+                    <span>Приоритет</span>
+                    <input type="number" min={0} max={100} value={ability.priority}
+                      onChange={(event) => updateAbility(index, {
+                        priority: Math.max(0, Math.min(100, Number(event.target.value))),
+                      })} />
+                  </label>
+                  <label>
+                    <span>Cooldown</span>
+                    <input type="number" min={0} max={20} value={ability.cooldown}
+                      onChange={(event) => updateAbility(index, {
+                        cooldown: Math.max(0, Math.min(20, Number(event.target.value))),
+                      })} />
+                  </label>
+                  <label>
+                    <span>Лимит использований</span>
+                    <input type="number" min={0} max={20} value={ability.max_uses}
+                      onChange={(event) => updateAbility(index, {
+                        max_uses: Math.max(0, Math.min(20, Number(event.target.value))),
+                      })} />
+                  </label>
+                  <label>
+                    <span>Фаза</span>
+                    <select
+                      value={ability.phase}
+                      onChange={(event) => updateAbility(index, {
+                        phase: Number(event.target.value) as 0 | 1 | 2,
+                      })}
+                    >
+                      <option value={0}>Любая</option>
+                      <option value={1}>Только 1</option>
+                      <option value={2}>Только 2</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="gm-enemy-number-grid">
+                  <label>
+                    <span>HP врага от %</span>
+                    <input type="number" min={0} max={100} value={ability.min_enemy_hp_percent}
+                      onChange={(event) => updateAbility(index, {
+                        min_enemy_hp_percent: Math.max(0, Math.min(100, Number(event.target.value))),
+                      })} />
+                  </label>
+                  <label>
+                    <span>HP врага до %</span>
+                    <input type="number" min={0} max={100} value={ability.max_enemy_hp_percent}
+                      onChange={(event) => updateAbility(index, {
+                        max_enemy_hp_percent: Math.max(0, Math.min(100, Number(event.target.value))),
+                      })} />
+                  </label>
+                  <label>
+                    <span>HP игрока от %</span>
+                    <input type="number" min={0} max={100} value={ability.min_player_hp_percent}
+                      onChange={(event) => updateAbility(index, {
+                        min_player_hp_percent: Math.max(0, Math.min(100, Number(event.target.value))),
+                      })} />
+                  </label>
+                  <label>
+                    <span>HP игрока до %</span>
+                    <input type="number" min={0} max={100} value={ability.max_player_hp_percent}
+                      onChange={(event) => updateAbility(index, {
+                        max_player_hp_percent: Math.max(0, Math.min(100, Number(event.target.value))),
+                      })} />
+                  </label>
+                  <label>
+                    <span>Мин. дебаффов на враге</span>
+                    <input type="number" min={0} max={20} value={ability.min_debuffs}
+                      onChange={(event) => updateAbility(index, {
+                        min_debuffs: Math.max(0, Math.min(20, Number(event.target.value))),
+                      })} />
+                  </label>
+                </div>
+
+                <div className="gm-enemy-resistance-grid">
+                  {ability.kind === 'attack' ? (
+                    <>
+                      <label>
+                        <span>Урон ×</span>
+                        <input type="number" min={0.1} max={5} step={0.05} value={ability.damage_multiplier}
+                          onChange={(event) => updateAbility(index, {
+                            damage_multiplier: Math.max(0.1, Math.min(5, Number(event.target.value))),
+                          })} />
+                      </label>
+                      <label>
+                        <span>Тип урона</span>
+                        <select
+                          value={ability.damage_type ?? ''}
+                          onChange={(event) => updateAbility(index, {
+                            damage_type: event.target.value ? event.target.value as DamageType : null,
+                          })}
+                        >
+                          <option value="">Как обычная атака</option>
+                          {damageTypes.map((type) => (
+                            <option key={type} value={type}>{damageLabels[type]}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  ) : ability.kind !== 'cleanse' ? (
+                    <label>
+                      <span>
+                        {ability.kind === 'heal' ? 'Лечение % max HP'
+                          : ability.kind === 'guard' ? 'Снижение урона %'
+                            : 'Бонус атаки %'}
+                      </span>
+                      <input type="number" min={1} max={100} value={ability.value}
+                        onChange={(event) => updateAbility(index, {
+                          value: Math.max(1, Math.min(100, Number(event.target.value))),
+                        })} />
+                    </label>
+                  ) : null}
+
+                  {ability.kind === 'attack' && (
+                    <label>
+                      <span>Эффект</span>
+                      <select
+                        value={ability.effect_type ?? ''}
+                        onChange={(event) => updateAbility(index, {
+                          effect_type: event.target.value ? event.target.value as CombatStatusEffectType : null,
+                          effect_chance: event.target.value ? Math.max(1, ability.effect_chance || 50) : 0,
+                          effect_turns: event.target.value ? Math.max(1, ability.effect_turns || 1) : 0,
+                          effect_potency: event.target.value ? ability.effect_potency : 0,
+                        })}
+                      >
+                        <option value="">Нет</option>
+                        {statusEffectOptions.map((effect) => (
+                          <option key={effect.value} value={effect.value}>{effect.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+
+                {ability.kind === 'attack' && ability.effect_type && (
+                  <div className="gm-enemy-number-grid">
+                    <label>
+                      <span>Шанс эффекта %</span>
+                      <input type="number" min={0} max={100} value={ability.effect_chance}
+                        onChange={(event) => updateAbility(index, {
+                          effect_chance: Math.max(0, Math.min(100, Number(event.target.value))),
+                        })} />
+                    </label>
+                    <label>
+                      <span>Ходов эффекта</span>
+                      <input type="number" min={0} max={10} value={ability.effect_turns}
+                        onChange={(event) => updateAbility(index, {
+                          effect_turns: Math.max(0, Math.min(10, Number(event.target.value))),
+                        })} />
+                    </label>
+                    <label>
+                      <span>Сила эффекта</span>
+                      <input type="number" min={0} max={1000} value={ability.effect_potency}
+                        onChange={(event) => updateAbility(index, {
+                          effect_potency: Math.max(0, Number(event.target.value)),
+                        })} />
+                    </label>
+                  </div>
+                )}
+
+                <div className="gm-sector-form-grid">
+                  <label>
+                    <span>Текст подготовки</span>
+                    <textarea rows={2} value={ability.telegraph_text}
+                      onChange={(event) => updateAbility(index, { telegraph_text: event.target.value })} />
+                  </label>
+                  <label>
+                    <span>Текст срабатывания</span>
+                    <textarea rows={2} value={ability.attack_text}
+                      onChange={(event) => updateAbility(index, { attack_text: event.target.value })} />
+                  </label>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="gm-enemy-resistances enemy-special-editor">
