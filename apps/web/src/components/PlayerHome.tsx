@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
 import { AdventuresPanel } from './AdventuresPanel'
+import { MagicPanel } from './MagicPanel'
 import { WorldMap } from './WorldMap'
 import type {
   Character,
@@ -21,7 +22,7 @@ type Props = {
 }
 
 type Tab = 'world' | 'character' | 'adventures' | 'community' | 'more'
-type CharacterTab = 'overview' | 'inventory' | 'equipment'
+type CharacterTab = 'overview' | 'inventory' | 'equipment' | 'magic'
 
 const equipmentLabels: Record<EquipmentSlot, string> = {
   weapon: 'Оружие',
@@ -149,7 +150,9 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
               shop_price,
               shop_enabled,
               damage_type,
-              damage_resistances
+              damage_resistances,
+              scroll_spell_id,
+              scroll_mode
             )
           `)
           .eq('character_id', character.id)
@@ -294,6 +297,37 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
     setInventoryBusy(false)
   }
 
+  async function learnSpellFromScroll(item: CharacterItem) {
+    const definition = normalizeDefinition(item.item_definitions)
+    if (!definition || definition.scroll_mode !== 'learn') return
+
+    setInventoryBusy(true)
+    setInventoryMessage('')
+
+    const { error } = await supabase.rpc('use_learning_scroll', {
+      p_character_item_id: item.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('LEVEL_TOO_LOW')) {
+        setInventoryMessage(`Для изучения этого заклинания нужен уровень ${definition.required_level}.`)
+      } else if (raw.includes('SPELL_ALREADY_LEARNED')) {
+        setInventoryMessage('Это заклинание уже изучено.')
+      } else if (raw.includes('COMBAT_ACTIVE')) {
+        setInventoryMessage('Нельзя изучать заклинания во время боя.')
+      } else {
+        setInventoryMessage(raw)
+      }
+      setInventoryBusy(false)
+      return
+    }
+
+    await loadInventory()
+    setInventoryMessage(`Заклинание из «${definition.name}» изучено.`)
+    setInventoryBusy(false)
+  }
+
   async function unequip(slot: EquipmentSlot) {
     setInventoryBusy(true)
     setInventoryMessage('')
@@ -379,6 +413,13 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
             >
               Экипировка
             </button>
+            <button
+              type="button"
+              className={characterTab === 'magic' ? 'active' : ''}
+              onClick={() => setCharacterTab('magic')}
+            >
+              Магия
+            </button>
           </div>
 
           {characterTab === 'overview' && (
@@ -391,6 +432,23 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
                   </div>
                   <div className="meter"><span style={{ width: hpPercent + '%' }} /></div>
                   <small className="passive-regen-note">Пассивное восстановление: +8 HP в час вне активного боя</small>
+                </article>
+
+                <article className="panel vital-card">
+                  <div className="card-heading">
+                    <span>Мана</span>
+                    <strong>{progress.mana_current ?? 0} / {progress.mana_max ?? 0}</strong>
+                  </div>
+                  <div className="meter mana-meter">
+                    <span
+                      style={{
+                        width: (progress.mana_max ?? 0) > 0
+                          ? Math.round(((progress.mana_current ?? 0) / (progress.mana_max ?? 1)) * 100) + '%'
+                          : '0%',
+                      }}
+                    />
+                  </div>
+                  <small className="passive-regen-note">Пассивное восстановление: +10 маны в час вне активного боя</small>
                 </article>
 
                 <article className="panel vital-card">
@@ -494,6 +552,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
               message={inventoryMessage}
               onEquip={equipItem}
               onUseHealing={useHealingItem}
+              onLearnScroll={learnSpellFromScroll}
             />
           )}
 
@@ -504,6 +563,13 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
               busy={inventoryBusy}
               message={inventoryMessage}
               onUnequip={unequip}
+            />
+          )}
+
+          {characterTab === 'magic' && (
+            <MagicPanel
+              characterId={character.id}
+              progress={progress}
             />
           )}
         </>
@@ -543,6 +609,7 @@ function InventoryPanel({
   message,
   onEquip,
   onUseHealing,
+  onLearnScroll,
 }: {
   items: CharacterItem[]
   equippedItemIds: Set<string>
@@ -550,6 +617,7 @@ function InventoryPanel({
   message: string
   onEquip: (item: CharacterItem) => Promise<void>
   onUseHealing: (item: CharacterItem) => Promise<void>
+  onLearnScroll: (item: CharacterItem) => Promise<void>
 }) {
   return (
     <section className="panel">
@@ -632,6 +700,19 @@ function InventoryPanel({
                         {equipped ? 'Надето' : 'Экипировать'}
                       </button>
                     </>
+                  ) : definition.scroll_mode === 'learn' ? (
+                    <button
+                      className="primary-button"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void onLearnScroll(item)}
+                    >
+                      Изучить заклинание
+                    </button>
+                  ) : definition.scroll_mode === 'cast' ? (
+                    <span className="muted item-state">
+                      Боевой свиток · используется во время боя
+                    </span>
                   ) : healingAmount > 0 ? (
                     <button
                       className="primary-button"
