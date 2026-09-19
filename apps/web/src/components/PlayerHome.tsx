@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
 import { AdventuresPanel } from './AdventuresPanel'
+import { CraftingPanel } from './CraftingPanel'
 import { MagicPanel } from './MagicPanel'
 import { WorldMap } from './WorldMap'
 import type {
@@ -22,7 +23,7 @@ type Props = {
 }
 
 type Tab = 'world' | 'character' | 'adventures' | 'community' | 'more'
-type CharacterTab = 'overview' | 'inventory' | 'equipment' | 'magic'
+type CharacterTab = 'overview' | 'inventory' | 'equipment' | 'magic' | 'crafting'
 
 const equipmentLabels: Record<EquipmentSlot, string> = {
   weapon: 'Оружие',
@@ -73,6 +74,40 @@ function normalizeProgress(value: Character['character_progress']): CharacterPro
 function normalizeDefinition(value: CharacterItem['item_definitions']): ItemDefinition | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value
+}
+
+function itemAffixes(item: CharacterItem) {
+  const value = item.metadata?.affixes
+  if (!Array.isArray(value)) return []
+
+  return value.filter((entry): entry is {
+    name: string
+    description?: string
+    stat_modifiers?: Record<string, number>
+    damage_resistances?: Partial<Record<DamageType, number>>
+  } => Boolean(entry) && typeof entry === 'object' && 'name' in entry && typeof entry.name === 'string')
+}
+
+function affixStatModifiers(item: CharacterItem): Record<string, number> {
+  const value = item.metadata?.affix_stat_modifiers
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, number>
+    : {}
+}
+
+function combinedResistances(item: CharacterItem, definition: ItemDefinition) {
+  const result: Partial<Record<DamageType, number>> = { ...(definition.damage_resistances ?? {}) }
+  const extra = item.metadata?.affix_damage_resistances
+
+  if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+    for (const [key, raw] of Object.entries(extra)) {
+      if (typeof raw !== 'number') continue
+      const type = key as DamageType
+      result[type] = Math.max(-75, Math.min(75, (result[type] ?? 0) + raw))
+    }
+  }
+
+  return result
 }
 
 export function PlayerHome({ profile, character, onSignOut }: Props) {
@@ -152,7 +187,11 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
               damage_type,
               damage_resistances,
               scroll_spell_id,
-              scroll_mode
+              scroll_mode,
+              unique_property_name,
+              unique_property_description,
+              unique_effect_type,
+              unique_effect_value
             )
           `)
           .eq('character_id', character.id)
@@ -194,9 +233,15 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
 
     const modifiers = equipment
       .map((entry) => itemById.get(entry.character_item_id))
-      .map((item) => item ? normalizeDefinition(item.item_definitions) : null)
-      .filter((definition): definition is ItemDefinition => Boolean(definition))
-      .map((definition) => definition.stat_modifiers ?? {})
+      .filter((item): item is CharacterItem => Boolean(item))
+      .flatMap((item) => {
+        const definition = normalizeDefinition(item.item_definitions)
+        if (!definition) return []
+        return [
+          definition.stat_modifiers ?? {},
+          affixStatModifiers(item),
+        ]
+      })
 
     return addStatModifiers(
       {
@@ -420,6 +465,13 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
             >
               Магия
             </button>
+            <button
+              type="button"
+              className={characterTab === 'crafting' ? 'active' : ''}
+              onClick={() => setCharacterTab('crafting')}
+            >
+              Ремесло
+            </button>
           </div>
 
           {characterTab === 'overview' && (
@@ -572,6 +624,15 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
               progress={progress}
             />
           )}
+
+          {characterTab === 'crafting' && (
+            <CraftingPanel
+              characterId={character.id}
+              progress={progress}
+              onProgressChanged={loadProgress}
+              onInventoryChanged={loadInventory}
+            />
+          )}
         </>
       )}
 
@@ -644,7 +705,10 @@ function InventoryPanel({
             const modifiers = Object.entries(definition.stat_modifiers ?? {})
               .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
             const healingAmount = getHealingAmount(definition)
-            const resistances = Object.entries(definition.damage_resistances ?? {})
+            const affixes = itemAffixes(item)
+            const affixModifiers = Object.entries(affixStatModifiers(item))
+              .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
+            const resistances = Object.entries(combinedResistances(item, definition))
               .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
 
             return (
@@ -685,6 +749,33 @@ function InventoryPanel({
                         {statLabels[key as StatKey] ?? key} {value >= 0 ? '+' : ''}{value}
                       </span>
                     ))}
+                  </div>
+                )}
+
+                {affixModifiers.length > 0 && (
+                  <div className="modifier-list affix-modifiers">
+                    {affixModifiers.map(([key, value]) => (
+                      <span key={'affix-' + key}>
+                        {statLabels[key as StatKey] ?? key} {value >= 0 ? '+' : ''}{value}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {affixes.length > 0 && (
+                  <div className="item-affix-list">
+                    {affixes.map((affix, index) => (
+                      <span key={affix.name + '-' + index} title={affix.description || affix.name}>
+                        {affix.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {definition.unique_property_name && (
+                  <div className="unique-property">
+                    <strong>{definition.unique_property_name}</strong>
+                    <span>{definition.unique_property_description}</span>
                   </div>
                 )}
 
@@ -785,11 +876,11 @@ function EquipmentPanel({
                       {damageTypeLabels[definition.damage_type]}
                     </span>
                   )}
-                  {Object.entries(definition.damage_resistances ?? {})
+                  {item && Object.entries(combinedResistances(item, definition))
                     .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
                     .length > 0 && (
                       <div className="resistance-list">
-                        {Object.entries(definition.damage_resistances ?? {})
+                        {Object.entries(combinedResistances(item, definition))
                           .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
                           .map(([type, value]) => (
                             <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
@@ -798,6 +889,19 @@ function EquipmentPanel({
                           ))}
                       </div>
                     )}
+                  {item && itemAffixes(item).length > 0 && (
+                    <div className="item-affix-list compact">
+                      {itemAffixes(item).map((affix, index) => (
+                        <span key={affix.name + '-' + index}>{affix.name}</span>
+                      ))}
+                    </div>
+                  )}
+                  {definition.unique_property_name && (
+                    <div className="unique-property compact">
+                      <strong>{definition.unique_property_name}</strong>
+                      <span>{definition.unique_property_description}</span>
+                    </div>
+                  )}
                   <button
                     className="ghost-button"
                     type="button"
