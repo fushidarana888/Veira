@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { addStatModifiers, experienceForNextLevel, type StatKey } from '@veira/game-core'
+import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
 import type {
   Character,
@@ -66,11 +66,32 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
   const [equipment, setEquipment] = useState<CharacterEquipment[]>([])
   const [inventoryBusy, setInventoryBusy] = useState(false)
   const [inventoryMessage, setInventoryMessage] = useState('')
-
-  const progress = useMemo(
+  const [statBusy, setStatBusy] = useState(false)
+  const [progressMessage, setProgressMessage] = useState('')
+  const [progress, setProgress] = useState<CharacterProgress | null>(
     () => normalizeProgress(character.character_progress),
-    [character.character_progress],
   )
+
+  useEffect(() => {
+    setProgress(normalizeProgress(character.character_progress))
+  }, [character.character_progress])
+
+  async function loadProgress() {
+    const { data, error } = await supabase
+      .from('character_progress')
+      .select('character_id, level, experience, hp_current, hp_max, strength, agility, intellect, vitality, luck, gold, unspent_stat_points, updated_at')
+      .eq('character_id', character.id)
+      .single()
+
+    if (error) {
+      setProgressMessage(error.message)
+      return null
+    }
+
+    const nextProgress = data as CharacterProgress
+    setProgress(nextProgress)
+    return nextProgress
+  }
 
   async function loadInventory() {
     setInventoryBusy(true)
@@ -160,7 +181,14 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
     )
   }, [equipment, itemById, progress])
 
-  if (!progress || !effectiveStats) {
+  const derivedCombatStats = useMemo(
+    () => progress && effectiveStats
+      ? calculateDerivedCombatStats(progress.level, effectiveStats)
+      : null,
+    [effectiveStats, progress],
+  )
+
+  if (!progress || !effectiveStats || !derivedCombatStats) {
     return (
       <main className="shell">
         <section className="panel">
@@ -222,6 +250,27 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
     }
 
     await loadInventory()
+  }
+
+  async function allocateStatPoint(stat: StatKey) {
+    if (progress.unspent_stat_points <= 0) return
+
+    setStatBusy(true)
+    setProgressMessage('')
+
+    const { error } = await supabase.rpc('allocate_character_stat_point', {
+      p_character_id: character.id,
+      p_stat: stat,
+    })
+
+    if (error) {
+      setProgressMessage(error.message)
+      setStatBusy(false)
+      return
+    }
+
+    await loadProgress()
+    setStatBusy(false)
   }
 
   return (
@@ -312,6 +361,60 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
                   <Stat label="Интеллект" value={effectiveStats.intellect} base={progress.intellect} />
                   <Stat label="Живучесть" value={effectiveStats.vitality} base={progress.vitality} />
                   <Stat label="Удача" value={effectiveStats.luck} base={progress.luck} />
+                </div>
+              </section>
+
+              {progress.unspent_stat_points > 0 && (
+                <section className="panel level-up-panel">
+                  <div className="section-heading">
+                    <div>
+                      <span className="eyebrow">ПОВЫШЕНИЕ УРОВНЯ</span>
+                      <h2>Свободные очки характеристик</h2>
+                    </div>
+                    <span className="badge stat-points-badge">
+                      {progress.unspent_stat_points} очк.
+                    </span>
+                  </div>
+
+                  <p className="muted level-up-copy">
+                    За каждый новый уровень персонаж получает 2 очка. Здесь уже нет стартового лимита 8 — развивай нужные характеристики дальше.
+                  </p>
+
+                  {progressMessage && <p className="form-message" aria-live="polite">{progressMessage}</p>}
+
+                  <div className="level-up-grid">
+                    {(Object.keys(statLabels) as StatKey[]).map((stat) => (
+                      <button
+                        key={stat}
+                        type="button"
+                        disabled={statBusy || progress.unspent_stat_points <= 0}
+                        onClick={() => void allocateStatPoint(stat)}
+                      >
+                        <span>
+                          <strong>{statLabels[stat]}</strong>
+                          <small>Сейчас {progress[stat]}</small>
+                        </span>
+                        <b>+1</b>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section className="panel">
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">БОЕВЫЕ ПАРАМЕТРЫ</span>
+                    <h2>Производные характеристики</h2>
+                  </div>
+                  <span className="muted stat-note">Первая версия формул</span>
+                </div>
+
+                <div className="combat-stats-grid">
+                  <CombatStat label="Физ. мощь" value={derivedCombatStats.physicalPower} />
+                  <CombatStat label="Маг. мощь" value={derivedCombatStats.magicPower} />
+                  <CombatStat label="Защита" value={derivedCombatStats.defense} />
+                  <CombatStat label="Инициатива" value={derivedCombatStats.initiative} />
                 </div>
               </section>
 
@@ -517,6 +620,15 @@ function Stat({ label, value, base }: { label: string; value: number; base: numb
       <span>{label}</span>
       <strong>{value}</strong>
       {bonus !== 0 && <small>База {base} · {bonus > 0 ? '+' : ''}{bonus} от вещей</small>}
+    </div>
+  )
+}
+
+function CombatStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="combat-stat-tile">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   )
 }
