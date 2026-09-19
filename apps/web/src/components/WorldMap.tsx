@@ -19,7 +19,7 @@ type Props = {
 }
 
 const TOTAL_SECTORS = 300
-const EXPLORATION_HOURS = 8
+const EXPLORATION_HOURS = 6
 
 const ORIGINAL_MAP_URL = supabase.storage
   .from('veira-assets')
