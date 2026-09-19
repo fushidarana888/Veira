@@ -243,7 +243,35 @@ function dungeonZeroExperience(level: number) {
   if (level === 2) return 11
   if (level === 3) return 6
   if (level === 4) return 2
-  return 0
+  return 1
+}
+
+function dungeonRecommendedLevel(danger: number) {
+  if (danger <= 0) return 1
+  return danger * 2 + 2
+}
+
+function dungeonRewardMultiplier(danger: number, level: number, kind: 'xp' | 'gold') {
+  if (danger <= 0) return 100
+  const over = level - dungeonRecommendedLevel(danger)
+  if (over <= 0) return 100
+  if (kind === 'xp') {
+    if (over === 1) return 75
+    if (over === 2) return 50
+    if (over === 3) return 25
+    if (over === 4) return 10
+    return 5
+  }
+  if (over === 1) return 90
+  if (over === 2) return 75
+  if (over === 3) return 60
+  if (over === 4) return 50
+  return 35
+}
+
+function scaledPartyDungeonReward(base: number, danger: number, level: number, kind: 'xp' | 'gold') {
+  if (danger === 0) return kind === 'xp' ? dungeonZeroExperience(level) : 40
+  return Math.max(1, Math.round(base * dungeonRewardMultiplier(danger, level, kind) / 100))
 }
 
 export function PartyDungeonPanel({
@@ -742,18 +770,20 @@ export function PartyDungeonPanel({
             <div className="party-dungeon-reward">
               <span>
                 {activeRun.danger_level === 0
-                  ? 'За полную зачистку · XP зависит от уровня'
-                  : 'Каждому за полную зачистку'}
+                  ? 'За полную зачистку · стартовая аварийная награда'
+                  : `За полную зачистку · рекомендованный уровень ≤ ${dungeonRecommendedLevel(activeRun.danger_level)}`}
               </span>
               <strong>
-                {activeRun.reward_gold} золота · {
-                  activeRun.danger_level === 0 && me
-                    ? dungeonZeroExperience(me.level)
-                    : activeRun.reward_experience
-                } опыта тебе
+                {me
+                  ? scaledPartyDungeonReward(activeRun.reward_gold, activeRun.danger_level, me.level, 'gold')
+                  : activeRun.reward_gold} золота · {me
+                  ? scaledPartyDungeonReward(activeRun.reward_experience, activeRun.danger_level, me.level, 'xp')
+                  : activeRun.reward_experience} опыта тебе
               </strong>
-              {activeRun.danger_level === 0 && (
-                <small>LVL 1: 15 · LVL 2: 11 · LVL 3: 6 · LVL 4: 2 · LVL 5+: 0 XP</small>
+              {activeRun.danger_level === 0 ? (
+                <small>XP: LVL 1 — 15 · LVL 2 — 11 · LVL 3 — 6 · LVL 4 — 2 · LVL 5+ — 1. Золото всегда 40.</small>
+              ) : (
+                <small>Если перерасти данж, награда постепенно снижается, но не ниже 5% XP и 35% золота.</small>
               )}
             </div>
           </div>
