@@ -140,13 +140,86 @@ export type CharacterSectorDiscovery = {
   source: string
 }
 
+export type SectorTerrain =
+  | 'unassigned'
+  | 'plains'
+  | 'forest'
+  | 'swamp'
+  | 'desert'
+  | 'mountains'
+  | 'tundra'
+  | 'coast'
+  | 'sea'
+  | 'riverlands'
+
+export type SectorContentType =
+  | 'unassigned'
+  | 'wilderness'
+  | 'settlement'
+  | 'ruins'
+  | 'dungeon'
+  | 'resource'
+  | 'npc'
+  | 'landmark'
+  | 'event'
+
+export type CharacterMapSector = {
+  id: number
+  grid_col: number
+  grid_row: number
+  initially_known: boolean
+  is_discovered: boolean
+  discovered_at: string | null
+  is_explorable: boolean
+  title: string | null
+  terrain_type: SectorTerrain | null
+  content_type: SectorContentType | null
+  player_description: string | null
+  danger_level: number | null
+  requires_gm: boolean
+}
+
+export type GmMapSector = {
+  id: number
+  grid_col: number
+  grid_row: number
+  initially_known: boolean
+  title: string | null
+  terrain_type: SectorTerrain
+  content_type: SectorContentType
+  player_description: string
+  danger_level: number
+  requires_gm: boolean
+  gm_notes: string
+  event_enabled: boolean
+  event_title: string
+  event_prompt: string
+  event_gm_notes: string
+}
+
 export type SectorExpedition = {
   id: string
   character_id: string
   sector_id: number
-  status: 'active' | 'completed' | 'cancelled'
+  status: 'active' | 'awaiting_event' | 'completed' | 'cancelled'
   started_at: string
   ends_at: string
   completed_at: string | null
   created_at: string
+}
+
+export type ExpeditionEventInstance = {
+  id: string
+  expedition_id: string
+  event_definition_id: string | null
+  character_id: string
+  sector_id: number
+  title: string
+  player_prompt: string
+  status: 'pending' | 'resolved'
+  resolution_text: string
+  outcome: 'discovered' | 'blocked' | null
+  created_at: string
+  resolved_at: string | null
+  resolved_by: string | null
 }
