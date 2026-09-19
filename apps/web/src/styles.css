@@ -5008,3 +5008,34 @@ textarea {
     font-size: 12px;
   }
 }
+
+
+.enemy-special-summary {
+  display: grid;
+  gap: 2px;
+  margin-top: 8px;
+  border: 1px solid #41362f;
+  border-radius: 9px;
+  background: rgba(98, 61, 43, .08);
+  padding: 7px 8px;
+}
+
+.enemy-special-summary strong {
+  color: #c8a48e;
+  font-size: 9px;
+}
+
+.enemy-special-summary span {
+  color: #84786f;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.enemy-special-summary.charging {
+  border-color: #7d4f3d;
+  background: rgba(118, 54, 37, .15);
+}
+
+.enemy-special-summary.charging strong {
+  color: #e0a07d;
+}
