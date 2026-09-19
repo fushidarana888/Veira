@@ -61,6 +61,8 @@ type DuelParticipant = {
   magic_damage_type: string
   guard_reduction_percent: number
   counter_bonus_percent: number
+  spell_damage_bonus_percent: number
+  spell_damage_bonus_hits: number
 }
 
 type DuelTurn = {
@@ -115,9 +117,9 @@ const statusLabels: Record<CombatStatusEffectType, string> = {
 }
 
 function duelError(raw: string) {
-  if (raw.includes('CHALLENGER_BUSY')) return 'Сначала заверши текущее приключение, подземелье или другую дуэль.'
-  if (raw.includes('OPPONENT_BUSY')) return 'Этот персонаж сейчас занят приключением, подземельем или другой дуэлью.'
-  if (raw.includes('PLAYER_BUSY')) return 'Один из участников уже занят. Обнови список и попробуй позже.'
+  if (raw.includes('CHALLENGER_BUSY')) return 'Сначала заверши активное подземелье, PvE-бой или другую дуэль.'
+  if (raw.includes('OPPONENT_BUSY')) return 'Этот персонаж сейчас в подземелье, PvE-бою или другой дуэли.'
+  if (raw.includes('PLAYER_BUSY')) return 'Один из участников занят тяжёлым боем или другой дуэлью. Обнови список и попробуй позже.'
   if (raw.includes('DUEL_ALREADY_PENDING')) return 'Между вами уже есть необработанный вызов.'
   if (raw.includes('TOO_MANY_PENDING_DUELS')) return 'Слишком много исходящих вызовов. Отмени часть из них.'
   if (raw.includes('CANNOT_DUEL_SELF')) return 'Нельзя вызвать на дуэль самого себя.'
@@ -128,6 +130,14 @@ function duelError(raw: string) {
   if (raw.includes('DUEL_NOT_ACTIVE')) return 'Эта дуэль уже завершена.'
   if (raw.includes('DUEL_NOT_PENDING')) return 'Этот вызов уже обработан.'
   return raw
+}
+
+function spellKindLabel(kind: CharacterSpell['spell_kind']) {
+  if (kind === 'heal') return 'лечение'
+  if (kind === 'guard') return 'щит'
+  if (kind === 'cleanse') return 'очищение'
+  if (kind === 'buff') return 'усиление'
+  return 'атака'
 }
 
 function hpPercent(current: number, max: number) {
@@ -429,7 +439,7 @@ export function DuelPanel({ characterId }: Props) {
                     onClick={() => void act('spell', spell.id)}
                   >
                     <span>{spell.name}</span>
-                    <small>{spell.spell_kind === 'heal' ? 'лечение' : 'атака'} · {spell.mana_cost} MP</small>
+                    <small>{spellKindLabel(spell.spell_kind)} · {spell.mana_cost} MP</small>
                   </button>
                 ))}
               </div>
@@ -680,6 +690,12 @@ function DuelFighter({
       {participant.guard_reduction_percent > 0 && (
         <div className="duel-guard-ready">
           Защита готова · -{participant.guard_reduction_percent}% следующего удара
+        </div>
+      )}
+
+      {participant.spell_damage_bonus_percent > 0 && participant.spell_damage_bonus_hits > 0 && (
+        <div className="duel-guard-ready">
+          Боевой фокус · +{participant.spell_damage_bonus_percent}% · {participant.spell_damage_bonus_hits} атак
         </div>
       )}
 
