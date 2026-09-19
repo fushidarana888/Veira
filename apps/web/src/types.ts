@@ -359,6 +359,7 @@ export type CombatEncounter = {
   enemy_damage_type: DamageType
   enemy_resistances: Partial<Record<DamageType, number>>
   player_physical_damage_type: PhysicalDamageType
+  player_magic_damage_type: ElementalDamageType
   player_hp_current: number
   player_hp_max: number
   created_at: string
