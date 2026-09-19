@@ -1143,6 +1143,16 @@ export function AdventuresPanel({
                       {' · '}{activeCombat.enemy_on_hit_effect_chance}%
                     </div>
                   )}
+
+                  {activeCombat.enemy_special_every_n >= 2 && activeCombat.enemy_special_name && (
+                    <div className={'enemy-special-summary ' + (activeCombat.enemy_special_charging ? 'charging' : '')}>
+                      <strong>{activeCombat.enemy_special_name}</strong>
+                      <span>
+                        особая атака · подготовка видна за 1 ход
+                        {' · '}×{Number(activeCombat.enemy_special_damage_multiplier).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
