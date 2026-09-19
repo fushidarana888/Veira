@@ -1666,8 +1666,8 @@ textarea {
 .eilar-map-stage {
   position: relative;
   width: 100%;
-  min-width: 760px;
-  aspect-ratio: 760 / 551;
+  min-width: 1100px;
+  aspect-ratio: 1472 / 1069;
   overflow: hidden;
 }
 
@@ -1819,11 +1819,76 @@ textarea {
   }
 
   .eilar-map-stage {
-    min-width: 700px;
+    min-width: 1000px;
   }
 
   .sector-explore-button {
     width: 100%;
     min-width: 0;
+  }
+}
+
+
+.gm-map-upload-copy {
+  max-width: 760px;
+  margin: 0 0 18px;
+  line-height: 1.6;
+}
+
+.gm-map-upload-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gm-map-file-picker {
+  flex: 1 1 360px;
+  min-height: 46px;
+  border: 1px dashed #4b5360;
+  border-radius: 12px;
+  padding: 11px 13px;
+  background: #10141a;
+  color: #cfd4da;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.gm-map-file-picker:hover {
+  border-color: #7a684d;
+  background: #15181d;
+}
+
+.gm-map-file-picker input {
+  display: none;
+}
+
+.gm-map-preview {
+  margin-top: 18px;
+  overflow: auto;
+  border: 1px solid #2e343d;
+  border-radius: 14px;
+  background: #080b0e;
+}
+
+.gm-map-preview img {
+  display: block;
+  width: 100%;
+  min-width: 760px;
+  height: auto;
+}
+
+@media (max-width: 700px) {
+  .gm-map-upload-controls {
+    flex-direction: column;
+  }
+
+  .gm-map-upload-controls .primary-button {
+    width: 100%;
+  }
+
+  .gm-map-preview img {
+    min-width: 720px;
   }
 }
