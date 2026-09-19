@@ -655,6 +655,8 @@ export type RaceAccessGrant = {
 
 export type AutobattleStrategy = 'conservative' | 'balanced' | 'aggressive'
 
+export type AutobattleGuardMode = 'never' | 'low_hp' | 'interval' | 'low_hp_or_interval'
+
 export type AutobattleSettings = {
   character_id: string
   strategy: AutobattleStrategy
@@ -662,7 +664,28 @@ export type AutobattleSettings = {
   mana_reserve_percent: number
   use_learned_spells: boolean
   include_boss: boolean
+  normal_allow_physical: boolean
+  normal_allow_magic: boolean
+  normal_allow_spells: boolean
+  normal_guard_mode: AutobattleGuardMode
+  normal_guard_hp_percent: number
+  normal_guard_every_n: number
+  boss_allow_physical: boolean
+  boss_allow_magic: boolean
+  boss_allow_spells: boolean
+  boss_guard_mode: AutobattleGuardMode
+  boss_guard_hp_percent: number
+  boss_guard_every_n: number
   updated_at: string
+}
+
+export type AutobattleSpellRule = {
+  spell_id: string
+  spell_name: string
+  normal_enabled: boolean
+  normal_priority: number
+  boss_enabled: boolean
+  boss_priority: number
 }
 
 export type AutobattleResult = {
