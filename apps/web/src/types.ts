@@ -13,6 +13,8 @@ export type CharacterProgress = {
   experience: number
   hp_current: number
   hp_max: number
+  mana_current: number
+  mana_max: number
   strength: number
   agility: number
   intellect: number
@@ -22,6 +24,7 @@ export type CharacterProgress = {
   unspent_stat_points: number
   updated_at: string
   hp_regen_anchor_at?: string
+  mana_regen_anchor_at?: string
 }
 
 export type RaceDefinition = {
@@ -34,6 +37,7 @@ export type RaceDefinition = {
   playable: boolean
   stat_modifiers: Record<string, number>
   traits: unknown[]
+  innate_magic_damage_type: ElementalDamageType
 }
 
 export type Character = {
@@ -120,6 +124,8 @@ export type ItemDefinition = {
   shop_enabled: boolean
   damage_type: DamageType | null
   damage_resistances: Partial<Record<DamageType, number>>
+  scroll_spell_id: string | null
+  scroll_mode: 'learn' | 'cast' | null
 }
 
 export type CharacterItem = {
@@ -362,6 +368,8 @@ export type CombatEncounter = {
   player_magic_damage_type: ElementalDamageType
   player_hp_current: number
   player_hp_max: number
+  player_mana_current: number
+  player_mana_max: number
   created_at: string
   ended_at: string | null
 }
@@ -421,4 +429,36 @@ export type EnemyTemplate = {
   initiative_multiplier: number
   created_at: string
   updated_at: string
+}
+
+
+export type SpellDefinition = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  enabled: boolean
+  spell_kind: 'damage' | 'heal'
+  damage_type: ElementalDamageType | null
+  mana_cost: number
+  required_level: number
+  power_multiplier: number
+  flat_power: number
+  created_at: string
+  updated_at: string
+}
+
+export type CharacterSpell = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  spell_kind: 'damage' | 'heal'
+  damage_type: ElementalDamageType | null
+  mana_cost: number
+  required_level: number
+  power_multiplier: number
+  flat_power: number
+  learned_at: string
+  source: string
 }
