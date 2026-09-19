@@ -65,6 +65,7 @@ export function App() {
         owner_user_id,
         name,
         race,
+        race_id,
         bio,
         avatar_url,
         created_at,
@@ -81,6 +82,7 @@ export function App() {
           vitality,
           luck,
           gold,
+          unspent_stat_points,
           updated_at
         )
       `)
