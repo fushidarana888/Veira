@@ -483,6 +483,10 @@ export type CharacterSpell = {
   required_level: number
   power_multiplier: number
   flat_power: number
+  status_effect_type: CombatStatusEffectType | null
+  status_effect_chance: number
+  status_effect_turns: number
+  status_effect_potency: number
   learned_at: string
   source: string
 }
