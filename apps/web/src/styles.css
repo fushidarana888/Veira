@@ -1653,6 +1653,25 @@ textarea {
   font-size: 20px;
 }
 
+.expedition-cancel-button {
+  margin-top: 7px;
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 9px;
+}
+
+@media (max-width: 680px) {
+  .world-header-card,
+  .expedition-status-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .expedition-timer {
+    width: 100%;
+  }
+}
+
 .eilar-map-frame {
   overflow: auto;
   border: 1px solid #34302a;
