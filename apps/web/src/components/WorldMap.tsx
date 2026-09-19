@@ -59,7 +59,6 @@ const mapContentLegend: Array<{
   { type: 'settlement', label: 'Поселение' },
   { type: 'ruins', label: 'Руины' },
   { type: 'dungeon', label: 'Подземелье' },
-  { type: 'wilderness', label: 'Дикая зона' },
   { type: 'resource', label: 'Ресурс' },
   { type: 'npc', label: 'NPC' },
   { type: 'landmark', label: 'Особое место' },
@@ -619,6 +618,7 @@ export function WorldMap({
                 sector.is_discovered
                 && sector.content_type
                 && sector.content_type !== 'unassigned'
+                && sector.content_type !== 'wilderness'
                   ? sector.content_type
                   : null
 
