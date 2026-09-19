@@ -18,7 +18,7 @@ type Props = {
 }
 
 const TOTAL_SECTORS = 300
-const EXPLORATION_HOURS = 12
+const EXPLORATION_HOURS = 8
 
 const ORIGINAL_MAP_URL = supabase.storage
   .from('veira-assets')
@@ -351,7 +351,7 @@ export function WorldMap({
           <span className="eyebrow">ЭЙЛАР · ЛИЧНАЯ КАРТА</span>
           <h2>Исследование мира</h2>
           <p className="muted">
-            Карта разделена на {TOTAL_SECTORS} секторов. Неизведанный соседний сектор открывается за {EXPLORATION_HOURS} часов реального времени.
+            Карта разделена на {TOTAL_SECTORS} секторов. Неизведанный соседний сектор открывается за {EXPLORATION_HOURS} часов реального времени. Исследование пассивное: параллельно можно дуэлиться, крафтить и заниматься социальными или учебными активностями.
           </p>
         </div>
 
@@ -391,7 +391,7 @@ export function WorldMap({
                 : 'Разведка входа и подходов'}
             </h3>
             <p className="muted">
-              Сектор #{activeSiteAction.sector_id}. Пока это действие идёт, нельзя начинать новую экспедицию или другое исследование.
+              Сектор #{activeSiteAction.sector_id}. Это пассивное исследование: можно дуэлиться, заниматься ремеслом и другими делами. Нельзя начинать другое исследование или тяжёлый PvE-контент.
             </p>
           </div>
           <div className="expedition-timer">
@@ -582,7 +582,7 @@ export function WorldMap({
                       disabled={busy || anyBlockingActivity}
                       onClick={() => void startSiteAction('explore_ruins')}
                     >
-                      Исследовать руины · 4 часа
+                      Исследовать руины · 2 часа
                     </button>
                   )}
                 </div>
@@ -620,7 +620,7 @@ export function WorldMap({
                       disabled={busy || anyBlockingActivity}
                       onClick={() => void startSiteAction('scout_dungeon')}
                     >
-                      Разведать вход · 2 часа
+                      Разведать вход · 1 час
                     </button>
                   )}
 
@@ -661,7 +661,7 @@ export function WorldMap({
                 disabled={busy || anyBlockingActivity}
                 onClick={() => void startExploration()}
               >
-                {busy ? 'Отправляемся…' : 'Исследовать · 12 часов'}
+                {busy ? 'Отправляемся…' : 'Исследовать · 8 часов'}
               </button>
             )}
           </>
