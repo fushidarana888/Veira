@@ -350,6 +350,7 @@ export function GmHome({ profile, onSignOut }: Props) {
                     <span><small>LVL</small><strong>{selectedProgress.level}</strong></span>
                     <span><small>EXP</small><strong>{selectedProgress.experience}</strong></span>
                     <span><small>HP</small><strong>{selectedProgress.hp_current}/{selectedProgress.hp_max}</strong></span>
+                    <span><small>MP</small><strong>{selectedProgress.mana_current}/{selectedProgress.mana_max}</strong></span>
                     <span><small>Золото</small><strong>{selectedProgress.gold}</strong></span>
                   </div>
                 </article>
@@ -391,6 +392,17 @@ export function GmHome({ profile, onSignOut }: Props) {
                       )}
                     >
                       Вылечить
+                    </button>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void mutateProgress(
+                        { mana_current: selectedProgress.mana_max },
+                        'Мана восстановлена.',
+                      )}
+                    >
+                      Восстановить ману
                     </button>
                     <button
                       className="ghost-button"
