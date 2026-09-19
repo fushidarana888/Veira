@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
+  CombatStatusEffectType,
   DamageType,
   ElementalDamageType,
   ItemCategory,
@@ -17,6 +18,16 @@ const damageTypes: DamageType[] = [
 
 const elementalTypes: ElementalDamageType[] = [
   'fire', 'water', 'earth', 'air', 'lightning', 'ice',
+]
+
+const statusEffectOptions: Array<{ value: CombatStatusEffectType; label: string }> = [
+  { value: 'burn', label: 'Горение' },
+  { value: 'bleed', label: 'Кровотечение' },
+  { value: 'poison', label: 'Яд' },
+  { value: 'chill', label: 'Охлаждение' },
+  { value: 'stun', label: 'Оглушение' },
+  { value: 'weaken', label: 'Ослабление' },
+  { value: 'vulnerable', label: 'Уязвимость' },
 ]
 
 const damageLabels: Record<DamageType, string> = {
@@ -104,6 +115,10 @@ type SpellDraft = {
   required_level: number
   power_multiplier: number
   flat_power: number
+  status_effect_type: CombatStatusEffectType | null
+  status_effect_chance: number
+  status_effect_turns: number
+  status_effect_potency: number
 }
 
 function emptyItem(): ItemDraft {
@@ -144,6 +159,10 @@ function emptySpell(): SpellDraft {
     required_level: 1,
     power_multiplier: 1,
     flat_power: 0,
+    status_effect_type: null,
+    status_effect_chance: 0,
+    status_effect_turns: 0,
+    status_effect_potency: 0,
   }
 }
 
@@ -240,6 +259,10 @@ export function GmItemsAndSpells() {
       required_level: spell.required_level,
       power_multiplier: Number(spell.power_multiplier),
       flat_power: spell.flat_power,
+      status_effect_type: spell.status_effect_type,
+      status_effect_chance: spell.status_effect_chance,
+      status_effect_turns: spell.status_effect_turns,
+      status_effect_potency: spell.status_effect_potency,
     })
     setMessage('')
   }
@@ -339,6 +362,10 @@ export function GmItemsAndSpells() {
       p_required_level: spellDraft.required_level,
       p_power_multiplier: spellDraft.power_multiplier,
       p_flat_power: spellDraft.flat_power,
+      p_status_effect_type: spellDraft.status_effect_type,
+      p_status_effect_chance: spellDraft.status_effect_chance,
+      p_status_effect_turns: spellDraft.status_effect_turns,
+      p_status_effect_potency: spellDraft.status_effect_potency,
     })
 
     if (error) {
@@ -639,6 +666,83 @@ export function GmItemsAndSpells() {
               <label><span>Требуемый уровень</span><input type="number" min={1} value={spellDraft.required_level} onChange={(e) => setSpellDraft({ ...spellDraft, required_level: Math.max(1, Number(e.target.value)) })} /></label>
               <label><span>Множитель силы</span><input type="number" min={0} max={10} step={0.05} value={spellDraft.power_multiplier} onChange={(e) => setSpellDraft({ ...spellDraft, power_multiplier: Math.max(0, Number(e.target.value)) })} /></label>
               <label><span>Плоский бонус</span><input type="number" min={0} value={spellDraft.flat_power} onChange={(e) => setSpellDraft({ ...spellDraft, flat_power: Math.max(0, Number(e.target.value)) })} /></label>
+            </div>
+
+            <div className="gm-editor-box">
+              <div>
+                <strong>Дополнительный боевой эффект</strong>
+                <small>Накладывается поверх основного урона заклинания</small>
+              </div>
+
+              <div className="gm-form-grid four">
+                <label>
+                  <span>Эффект</span>
+                  <select
+                    value={spellDraft.status_effect_type ?? ''}
+                    onChange={(e) => setSpellDraft({
+                      ...spellDraft,
+                      status_effect_type: e.target.value ? e.target.value as CombatStatusEffectType : null,
+                      status_effect_chance: e.target.value ? Math.max(1, spellDraft.status_effect_chance || 25) : 0,
+                      status_effect_turns: e.target.value ? Math.max(1, spellDraft.status_effect_turns || 1) : 0,
+                      status_effect_potency: e.target.value ? spellDraft.status_effect_potency : 0,
+                    })}
+                  >
+                    <option value="">Нет</option>
+                    {statusEffectOptions.map((effect) => (
+                      <option key={effect.value} value={effect.value}>{effect.label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Шанс %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    disabled={!spellDraft.status_effect_type}
+                    value={spellDraft.status_effect_chance}
+                    onChange={(e) => setSpellDraft({
+                      ...spellDraft,
+                      status_effect_chance: Math.max(0, Math.min(100, Number(e.target.value))),
+                    })}
+                  />
+                </label>
+
+                <label>
+                  <span>Ходов</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    disabled={!spellDraft.status_effect_type}
+                    value={spellDraft.status_effect_turns}
+                    onChange={(e) => setSpellDraft({
+                      ...spellDraft,
+                      status_effect_turns: Math.max(0, Math.min(10, Number(e.target.value))),
+                    })}
+                  />
+                </label>
+
+                <label>
+                  <span>Сила эффекта</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={1000}
+                    disabled={!spellDraft.status_effect_type}
+                    value={spellDraft.status_effect_potency}
+                    onChange={(e) => setSpellDraft({
+                      ...spellDraft,
+                      status_effect_potency: Math.max(0, Number(e.target.value)),
+                    })}
+                  />
+                </label>
+              </div>
+
+              <p className="muted">
+                Горение, кровотечение и яд используют силу как урон за ход. Охлаждение и ослабление — как процент снижения урона. Уязвимость — как процент дополнительного входящего урона. Для оглушения сила не нужна.
+              </p>
             </div>
 
             <p className="muted">
