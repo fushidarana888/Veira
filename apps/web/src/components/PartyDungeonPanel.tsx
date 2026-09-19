@@ -70,6 +70,8 @@ type PartyCombatMember = {
   mana_max: number
   downed: boolean
   guard_percent: number
+  damage_bonus_percent: number
+  damage_bonus_hits: number
   acted: boolean
   is_leader: boolean
   joined_order: number
@@ -95,6 +97,21 @@ type PartyLoot = {
   rarity: string
   quantity: number
   created_at: string
+}
+
+type PartySpell = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff'
+  damage_type: string | null
+  mana_cost: number
+  required_level: number
+  power_multiplier: number
+  flat_power: number
+  learned_at: string
+  source: string
 }
 
 type PartyDungeonState = {
@@ -155,6 +172,11 @@ function coopError(raw: string) {
   if (raw.includes('PARTY_COMBAT_ALREADY_ACTIVE')) return 'Бой в этом зале уже идёт.'
   if (raw.includes('PARTY_ROOM_COMBAT_ALREADY_EXISTS')) return 'Этот зал уже был разыгран.'
   if (raw.includes('PARTY_DUNGEON_ACTIVE')) return 'Сначала заверши текущий групповой поход.'
+  if (raw.includes('NOT_ENOUGH_MANA')) return 'Недостаточно маны для этого заклинания.'
+  if (raw.includes('SPELL_NOT_LEARNED')) return 'Это заклинание не изучено персонажем.'
+  if (raw.includes('ALREADY_FULL_HEALTH')) return 'У выбранного союзника уже полное здоровье.'
+  if (raw.includes('PARTY_TARGET_DOWNED')) return 'На выведенного союзника сейчас можно применить только лечение.'
+  if (raw.includes('PARTY_SPELL_NOT_SUPPORTED')) return 'Это заклинание пока не поддерживается в групповом бою.'
   return raw
 }
 
@@ -171,6 +193,8 @@ export function PartyDungeonPanel({
   const [party, setParty] = useState<PartySummary | null>(null)
   const [options, setOptions] = useState<DungeonOption[]>([])
   const [state, setState] = useState<PartyDungeonState>(emptyState)
+  const [spells, setSpells] = useState<PartySpell[]>([])
+  const [spellTargets, setSpellTargets] = useState<Record<string, string>>({})
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -179,7 +203,7 @@ export function PartyDungeonPanel({
   async function loadState(silent = false) {
     if (!silent) setLoading(true)
 
-    const [partyResult, optionResult, dungeonResult] = await Promise.all([
+    const [partyResult, optionResult, dungeonResult, spellResult] = await Promise.all([
       supabase.rpc('get_party_overview', {
         p_character_id: characterId,
       }),
@@ -189,9 +213,12 @@ export function PartyDungeonPanel({
       supabase.rpc('get_party_dungeon_state', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_character_spells', {
+        p_character_id: characterId,
+      }),
     ])
 
-    const error = partyResult.error ?? optionResult.error ?? dungeonResult.error
+    const error = partyResult.error ?? optionResult.error ?? dungeonResult.error ?? spellResult.error
     if (error) {
       if (!silent) setMessage(coopError(error.message))
       if (!silent) setLoading(false)
@@ -205,6 +232,10 @@ export function PartyDungeonPanel({
     setParty(overview?.party ?? null)
     setOptions(nextOptions)
     setState(nextState)
+    setSpells(
+      ((spellResult.data as PartySpell[] | null) ?? [])
+        .filter((spell) => ['damage', 'heal', 'guard', 'buff'].includes(spell.spell_kind)),
+    )
 
     if (
       selectedSectorId == null
@@ -312,6 +343,51 @@ export function PartyDungeonPanel({
       setMessage('Раунд завершён: после действий группы противник ответил атакой.')
     } else {
       setMessage('Ход принят. Ждём остальных участников группы.')
+    }
+
+    setBusy(false)
+  }
+
+  async function castPartySpell(spell: PartySpell) {
+    if (!state.encounter) return
+
+    const support = spell.spell_kind !== 'damage'
+    const targetId = support
+      ? spellTargets[spell.id] ?? characterId
+      : null
+
+    setBusy(true)
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('cast_party_character_spell', {
+      p_character_id: characterId,
+      p_encounter_id: state.encounter.id,
+      p_spell_id: spell.id,
+      p_target_character_id: targetId,
+    })
+
+    if (error) {
+      setMessage(coopError(error.message))
+      setBusy(false)
+      await loadState(true)
+      return
+    }
+
+    const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
+    await Promise.all([loadState(true), refreshPlayer()])
+
+    if (result?.status === 'victory') {
+      setMessage(
+        result.run_status === 'completed'
+          ? 'Заклинание добивает хранителя. Групповой поход завершён победой.'
+          : 'Заклинание завершает бой. Зал очищен.',
+      )
+    } else if (result?.status === 'defeat') {
+      setMessage('После хода противника вся группа выведена из строя.')
+    } else if (result?.enemy_acted) {
+      setMessage('Заклинание применено. Все участники походили, поэтому противник ответил.')
+    } else {
+      setMessage('Заклинание применено. Ждём ходы остальных участников.')
     }
 
     setBusy(false)
@@ -539,6 +615,11 @@ export function PartyDungeonPanel({
                 {member.guard_percent > 0 && (
                   <small className="party-guard-state">Защита −{member.guard_percent}% следующего удара</small>
                 )}
+                {member.damage_bonus_hits > 0 && member.damage_bonus_percent > 0 && (
+                  <small className="party-buff-state">
+                    Боевой фокус +{member.damage_bonus_percent}% · атак {member.damage_bonus_hits}
+                  </small>
+                )}
               </div>
             ))}
           </div>
@@ -647,8 +728,94 @@ export function PartyDungeonPanel({
                 )}
               </div>
 
+              {spells.length > 0 && (
+                <div className="party-spell-section">
+                  <div className="party-subheading">
+                    <strong>Изученные заклинания</strong>
+                    <span>каждое занимает твой ход</span>
+                  </div>
+
+                  <div className="party-spell-grid">
+                    {spells.map((spell) => {
+                      const support = spell.spell_kind !== 'damage'
+                      const targetId = spellTargets[spell.id] ?? characterId
+                      const target = state.members.find((member) => member.character_id === targetId) ?? me
+                      const noMana = (me?.mana_current ?? 0) < spell.mana_cost
+                      const targetInvalid = Boolean(
+                        support
+                        && target
+                        && target.downed
+                        && spell.spell_kind !== 'heal',
+                      )
+                      const fullHeal = Boolean(
+                        spell.spell_kind === 'heal'
+                        && target
+                        && !target.downed
+                        && target.hp_current >= target.hp_max,
+                      )
+
+                      return (
+                        <div className={'party-spell-card ' + spell.spell_kind} key={spell.id}>
+                          <div>
+                            <strong>{spell.name}</strong>
+                            <span>
+                              {spell.spell_kind === 'damage'
+                                ? (damageLabels[spell.damage_type ?? ''] ?? spell.damage_type ?? 'магия')
+                                : spell.spell_kind === 'heal'
+                                  ? 'лечение / поднятие'
+                                  : spell.spell_kind === 'guard'
+                                    ? 'щит союзника'
+                                    : 'усиление урона'}
+                              {' · '}{spell.mana_cost} MP
+                            </span>
+                          </div>
+
+                          {support && (
+                            <select
+                              value={targetId}
+                              disabled={!canAct}
+                              onChange={(event) => setSpellTargets((current) => ({
+                                ...current,
+                                [spell.id]: event.target.value,
+                              }))}
+                            >
+                              {state.members.map((member) => (
+                                <option
+                                  key={member.character_id}
+                                  value={member.character_id}
+                                  disabled={member.downed && spell.spell_kind !== 'heal'}
+                                >
+                                  {member.name}
+                                  {member.character_id === characterId ? ' · ты' : ''}
+                                  {member.downed ? ' · выведен' : ''}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          <button
+                            className={spell.spell_kind === 'damage' ? 'primary-button' : 'ghost-button'}
+                            type="button"
+                            disabled={!canAct || noMana || targetInvalid || fullHeal}
+                            onClick={() => void castPartySpell(spell)}
+                          >
+                            {noMana
+                              ? 'Не хватает маны'
+                              : fullHeal
+                                ? 'HP полное'
+                                : spell.spell_kind === 'damage'
+                                  ? 'Применить'
+                                  : 'На выбранного'}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <small className="party-coop-note">
-                Первая версия кооп-боя использует физическую атаку, врождённую магию и защиту. Заклинания, лечение союзников и полноценные роли пати добавим следующим слоем.
+                Лечение можно направлять на любого участника и поднимать им выведенного союзника. Арканный щит и Боевой фокус тоже можно накладывать на товарищей. Эффекты состояний вроде ожога, оглушения и ослабления пока не переносятся в групповой бой.
               </small>
 
               <div className="party-combat-log">
