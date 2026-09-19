@@ -4876,3 +4876,74 @@ textarea {
 .combat-guard-help b {
   color: #bcc4cd;
 }
+
+
+/* Optional email verification */
+.auth-register-note {
+  margin: -2px 0 0;
+  color: #87929f;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.more-section {
+  display: grid;
+  gap: 14px;
+}
+
+.account-security-panel {
+  display: grid;
+  gap: 13px;
+}
+
+.account-email-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #303843;
+  border-radius: 11px;
+  background: #0f141a;
+  padding: 10px 11px;
+}
+
+.account-email-row > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.account-email-row span {
+  color: #838e9a;
+  font-size: 8px;
+}
+
+.account-email-row strong {
+  color: #e0e5ea;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.account-security-note {
+  margin: 0;
+  border-left: 2px solid #66533e;
+  color: #928a80;
+  padding: 5px 9px;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.account-security-note.verified {
+  border-left-color: #46634e;
+  color: #95aa9a;
+}
+
+@media (max-width: 620px) {
+  .account-email-row {
+    display: grid;
+  }
+
+  .account-email-row .primary-button {
+    width: 100%;
+  }
+}
