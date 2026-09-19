@@ -28,10 +28,10 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, player_hp_current, player_hp_max, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, player_hp_current, player_hp_max, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
-        .limit(12),
+        .limit(20),
     ])
 
     const error = siteResult.error ?? encounterResult.error
@@ -56,7 +56,7 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
         .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
         .eq('encounter_id', latestEncounter.id)
         .order('id', { ascending: false })
-        .limit(14)
+        .limit(18)
 
       if (turnError) {
         setMessage(turnError.message)
@@ -91,6 +91,9 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
 
   const latestCombat = encounters[0] ?? null
   const activeCombat = latestCombat?.status === 'active' ? latestCombat : null
+  const latestCombatSite = latestCombat
+    ? dungeons.find((site) => site.active_run_id === latestCombat.dungeon_run_id) ?? null
+    : null
 
   async function startDungeon(site: CharacterAdventureSite) {
     setBusy(true)
@@ -132,8 +135,10 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
 
     if (error) {
       const raw = error.message
-      if (raw.includes('COMBAT_ALREADY_EXISTS')) {
-        setMessage('Бой для этого прохождения уже начат.')
+      if (raw.includes('COMBAT_ALREADY_ACTIVE')) {
+        setMessage('В этом подземелье уже идёт бой.')
+      } else if (raw.includes('ROOM_COMBAT_ALREADY_EXISTS')) {
+        setMessage('Этот зал уже был разыгран.')
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('У персонажа нет здоровья для начала боя.')
       } else {
@@ -145,7 +150,7 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
     }
 
     await loadAdventures()
-    setMessage('Первый бой начался.')
+    setMessage('Следующий зал начат.')
     setBusy(false)
   }
 
@@ -206,6 +211,14 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
     ? Math.max(0, Math.min(100, Math.round((activeCombat.enemy_hp_current / activeCombat.enemy_hp_max) * 100)))
     : 0
 
+  const clearedRooms = activeDungeon?.run_rooms_cleared ?? 0
+  const totalRooms = activeDungeon?.run_total_rooms ?? 0
+  const nextRoom = Math.min(totalRooms, clearedRooms + 1)
+  const dungeonProgress = totalRooms > 0
+    ? Math.round((clearedRooms / totalRooms) * 100)
+    : 0
+  const nextRoomIsBoss = totalRooms > 0 && nextRoom === totalRooms
+
   return (
     <section className="adventures-section">
       <article className="panel adventures-header">
@@ -234,13 +247,33 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
             <span className="badge">сектор #{activeDungeon.sector_id}</span>
           </div>
 
+          <div className="dungeon-progress-block">
+            <div className="dungeon-progress-head">
+              <span>Пройдено залов</span>
+              <strong>{clearedRooms} / {totalRooms}</strong>
+            </div>
+            <div className="dungeon-progress-meter">
+              <span style={{ width: dungeonProgress + '%' }} />
+            </div>
+            <div className="dungeon-reward-preview">
+              <span>За полную зачистку</span>
+              <strong>
+                {activeDungeon.run_reward_gold ?? 0} золота · {activeDungeon.run_reward_experience ?? 0} опыта
+              </strong>
+            </div>
+          </div>
+
           {!activeCombat ? (
             <>
               <div className="dungeon-run-stage">
-                <span>Текущий этап</span>
-                <strong>Вход в подземелье</strong>
+                <span>Следующий этап</span>
+                <strong>
+                  {nextRoomIsBoss
+                    ? `Финальный зал · хранитель`
+                    : `Зал ${nextRoom} из ${totalRooms}`}
+                </strong>
                 <p className="muted">
-                  Вход разведан. Первый зал уже можно начать как отдельный серверный бой.
+                  Здоровье между залами не восстанавливается автоматически. Можно продолжить или выйти и начать прохождение заново позже.
                 </p>
               </div>
 
@@ -251,7 +284,7 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
                   disabled={busy}
                   onClick={() => void startCombat(activeDungeon.active_run_id!)}
                 >
-                  Войти в первый зал
+                  {nextRoomIsBoss ? 'Войти к хранителю' : `Войти в зал ${nextRoom}`}
                 </button>
 
                 <button
@@ -268,11 +301,20 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
             <div className="combat-shell">
               <div className="combat-heading">
                 <div>
-                  <span className="eyebrow">БОЙ · РАУНД {activeCombat.round + 1}</span>
+                  <span className="eyebrow">
+                    {activeCombat.is_boss
+                      ? `ХРАНИТЕЛЬ · РАУНД ${activeCombat.round + 1}`
+                      : `ЗАЛ ${activeCombat.room_index} · РАУНД ${activeCombat.round + 1}`}
+                  </span>
                   <h3>{activeCombat.enemy_name}</h3>
-                  <span className="muted">Уровень {activeCombat.enemy_level}</span>
+                  <span className="muted">
+                    Уровень {activeCombat.enemy_level}
+                    {activeCombat.is_boss ? ' · финальный противник' : ''}
+                  </span>
                 </div>
-                <span className="badge">серверный бой</span>
+                <span className="badge">
+                  {activeCombat.room_index} / {totalRooms}
+                </span>
               </div>
 
               <div className="combatants-grid">
@@ -346,7 +388,9 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
           <div>
             <span className="eyebrow">
               {latestCombat.status === 'victory'
-                ? 'ПОБЕДА'
+                ? latestCombat.is_boss
+                  ? 'ПОДЗЕМЕЛЬЕ ЗАЧИЩЕНО'
+                  : `ЗАЛ ${latestCombat.room_index} ОЧИЩЕН`
                 : latestCombat.status === 'defeat'
                   ? 'ПОРАЖЕНИЕ'
                   : 'БОЙ ПРЕКРАЩЁН'}
@@ -354,14 +398,20 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
             <h3>{latestCombat.enemy_name}</h3>
             <p className="muted">
               {latestCombat.status === 'victory'
-                ? 'Первый зал очищен. Эта боевая основа готова для подключения следующих комнат и наград.'
+                ? latestCombatSite?.run_status === 'completed'
+                  ? `Полная зачистка завершена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта.`
+                  : 'Противник повержен. Можно перейти к следующему залу.'
                 : latestCombat.status === 'defeat'
                   ? 'Персонаж отступил из подземелья и остался с 1 HP.'
                   : 'Прохождение было прервано.'}
             </p>
           </div>
           <span className="badge">
-            {latestCombat.status === 'victory' ? 'зал очищен' : latestCombat.status}
+            {latestCombat.status === 'victory'
+              ? latestCombatSite?.run_status === 'completed'
+                ? 'зачищено'
+                : 'зал очищен'
+              : latestCombat.status}
           </span>
         </article>
       )}
@@ -440,11 +490,15 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
                         disabled={busy}
                         onClick={() => void startDungeon(site)}
                       >
-                        Войти
+                        {site.site_status === 'cleared' ? 'Пройти снова' : 'Войти'}
                       </button>
                     )}
 
-                    {active && <span className="badge">внутри</span>}
+                    {active && (
+                      <span className="badge">
+                        {(site.run_rooms_cleared ?? 0)} / {(site.run_total_rooms ?? 0)}
+                      </span>
+                    )}
                   </div>
                 </div>
               )
