@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type {
   CharacterMapSector,
   ExpeditionEventInstance,
+  ExpeditionResult,
   SectorExpedition,
 } from '../types'
 
@@ -59,6 +60,7 @@ export function WorldMap({ characterId }: Props) {
   const [sectors, setSectors] = useState<CharacterMapSector[]>([])
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
   const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
+  const [results, setResults] = useState<ExpeditionResult[]>([])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -70,7 +72,7 @@ export function WorldMap({ characterId }: Props) {
     setLoading(true)
     setMessage('')
 
-    const [mapResult, expeditionResult, eventResult] = await Promise.all([
+    const [mapResult, expeditionResult, eventResult, resultResult] = await Promise.all([
       supabase.rpc('get_character_map_state', {
         p_character_id: characterId,
       }),
@@ -82,13 +84,19 @@ export function WorldMap({ characterId }: Props) {
         .limit(20),
       supabase
         .from('expedition_event_instances')
-        .select('id, expedition_id, event_definition_id, character_id, sector_id, title, player_prompt, status, resolution_text, outcome, created_at, resolved_at, resolved_by')
+        .select('id, expedition_id, event_definition_id, encounter_template_id, source_kind, character_id, sector_id, title, player_prompt, gm_notes, status, resolution_text, outcome, created_at, resolved_at, resolved_by')
+        .eq('character_id', characterId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('expedition_results')
+        .select('id, expedition_id, character_id, sector_id, source, result_type, title, summary, outcome, encounter_template_id, created_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
     ])
 
-    const error = mapResult.error ?? expeditionResult.error ?? eventResult.error
+    const error = mapResult.error ?? expeditionResult.error ?? eventResult.error ?? resultResult.error
 
     if (error) {
       setMessage(error.message)
@@ -99,6 +107,7 @@ export function WorldMap({ characterId }: Props) {
     setSectors((mapResult.data as CharacterMapSector[] | null) ?? [])
     setExpeditions((expeditionResult.data as SectorExpedition[] | null) ?? [])
     setEvents((eventResult.data as ExpeditionEventInstance[] | null) ?? [])
+    setResults((resultResult.data as ExpeditionResult[] | null) ?? [])
     setLoading(false)
   }
 
@@ -133,8 +142,7 @@ export function WorldMap({ characterId }: Props) {
   const pendingEvent =
     events.find((entry) => entry.status === 'pending') ?? null
 
-  const recentResolvedEvent =
-    events.find((entry) => entry.status === 'resolved' && entry.resolution_text.trim()) ?? null
+  const latestResult = results[0] ?? null
 
   const selectedSector = selectedSectorId
     ? sectorById.get(selectedSectorId) ?? null
@@ -242,15 +250,25 @@ export function WorldMap({ characterId }: Props) {
         </article>
       )}
 
-      {!pendingEvent && recentResolvedEvent && (
+      {!pendingEvent && latestResult && (
         <article className="panel expedition-result-card">
           <div>
-            <span className="eyebrow">ИТОГ ПОСЛЕДНЕГО СОБЫТИЯ</span>
-            <h3>{recentResolvedEvent.title}</h3>
-            <p>{recentResolvedEvent.resolution_text}</p>
+            <span className="eyebrow">
+              {latestResult.source === 'random_event'
+                ? 'СЛУЧАЙНОЕ СОБЫТИЕ'
+                : latestResult.source === 'gm_event'
+                  ? 'ИТОГ СОБЫТИЯ'
+                  : 'ОТЧЁТ ЭКСПЕДИЦИИ'}
+            </span>
+            <h3>{latestResult.title}</h3>
+            <p>{latestResult.summary}</p>
+            <div className="sector-tags expedition-result-tags">
+              <span>{contentLabels[latestResult.result_type] ?? 'Исследование'}</span>
+              <span>Сектор #{latestResult.sector_id}</span>
+            </div>
           </div>
           <span className="badge">
-            {recentResolvedEvent.outcome === 'discovered' ? 'Сектор открыт' : 'Экспедиция остановлена'}
+            {latestResult.outcome === 'discovered' ? 'Сектор открыт' : 'Экспедиция остановлена'}
           </span>
         </article>
       )}
