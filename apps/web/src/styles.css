@@ -1782,6 +1782,211 @@ textarea {
   font-size: 8px;
 }
 
+.world-map-tools {
+  display: grid;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.world-map-mode {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 4px;
+  border: 1px solid #303842;
+  border-radius: 12px;
+  background: #0d1217;
+  padding: 4px;
+}
+
+.world-map-mode button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 11px;
+  background: transparent;
+  color: #7f8a94;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.world-map-mode button:hover {
+  color: #c2c9cf;
+}
+
+.world-map-mode button.active {
+  background: #1b232a;
+  color: #e0e6e9;
+  box-shadow: inset 0 0 0 1px rgba(178, 193, 201, .12);
+}
+
+.world-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.map-legend-item {
+  --map-sector-rgb: 135, 145, 153;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  border: 1px solid rgba(var(--map-sector-rgb), .42);
+  border-radius: 999px;
+  padding: 4px 8px 4px 5px;
+  background: rgba(var(--map-sector-rgb), .10);
+  color: #aeb8bf;
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.map-legend-icon,
+.sector-content-mark {
+  display: grid;
+  place-items: center;
+}
+
+.map-legend-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(var(--map-sector-rgb), .18);
+  color: rgb(var(--map-sector-rgb));
+}
+
+.map-legend-icon svg,
+.sector-content-mark svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.content-settlement { --map-sector-rgb: 73, 174, 101; }
+.content-ruins { --map-sector-rgb: 221, 176, 65; }
+.content-dungeon { --map-sector-rgb: 201, 73, 73; }
+.content-wilderness { --map-sector-rgb: 121, 151, 76; }
+.content-resource { --map-sector-rgb: 67, 176, 180; }
+.content-npc { --map-sector-rgb: 83, 138, 207; }
+.content-landmark { --map-sector-rgb: 146, 103, 202; }
+.content-event { --map-sector-rgb: 199, 89, 145; }
+
+.fog-grid.gameplay-overlay .fog-sector.discovered[class*="content-"] {
+  border-color: rgba(var(--map-sector-rgb), .48);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--map-sector-rgb), .10),
+    inset 0 0 18px rgba(var(--map-sector-rgb), .07);
+}
+
+.fog-grid.gameplay-overlay .fog-sector.discovered[class*="content-"]::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 2px;
+  border-radius: 3px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(var(--map-sector-rgb), .22),
+      rgba(var(--map-sector-rgb), .08) 55%,
+      rgba(var(--map-sector-rgb), .14)
+    );
+  pointer-events: none;
+  transition: background .16s ease, box-shadow .16s ease;
+}
+
+.fog-grid.gameplay-overlay .fog-sector.discovered[class*="content-"]:hover::before {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(var(--map-sector-rgb), .31),
+      rgba(var(--map-sector-rgb), .13) 55%,
+      rgba(var(--map-sector-rgb), .20)
+    );
+}
+
+.fog-grid.gameplay-overlay .fog-sector.discovered.selected[class*="content-"] {
+  border-color: rgba(var(--map-sector-rgb), .95);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--map-sector-rgb), .34),
+    0 0 0 1px rgba(var(--map-sector-rgb), .32),
+    0 0 13px rgba(var(--map-sector-rgb), .24);
+}
+
+.fog-grid.gameplay-overlay .fog-sector.discovered.selected[class*="content-"]::before {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(var(--map-sector-rgb), .38),
+      rgba(var(--map-sector-rgb), .16) 58%,
+      rgba(var(--map-sector-rgb), .24)
+    );
+}
+
+.sector-content-mark {
+  position: absolute;
+  z-index: 3;
+  right: 5px;
+  top: 5px;
+  width: 21px;
+  height: 21px;
+  border: 1px solid rgba(var(--map-sector-rgb), .78);
+  border-radius: 7px;
+  background: rgba(8, 12, 15, .88);
+  color: rgb(var(--map-sector-rgb));
+  box-shadow:
+    0 2px 7px rgba(0, 0, 0, .48),
+    inset 0 0 8px rgba(var(--map-sector-rgb), .08);
+  pointer-events: none;
+}
+
+.fog-sector.active-expedition .sector-content-mark {
+  right: 4px;
+  top: 4px;
+}
+
+@media (max-width: 760px) {
+  .world-map-tools {
+    gap: 8px;
+  }
+
+  .world-map-mode {
+    width: 100%;
+  }
+
+  .world-map-mode button {
+    flex: 1 1 0;
+  }
+
+  .world-map-legend {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .world-map-legend::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sector-content-mark {
+    width: 23px;
+    height: 23px;
+  }
+
+  .sector-content-mark svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .sector-detail-card h3 {
   margin: 7px 0 0;
   font-size: 20px;
