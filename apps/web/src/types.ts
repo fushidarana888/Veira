@@ -401,6 +401,9 @@ export type SettlementShopItem = {
   stat_modifiers: Record<string, number>
   damage_type: DamageType | null
   damage_resistances: Partial<Record<DamageType, number>>
+  scroll_mode: 'learn' | 'cast' | null
+  scroll_spell_id: string | null
+  scroll_spell_name: string | null
   heal_amount: number
   price: number
   required_level: number
