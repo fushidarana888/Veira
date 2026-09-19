@@ -34,9 +34,13 @@ export function App() {
 
     setState((current) => ({ ...current, user, loading: true, error: '' }))
 
+    // If this session was created through an email OTP / magic-link flow,
+    // trust it as proof that the user controls the mailbox.
+    await supabase.rpc('mark_email_verified_from_otp')
+
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('user_id, display_name, avatar_url, account_type')
+      .select('user_id, display_name, avatar_url, account_type, email_verified, email_verified_at')
       .eq('user_id', user.id)
       .single()
 
@@ -186,6 +190,7 @@ export function App() {
     <PlayerHome
       profile={state.profile}
       character={state.character}
+      userEmail={state.user.email ?? ''}
       onSignOut={signOut}
     />
   )
