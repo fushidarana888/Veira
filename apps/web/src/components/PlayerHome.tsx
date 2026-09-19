@@ -711,7 +711,8 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                 <div className="combat-stats-grid">
                   <CombatStat label="Физ. мощь" value={derivedCombatStats.physicalPower} />
                   <CombatStat label="Маг. мощь" value={derivedCombatStats.magicPower} />
-                  <CombatStat label="Защита" value={derivedCombatStats.defense} />
+                  <CombatStat label="Физ. защита" value={derivedCombatStats.physicalDefense} />
+                  <CombatStat label="Маг. защита" value={derivedCombatStats.magicDefense} />
                   <CombatStat label="Инициатива" value={derivedCombatStats.initiative} />
                 </div>
               </section>
