@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { GmEnemyTemplates } from './GmEnemyTemplates'
 import type {
   Character,
   ExpeditionEventInstance,
@@ -1262,6 +1263,8 @@ export function GmWorldEditor({ characters, profiles }: Props) {
           )}
         </aside>
       </div>
+
+      <GmEnemyTemplates />
 
       <article className="panel gm-event-pool-panel">
         <div className="section-heading">
