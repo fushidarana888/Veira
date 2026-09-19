@@ -527,7 +527,7 @@ export function WorldMap({ characterId }: Props) {
                 <h3>{selectedSector.title ?? `Сектор ${selectedSector.grid_col}:${selectedSector.grid_row}`}</h3>
               </div>
               <span className="badge">
-                Опасность {selectedSector.danger_level ?? 0}/5
+                Опасность {selectedSector.danger_level ?? 0}/10
               </span>
             </div>
 
