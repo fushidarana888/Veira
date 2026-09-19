@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { GmCraftingEditor } from './GmCraftingEditor'
+import { GmAffixEditor } from './GmAffixEditor'
 import { GmLootEditor } from './GmLootEditor'
 import type {
   CombatStatusEffectType,
@@ -217,7 +218,7 @@ function manaAmount(item: ItemDefinition) {
 }
 
 export function GmItemsAndSpells() {
-  const [section, setSection] = useState<'items' | 'spells' | 'loot' | 'crafting'>('items')
+  const [section, setSection] = useState<'items' | 'spells' | 'affixes' | 'loot' | 'crafting'>('items')
   const [items, setItems] = useState<ItemDefinition[]>([])
   const [spells, setSpells] = useState<SpellDefinition[]>([])
   const [itemDraft, setItemDraft] = useState<ItemDraft>(emptyItem)
@@ -497,6 +498,13 @@ export function GmItemsAndSpells() {
               onClick={() => setSection('spells')}
             >
               Заклинания · {spells.length}
+            </button>
+            <button
+              type="button"
+              className={section === 'affixes' ? 'active' : ''}
+              onClick={() => setSection('affixes')}
+            >
+              Аффиксы
             </button>
             <button
               type="button"
@@ -1017,6 +1025,8 @@ export function GmItemsAndSpells() {
             </div>
           </article>
         </div>
+      ) : section === 'affixes' ? (
+        <GmAffixEditor />
       ) : section === 'crafting' ? (
         <GmCraftingEditor />
       ) : (
