@@ -383,6 +383,21 @@ export function GmItemsAndSpells() {
     setItemDraft({ ...itemDraft, stat_modifiers: next })
   }
 
+  function updateFirstStrikeMultiplier(
+    key: 'first_physical_strike_multiplier' | 'first_physical_bonus_damage_multiplier',
+    raw: string,
+  ) {
+    const limits = key === 'first_physical_strike_multiplier' ? [1, 3] : [1, 2]
+    const parsed = Number(raw)
+    const value = Math.max(limits[0], Math.min(limits[1], Number.isFinite(parsed) ? parsed : 1))
+    const next = { ...itemDraft.stat_modifiers }
+
+    if (value <= 1) delete next[key]
+    else next[key] = Math.round(value * 10) / 10
+
+    setItemDraft({ ...itemDraft, stat_modifiers: next })
+  }
+
   function updateResistance(type: DamageType, raw: string) {
     const value = Math.max(-75, Math.min(75, Number(raw) || 0))
     const next = { ...itemDraft.damage_resistances }
@@ -824,17 +839,53 @@ export function GmItemsAndSpells() {
             )}
 
             {itemDraft.category === 'weapon' && (
-              <div className="gm-form-grid two">
-                <label>
-                  <span>Тип урона оружия</span>
-                  <select value={itemDraft.damage_type ?? ''} onChange={(e) => setItemDraft({ ...itemDraft, damage_type: e.target.value ? e.target.value as DamageType : null })}>
-                    <option value="">Нет</option>
-                    {damageTypes.filter((type) => ['slashing', 'piercing', 'blunt'].includes(type)).map((type) => (
-                      <option key={type} value={type}>{damageLabels[type]}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              <>
+                <div className="gm-form-grid two">
+                  <label>
+                    <span>Тип урона оружия</span>
+                    <select value={itemDraft.damage_type ?? ''} onChange={(e) => setItemDraft({ ...itemDraft, damage_type: e.target.value ? e.target.value as DamageType : null })}>
+                      <option value="">Нет</option>
+                      {damageTypes.filter((type) => ['slashing', 'piercing', 'blunt'].includes(type)).map((type) => (
+                        <option key={type} value={type}>{damageLabels[type]}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="gm-editor-box">
+                  <div>
+                    <strong>Первый физический удар</strong>
+                    <small>Отдельные множители базы и бонусной части первой физической атаки в битве</small>
+                  </div>
+                  <div className="gm-form-grid two">
+                    <label>
+                      <span>first_physical_strike_multiplier</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={3}
+                        step={0.1}
+                        value={itemDraft.stat_modifiers.first_physical_strike_multiplier ?? 1}
+                        onChange={(e) => updateFirstStrikeMultiplier('first_physical_strike_multiplier', e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span>first_physical_bonus_damage_multiplier</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={2}
+                        step={0.1}
+                        value={itemDraft.stat_modifiers.first_physical_bonus_damage_multiplier ?? 1}
+                        onChange={(e) => updateFirstStrikeMultiplier('first_physical_bonus_damage_multiplier', e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <p className="muted">
+                    Значение 1 выключает соответствующее усиление. Магия, заклинания, защита и расходники не расходуют первый физический удар.
+                  </p>
+                </div>
+              </>
             )}
 
             {itemDraft.equip_group && (
