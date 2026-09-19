@@ -7,7 +7,7 @@ type Props = {
   onSignOut: () => Promise<void> | void
 }
 
-type GmTab = 'players' | 'audit'
+type GmTab = 'players' | 'world' | 'audit'
 
 type AuditEntry = {
   id: number
@@ -36,6 +36,9 @@ export function GmHome({ profile, onSignOut }: Props) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
+  const [mapFile, setMapFile] = useState<File | null>(null)
+  const [mapUploading, setMapUploading] = useState(false)
+  const [mapPreviewVersion, setMapPreviewVersion] = useState(() => Date.now())
 
   async function loadData() {
     setLoading(true)
@@ -185,6 +188,44 @@ export function GmHome({ profile, onSignOut }: Props) {
     setBusy(false)
   }
 
+  async function uploadWorldMap() {
+    if (!mapFile) {
+      setNotice('Выбери PNG-карту перед загрузкой.')
+      return
+    }
+
+    if (mapFile.type !== 'image/png') {
+      setNotice('Для основной карты сейчас принимается PNG без дополнительного сжатия.')
+      return
+    }
+
+    if (mapFile.size > 10 * 1024 * 1024) {
+      setNotice('Файл карты больше 10 МБ.')
+      return
+    }
+
+    setMapUploading(true)
+    setNotice('')
+
+    const { error } = await supabase.storage
+      .from('veira-assets')
+      .upload('eilar-map-original.png', mapFile, {
+        upsert: true,
+        contentType: 'image/png',
+        cacheControl: '0',
+      })
+
+    if (error) {
+      setNotice(error.message)
+      setMapUploading(false)
+      return
+    }
+
+    setMapPreviewVersion(Date.now())
+    setNotice('Карта загружена без уменьшения разрешения и повторного сжатия.')
+    setMapUploading(false)
+  }
+
   async function resetCharacterToCreation() {
     if (!selectedCharacter) return
 
@@ -241,6 +282,9 @@ export function GmHome({ profile, onSignOut }: Props) {
       <div className="subnav gm-subnav">
         <button className={tab === 'players' ? 'active' : ''} type="button" onClick={() => setTab('players')}>
           Игроки
+        </button>
+        <button className={tab === 'world' ? 'active' : ''} type="button" onClick={() => setTab('world')}>
+          Карта мира
         </button>
         <button className={tab === 'audit' ? 'active' : ''} type="button" onClick={() => setTab('audit')}>
           Журнал GM
@@ -401,6 +445,50 @@ export function GmHome({ profile, onSignOut }: Props) {
             )}
           </section>
         </div>
+      ) : tab === 'world' ? (
+        <section className="panel gm-map-upload-panel">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">КАРТА ЭЙЛАРА</span>
+              <h2>Оригинальная подложка мира</h2>
+            </div>
+            <span className="badge">PNG · до 10 МБ</span>
+          </div>
+
+          <p className="muted gm-map-upload-copy">
+            Файл сохраняется как есть: без уменьшения разрешения, WebP-конвертации и повторного сжатия.
+            Для текущей карты используй исходник 1472×1069.
+          </p>
+
+          <div className="gm-map-upload-controls">
+            <label className="gm-map-file-picker">
+              <span>{mapFile ? mapFile.name : 'Выбрать PNG-карту'}</span>
+              <input
+                type="file"
+                accept="image/png"
+                onChange={(event) => setMapFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
+
+            <button
+              className="primary-button"
+              type="button"
+              disabled={!mapFile || mapUploading}
+              onClick={() => void uploadWorldMap()}
+            >
+              {mapUploading ? 'Загружаем…' : 'Опубликовать карту'}
+            </button>
+          </div>
+
+          <div className="gm-map-preview">
+            <img
+              src={supabase.storage
+                .from('veira-assets')
+                .getPublicUrl('eilar-map-original.png').data.publicUrl + '?v=' + mapPreviewVersion}
+              alt="Текущая карта Эйлара"
+            />
+          </div>
+        </section>
       ) : (
         <section className="panel">
           <div className="section-heading">
