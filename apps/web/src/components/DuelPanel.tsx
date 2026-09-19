@@ -56,6 +56,8 @@ type DuelParticipant = {
   physical_power: number
   magic_power: number
   defense: number
+  physical_defense: number
+  magic_defense: number
   initiative: number
   weapon_damage_type: string
   magic_damage_type: string
@@ -681,9 +683,10 @@ function DuelFighter({
       </div>
 
       <div className="duel-combat-mini">
-        <span>Физ. {participant.physical_power}</span>
-        <span>Маг. {participant.magic_power}</span>
-        <span>Защ. {participant.defense}</span>
+        <span>Физ. урон {participant.physical_power}</span>
+        <span>Маг. урон {participant.magic_power}</span>
+        <span>Физ. защ. {participant.physical_defense}</span>
+        <span>Маг. защ. {participant.magic_defense}</span>
         <span>Иниц. {participant.initiative}</span>
       </div>
 
