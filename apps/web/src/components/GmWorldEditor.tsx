@@ -915,7 +915,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                         danger_level: Number(event.target.value),
                       })}
                     />
-                    <strong>{bulkValues.danger_level}/5</strong>
+                    <strong>{bulkValues.danger_level}/10</strong>
                   </div>
                 </div>
 
@@ -1110,7 +1110,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                 </div>
 
                 <label>
-                  <span>Опасность · {form.danger_level}/5</span>
+                  <span>Опасность · {form.danger_level}/10</span>
                   <input
                     type="range"
                     min={0}
