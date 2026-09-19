@@ -236,7 +236,7 @@ export function AdventuresPanel({
     setEncounters(nextEncounters)
     setSpells(
       ((spellResult.data as CharacterSpell[] | null) ?? [])
-        .filter((spell) => !['taunt', 'sacrifice'].includes(spell.spell_kind)),
+        .filter((spell) => spell.combat_slot !== null && !['taunt', 'sacrifice'].includes(spell.spell_kind)),
     )
     const combatInventory = (scrollResult.data as CombatScroll[] | null) ?? []
     setCombatScrolls(
@@ -468,6 +468,8 @@ export function AdventuresPanel({
       const raw = error.message
       if (raw.includes('NOT_ENOUGH_MANA')) {
         setMessage('Недостаточно маны для этого заклинания.')
+      } else if (raw.includes('SPELL_NOT_IN_LOADOUT')) {
+        setMessage('Это заклинание не входит в текущий боевой набор.')
       } else if (raw.includes('SPELL_NOT_LEARNED')) {
         setMessage('Это заклинание не изучено персонажем.')
       } else if (raw.includes('ALREADY_FULL_HEALTH')) {
