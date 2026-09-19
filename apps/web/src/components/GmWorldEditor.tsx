@@ -49,7 +49,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
   const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
-  const [highlightUnconfigured, setHighlightUnconfigured] = useState(false)
+  const [unconfiguredHighlightMode, setUnconfiguredHighlightMode] = useState<'off' | 'terrain' | 'danger' | 'content'>('off')
   const [selectionMode, setSelectionMode] = useState<'single' | 'multi' | 'rectangle'>('single')
   const [selectedSectorIds, setSelectedSectorIds] = useState<Set<number>>(new Set())
   const [rectangleAnchorId, setRectangleAnchorId] = useState<number | null>(null)
@@ -483,14 +483,20 @@ export function GmWorldEditor({ characters, profiles }: Props) {
             </div>
 
             <div className="gm-map-selection-status">
-              <button
-                className={highlightUnconfigured ? 'ghost-button active' : 'ghost-button'}
-                type="button"
-                aria-pressed={highlightUnconfigured}
-                onClick={() => setHighlightUnconfigured((current) => !current)}
-              >
-                {highlightUnconfigured ? 'Не настроенные: подсвечены' : 'Подсветить не настроенные'}
-              </button>
+              <label className="gm-unconfigured-filter">
+                <span>Подсветить без:</span>
+                <select
+                  value={unconfiguredHighlightMode}
+                  onChange={(event) => setUnconfiguredHighlightMode(
+                    event.target.value as 'off' | 'terrain' | 'danger' | 'content',
+                  )}
+                >
+                  <option value="off">Выключено</option>
+                  <option value="terrain">Местности</option>
+                  <option value="danger">Опасности</option>
+                  <option value="content">Содержимого</option>
+                </select>
+              </label>
               <strong>{selectedSectorIds.size}</strong>
               <span>выбрано</span>
               <button
@@ -517,7 +523,10 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     sector.terrain_type !== 'unassigned' ||
                     Boolean(sector.title)
                   const event = sector.event_enabled
-                  const unconfiguredHighlighted = highlightUnconfigured && !configured
+                  const unconfiguredHighlighted =
+                    (unconfiguredHighlightMode === 'terrain' && sector.terrain_type === 'unassigned') ||
+                    (unconfiguredHighlightMode === 'content' && sector.content_type === 'unassigned') ||
+                    (unconfiguredHighlightMode === 'danger' && sector.danger_level === 0)
 
                   return (
                     <button
