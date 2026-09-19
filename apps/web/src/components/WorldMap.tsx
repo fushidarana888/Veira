@@ -367,6 +367,8 @@ export function WorldMap({
         setMessage('У персонажа уже идёт экспедиция или ожидается решение события.')
       } else if (raw.includes('SECTOR_NOT_ADJACENT_TO_DISCOVERED')) {
         setMessage('Этот сектор пока нельзя исследовать: сначала открой соседнюю область.')
+      } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
+        setMessage('Сначала заверши текущий групповой поход.')
       } else {
         setMessage(raw)
       }
@@ -434,6 +436,8 @@ export function WorldMap({
         setMessage('Эти руины уже исследованы.')
       } else if (raw.includes('DUNGEON_ALREADY_SCOUTED')) {
         setMessage('Вход в это подземелье уже разведан.')
+      } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
+        setMessage('Сначала заверши текущий групповой поход.')
       } else {
         setMessage(raw)
       }
@@ -467,6 +471,8 @@ export function WorldMap({
         setMessage('У персонажа уже есть активное прохождение подземелья.')
       } else if (raw.includes('EXPEDITION_ALREADY_ACTIVE') || raw.includes('SITE_ACTION_ALREADY_ACTIVE')) {
         setMessage('Сначала заверши текущее исследование.')
+      } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
+        setMessage('Ты уже находишься в групповом походе. Управление им находится в «Приключениях».')
       } else {
         setMessage(raw)
       }
