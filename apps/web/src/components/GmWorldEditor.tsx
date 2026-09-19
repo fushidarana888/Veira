@@ -49,6 +49,30 @@ export function GmWorldEditor({ characters, profiles }: Props) {
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
   const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
+  const [selectionMode, setSelectionMode] = useState<'single' | 'multi' | 'rectangle'>('single')
+  const [selectedSectorIds, setSelectedSectorIds] = useState<Set<number>>(new Set())
+  const [rectangleAnchorId, setRectangleAnchorId] = useState<number | null>(null)
+  const [bulkApply, setBulkApply] = useState({
+    terrain: false,
+    content: false,
+    danger: false,
+    requiresGm: false,
+    playerDescription: false,
+    gmNotes: false,
+    event: false,
+  })
+  const [bulkValues, setBulkValues] = useState({
+    terrain_type: 'unassigned' as SectorTerrain,
+    content_type: 'unassigned' as SectorContentType,
+    danger_level: 0,
+    requires_gm: false,
+    player_description: '',
+    gm_notes: '',
+    event_enabled: false,
+    event_title: '',
+    event_prompt: '',
+    event_gm_notes: '',
+  })
   const [selectedCharacterId, setSelectedCharacterId] = useState('')
   const [discoveredIds, setDiscoveredIds] = useState<Set<number>>(new Set())
   const [form, setForm] = useState<GmMapSector | null>(null)
@@ -150,6 +174,145 @@ export function GmWorldEditor({ characters, profiles }: Props) {
     const sector = sectors.find((entry) => entry.id === sectorId) ?? null
     setSelectedSectorId(sectorId)
     setForm(sector ? { ...sector } : null)
+  }
+
+  function setMapSelectionMode(mode: 'single' | 'multi' | 'rectangle') {
+    setSelectionMode(mode)
+    setRectangleAnchorId(null)
+
+    if (mode === 'single') {
+      setSelectedSectorIds(new Set())
+    }
+  }
+
+  function handleMapSectorClick(sectorId: number) {
+    if (selectionMode === 'single') {
+      selectSector(sectorId)
+      return
+    }
+
+    if (selectionMode === 'multi') {
+      setSelectedSectorIds((current) => {
+        const next = new Set(current)
+        if (next.has(sectorId)) next.delete(sectorId)
+        else next.add(sectorId)
+        return next
+      })
+      return
+    }
+
+    if (rectangleAnchorId === null) {
+      setRectangleAnchorId(sectorId)
+      setSelectedSectorIds(new Set([sectorId]))
+      setMessage('Выбран первый угол области. Нажми второй сектор.')
+      return
+    }
+
+    const start = sectors.find((entry) => entry.id === rectangleAnchorId)
+    const end = sectors.find((entry) => entry.id === sectorId)
+
+    if (!start || !end) {
+      setRectangleAnchorId(null)
+      return
+    }
+
+    const minCol = Math.min(start.grid_col, end.grid_col)
+    const maxCol = Math.max(start.grid_col, end.grid_col)
+    const minRow = Math.min(start.grid_row, end.grid_row)
+    const maxRow = Math.max(start.grid_row, end.grid_row)
+
+    const next = new Set(
+      sectors
+        .filter((sector) =>
+          sector.grid_col >= minCol &&
+          sector.grid_col <= maxCol &&
+          sector.grid_row >= minRow &&
+          sector.grid_row <= maxRow,
+        )
+        .map((sector) => sector.id),
+    )
+
+    setSelectedSectorIds(next)
+    setRectangleAnchorId(null)
+    setMessage(`Выбрано секторов: ${next.size}.`)
+  }
+
+  function clearGroupSelection() {
+    setSelectedSectorIds(new Set())
+    setRectangleAnchorId(null)
+  }
+
+  function copyCurrentSectorToBulk() {
+    if (!form) return
+
+    setBulkValues({
+      terrain_type: form.terrain_type,
+      content_type: form.content_type,
+      danger_level: form.danger_level,
+      requires_gm: form.requires_gm,
+      player_description: form.player_description,
+      gm_notes: form.gm_notes,
+      event_enabled: form.event_enabled,
+      event_title: form.event_title,
+      event_prompt: form.event_prompt,
+      event_gm_notes: form.event_gm_notes,
+    })
+
+    setBulkApply({
+      terrain: true,
+      content: true,
+      danger: true,
+      requiresGm: true,
+      playerDescription: false,
+      gmNotes: false,
+      event: false,
+    })
+  }
+
+  async function applyBulkSectorValues() {
+    if (selectedSectorIds.size === 0) {
+      setMessage('Сначала выбери несколько секторов на карте.')
+      return
+    }
+
+    const patch: Record<string, unknown> = {}
+
+    if (bulkApply.terrain) patch.terrain_type = bulkValues.terrain_type
+    if (bulkApply.content) patch.content_type = bulkValues.content_type
+    if (bulkApply.danger) patch.danger_level = bulkValues.danger_level
+    if (bulkApply.requiresGm) patch.requires_gm = bulkValues.requires_gm
+    if (bulkApply.playerDescription) patch.player_description = bulkValues.player_description
+    if (bulkApply.gmNotes) patch.gm_notes = bulkValues.gm_notes
+
+    if (bulkApply.event) {
+      patch.event_enabled = bulkValues.event_enabled
+      patch.event_title = bulkValues.event_title
+      patch.event_prompt = bulkValues.event_prompt
+      patch.event_gm_notes = bulkValues.event_gm_notes
+    }
+
+    if (Object.keys(patch).length === 0) {
+      setMessage('Отметь хотя бы один показатель, который нужно изменить у группы.')
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('gm_bulk_update_sectors', {
+      p_sector_ids: Array.from(selectedSectorIds),
+      p_patch: patch,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    setMessage(`Одинаковые параметры применены к ${Number(data ?? selectedSectorIds.size)} секторам.`)
+    await loadWorld()
+    setBusy(false)
   }
 
   async function saveSector() {
@@ -293,12 +456,53 @@ export function GmWorldEditor({ characters, profiles }: Props) {
 
       <div className="gm-world-layout">
         <div className="gm-world-main">
+          <div className="gm-map-selection-toolbar">
+            <div className="gm-map-selection-modes">
+              <button
+                className={selectionMode === 'single' ? 'ghost-button active' : 'ghost-button'}
+                type="button"
+                onClick={() => setMapSelectionMode('single')}
+              >
+                Один сектор
+              </button>
+              <button
+                className={selectionMode === 'multi' ? 'ghost-button active' : 'ghost-button'}
+                type="button"
+                onClick={() => setMapSelectionMode('multi')}
+              >
+                Несколько
+              </button>
+              <button
+                className={selectionMode === 'rectangle' ? 'ghost-button active' : 'ghost-button'}
+                type="button"
+                onClick={() => setMapSelectionMode('rectangle')}
+              >
+                Прямоугольник
+              </button>
+            </div>
+
+            <div className="gm-map-selection-status">
+              <strong>{selectedSectorIds.size}</strong>
+              <span>выбрано</span>
+              <button
+                className="ghost-button"
+                type="button"
+                disabled={selectedSectorIds.size === 0}
+                onClick={clearGroupSelection}
+              >
+                Очистить
+              </button>
+            </div>
+          </div>
+
           <div className="gm-map-frame">
             <div className="gm-map-stage">
               <img src={mapUrl} alt="Полная карта Эйлара для GM" draggable={false} />
               <div className="gm-sector-grid">
                 {sectors.map((sector) => {
                   const selected = selectedSectorId === sector.id
+                  const groupSelected = selectedSectorIds.has(sector.id)
+                  const rectangleAnchor = rectangleAnchorId === sector.id
                   const configured =
                     sector.content_type !== 'unassigned' ||
                     sector.terrain_type !== 'unassigned' ||
@@ -311,12 +515,14 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                       type="button"
                       className={[
                         'gm-map-sector',
-                        selected ? 'selected' : '',
+                        selected && selectionMode === 'single' ? 'selected' : '',
+                        groupSelected ? 'group-selected' : '',
+                        rectangleAnchor ? 'rectangle-anchor' : '',
                         configured ? 'configured' : '',
                         event ? 'has-event' : '',
                       ].filter(Boolean).join(' ')}
                       title={`${sector.grid_col}:${sector.grid_row} · ${sector.title ?? 'без названия'}`}
-                      onClick={() => selectSector(sector.id)}
+                      onClick={() => handleMapSectorClick(sector.id)}
                     >
                       {event ? '!' : configured ? '·' : ''}
                     </button>
@@ -372,7 +578,241 @@ export function GmWorldEditor({ characters, profiles }: Props) {
         </div>
 
         <aside className="panel gm-sector-editor-panel">
-          {!form ? (
+          {selectionMode !== 'single' ? (
+            <div className="gm-bulk-sector-editor">
+              <div className="section-heading">
+                <div>
+                  <span className="eyebrow">ГРУППОВОЕ РЕДАКТИРОВАНИЕ</span>
+                  <h2>{selectedSectorIds.size} секторов</h2>
+                </div>
+                <span className="badge">
+                  {selectionMode === 'rectangle' ? 'область' : 'выбор'}
+                </span>
+              </div>
+
+              <p className="muted gm-bulk-help">
+                Отметь только те параметры, которые нужно сделать одинаковыми. Остальные данные выбранных клеток не изменятся.
+              </p>
+
+              {form && (
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={copyCurrentSectorToBulk}
+                >
+                  Взять основные параметры из последнего сектора
+                </button>
+              )}
+
+              <div className="gm-bulk-fields">
+                <div className="gm-bulk-field-row">
+                  <label className="gm-check-row">
+                    <input
+                      type="checkbox"
+                      checked={bulkApply.terrain}
+                      onChange={(event) => setBulkApply({ ...bulkApply, terrain: event.target.checked })}
+                    />
+                    <span>Местность</span>
+                  </label>
+                  <select
+                    value={bulkValues.terrain_type}
+                    disabled={!bulkApply.terrain}
+                    onChange={(event) => setBulkValues({
+                      ...bulkValues,
+                      terrain_type: event.target.value as SectorTerrain,
+                    })}
+                  >
+                    {terrainOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="gm-bulk-field-row">
+                  <label className="gm-check-row">
+                    <input
+                      type="checkbox"
+                      checked={bulkApply.content}
+                      onChange={(event) => setBulkApply({ ...bulkApply, content: event.target.checked })}
+                    />
+                    <span>Содержимое</span>
+                  </label>
+                  <select
+                    value={bulkValues.content_type}
+                    disabled={!bulkApply.content}
+                    onChange={(event) => setBulkValues({
+                      ...bulkValues,
+                      content_type: event.target.value as SectorContentType,
+                    })}
+                  >
+                    {contentOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="gm-bulk-field-row">
+                  <label className="gm-check-row">
+                    <input
+                      type="checkbox"
+                      checked={bulkApply.danger}
+                      onChange={(event) => setBulkApply({ ...bulkApply, danger: event.target.checked })}
+                    />
+                    <span>Опасность</span>
+                  </label>
+                  <div className="gm-bulk-range">
+                    <input
+                      type="range"
+                      min={0}
+                      max={5}
+                      disabled={!bulkApply.danger}
+                      value={bulkValues.danger_level}
+                      onChange={(event) => setBulkValues({
+                        ...bulkValues,
+                        danger_level: Number(event.target.value),
+                      })}
+                    />
+                    <strong>{bulkValues.danger_level}/5</strong>
+                  </div>
+                </div>
+
+                <div className="gm-bulk-field-row">
+                  <label className="gm-check-row">
+                    <input
+                      type="checkbox"
+                      checked={bulkApply.requiresGm}
+                      onChange={(event) => setBulkApply({ ...bulkApply, requiresGm: event.target.checked })}
+                    />
+                    <span>GM/RP-сцена</span>
+                  </label>
+                  <select
+                    value={bulkValues.requires_gm ? 'yes' : 'no'}
+                    disabled={!bulkApply.requiresGm}
+                    onChange={(event) => setBulkValues({
+                      ...bulkValues,
+                      requires_gm: event.target.value === 'yes',
+                    })}
+                  >
+                    <option value="no">Нет</option>
+                    <option value="yes">Да</option>
+                  </select>
+                </div>
+
+                <label className="gm-bulk-text-field">
+                  <span className="gm-bulk-text-heading">
+                    <input
+                      type="checkbox"
+                      checked={bulkApply.playerDescription}
+                      onChange={(event) => setBulkApply({
+                        ...bulkApply,
+                        playerDescription: event.target.checked,
+                      })}
+                    />
+                    Одинаковое описание для игрока
+                  </span>
+                  <textarea
+                    rows={4}
+                    disabled={!bulkApply.playerDescription}
+                    value={bulkValues.player_description}
+                    onChange={(event) => setBulkValues({
+                      ...bulkValues,
+                      player_description: event.target.value,
+                    })}
+                  />
+                </label>
+
+                <label className="gm-bulk-text-field">
+                  <span className="gm-bulk-text-heading">
+                    <input
+                      type="checkbox"
+                      checked={bulkApply.gmNotes}
+                      onChange={(event) => setBulkApply({
+                        ...bulkApply,
+                        gmNotes: event.target.checked,
+                      })}
+                    />
+                    Одинаковые заметки GM
+                  </span>
+                  <textarea
+                    rows={3}
+                    disabled={!bulkApply.gmNotes}
+                    value={bulkValues.gm_notes}
+                    onChange={(event) => setBulkValues({
+                      ...bulkValues,
+                      gm_notes: event.target.value,
+                    })}
+                  />
+                </label>
+
+                <div className="gm-sector-event-box">
+                  <label className="gm-check-row">
+                    <input
+                      type="checkbox"
+                      checked={bulkApply.event}
+                      onChange={(event) => setBulkApply({ ...bulkApply, event: event.target.checked })}
+                    />
+                    <span>Одинаковое событие экспедиции</span>
+                  </label>
+
+                  {bulkApply.event && (
+                    <>
+                      <label className="gm-check-row">
+                        <input
+                          type="checkbox"
+                          checked={bulkValues.event_enabled}
+                          onChange={(event) => setBulkValues({
+                            ...bulkValues,
+                            event_enabled: event.target.checked,
+                          })}
+                        />
+                        <span>Событие включено</span>
+                      </label>
+
+                      <input
+                        value={bulkValues.event_title}
+                        onChange={(event) => setBulkValues({
+                          ...bulkValues,
+                          event_title: event.target.value,
+                        })}
+                        placeholder="Название события"
+                      />
+
+                      <textarea
+                        rows={3}
+                        value={bulkValues.event_prompt}
+                        onChange={(event) => setBulkValues({
+                          ...bulkValues,
+                          event_prompt: event.target.value,
+                        })}
+                        placeholder="Текст для игрока"
+                      />
+
+                      <textarea
+                        rows={3}
+                        value={bulkValues.event_gm_notes}
+                        onChange={(event) => setBulkValues({
+                          ...bulkValues,
+                          event_gm_notes: event.target.value,
+                        })}
+                        placeholder="Подсказка GM"
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <button
+                className="primary-button"
+                type="button"
+                disabled={busy || selectedSectorIds.size === 0}
+                onClick={() => void applyBulkSectorValues()}
+              >
+                {busy
+                  ? 'Применяем…'
+                  : `Применить к ${selectedSectorIds.size || 0} секторам`}
+              </button>
+            </div>
+          ) : !form ? (
             <p className="muted">Выбери сектор на карте.</p>
           ) : (
             <>
