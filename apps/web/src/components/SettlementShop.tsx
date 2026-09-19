@@ -45,6 +45,11 @@ const weaponScalingLabels: Record<'strength' | 'agility' | 'hybrid', string> = {
   hybrid: 'Гибридное',
 }
 
+const bowFamilyLabels: Record<'short_bow' | 'long_bow', string> = {
+  short_bow: 'Короткий лук',
+  long_bow: 'Длинный лук',
+}
+
 const statLabels: Record<string, string> = {
   strength: 'Сила',
   agility: 'Ловкость',
@@ -67,7 +72,7 @@ export function SettlementShop({
   async function loadShop() {
     setLoading(true)
 
-    const { data, error } = await supabase.rpc('get_settlement_shop_v3', {
+    const { data, error } = await supabase.rpc('get_settlement_shop_v4', {
       p_character_id: characterId,
       p_sector_id: sectorId,
     })
@@ -233,6 +238,15 @@ export function SettlementShop({
                       <div className="modifier-list">
                         <span>Базовый урон +{item.weapon_base_damage ?? 0}</span>
                         <span>{weaponScalingLabels[item.weapon_scaling ?? 'strength']}</span>
+                        {item.weapon_family && (
+                          <span>{bowFamilyLabels[item.weapon_family]}</span>
+                        )}
+                        {item.weapon_family && item.bow_full_draw_armor_penetration_percent > 0 && (
+                          <span>Полный натяг · пробитие брони {item.bow_full_draw_armor_penetration_percent}%</span>
+                        )}
+                        {item.bloodshed_chance_percent > 0 && (
+                          <span>Кровопролитие · шанс {item.bloodshed_chance_percent}%</span>
+                        )}
                       </div>
                     )}
 
