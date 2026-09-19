@@ -65,7 +65,7 @@ export function MagicPanel({ characterId, progress }: Props) {
           <span className="eyebrow">МАГИЯ</span>
           <h2>Книга заклинаний</h2>
           <p className="muted">
-            Базовая магическая атака использует врождённую стихию расы. Другие стихии доступны только через изученные заклинания или одноразовые боевые свитки.
+            Базовая магическая атака использует врождённую стихию расы. Изученные заклинания могут наносить стихийный урон или лечить персонажа прямо в бою.
           </p>
         </div>
 
@@ -106,17 +106,21 @@ export function MagicPanel({ characterId, progress }: Props) {
                     <span className="eyebrow">УР. {spell.required_level}</span>
                     <h3>{spell.name}</h3>
                   </div>
-                  {spell.damage_type && (
+                  {spell.spell_kind === 'heal' ? (
+                    <span className="damage-type-chip healing">Лечение</span>
+                  ) : spell.damage_type ? (
                     <span className="damage-type-chip">{damageLabels[spell.damage_type]}</span>
-                  )}
+                  ) : null}
                 </div>
 
                 <p>{spell.description}</p>
 
                 <div className="spell-stats">
                   <span>Мана <strong>{spell.mana_cost}</strong></span>
-                  <span>Сила <strong>×{Number(spell.power_multiplier).toFixed(2)}</strong></span>
-                  {spell.flat_power > 0 && <span>Бонус <strong>+{spell.flat_power}</strong></span>}
+                  <span>{spell.spell_kind === 'heal' ? 'Лечение' : 'Сила'} <strong>×{Number(spell.power_multiplier).toFixed(2)}</strong></span>
+                  {spell.flat_power > 0 && (
+                    <span>{spell.spell_kind === 'heal' ? 'База' : 'Бонус'} <strong>+{spell.flat_power}</strong></span>
+                  )}
                   {spell.status_effect_type && (
                     <span className="spell-effect-stat">
                       {statusEffectLabels[spell.status_effect_type]}
