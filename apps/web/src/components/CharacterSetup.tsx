@@ -165,25 +165,26 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
 
     setBusy(true)
 
-    const { error } = await supabase.rpc('create_character_with_stats', {
-      p_name: name.trim(),
-      p_race_id: raceId,
-      p_bio: bio.trim(),
-      p_strength: stats.strength,
-      p_agility: stats.agility,
-      p_intellect: stats.intellect,
-      p_vitality: stats.vitality,
-      p_luck: stats.luck,
+    const { error } = await supabase.from('characters').insert({
+      owner_user_id: userId,
+      name: name.trim(),
+      race_id: raceId,
+      bio: bio.trim(),
+      initial_strength: stats.strength,
+      initial_agility: stats.agility,
+      initial_intellect: stats.intellect,
+      initial_vitality: stats.vitality,
+      initial_luck: stats.luck,
     })
 
     if (error) {
       const raw = error.message
 
-      if (raw.includes('INVALID_INITIAL_STAT_TOTAL')) {
+      if (raw.includes('characters_initial_stats_total')) {
         setMessage('Нужно распределить ровно 10 свободных очков.')
-      } else if (raw.includes('INVALID_INITIAL_STAT_RANGE')) {
+      } else if (raw.includes('characters_initial_') && raw.includes('_range')) {
         setMessage('При создании каждая характеристика должна быть от 3 до 8.')
-      } else if (raw.includes('CHARACTER_ALREADY_EXISTS')) {
+      } else if (raw.includes('characters_one_per_owner_idx')) {
         setMessage('На этом аккаунте уже есть персонаж.')
       } else {
         setMessage(raw)
