@@ -2696,3 +2696,213 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* Ruins, dungeon scouting and adventures */
+.site-action-status-card,
+.dungeon-active-card,
+.site-result-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.sector-site-actions {
+  margin-top: 15px;
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #292f37;
+  padding-top: 14px;
+}
+
+.sector-site-state {
+  display: grid;
+  gap: 4px;
+}
+
+.sector-site-state strong {
+  font-size: 13px;
+}
+
+.sector-site-state span {
+  color: #9ba3ad;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sector-site-actions .primary-button {
+  justify-self: start;
+}
+
+.adventures-section {
+  display: grid;
+  gap: 14px;
+}
+
+.adventures-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.adventures-header p {
+  max-width: 720px;
+  line-height: 1.6;
+}
+
+.adventure-counters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.adventure-counters > span {
+  min-width: 105px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid #303641;
+  border-radius: 13px;
+  background: #10141a;
+  padding: 10px 12px;
+}
+
+.adventure-counters strong {
+  font-size: 20px;
+}
+
+.adventure-counters small {
+  color: #8d96a1;
+  font-size: 10px;
+}
+
+.adventure-site-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.adventure-site-list {
+  display: grid;
+  gap: 8px;
+}
+
+.adventure-site-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #2c323b;
+  border-radius: 13px;
+  background: #10141a;
+  padding: 11px 12px;
+}
+
+.adventure-site-row > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.adventure-site-row strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.adventure-site-row span:not(.badge) {
+  color: #8f98a3;
+  font-size: 10px;
+}
+
+.adventure-site-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.adventure-site-actions .primary-button {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+.badge.ready {
+  border-color: #46614b;
+  color: #a9c7ae;
+  background: rgba(52, 79, 59, .22);
+}
+
+.active-dungeon-panel {
+  border-color: #514130;
+  background:
+    linear-gradient(135deg, rgba(111, 79, 43, .12), transparent 48%),
+    var(--panel);
+}
+
+.dungeon-run-stage {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #303641;
+  border-radius: 14px;
+  background: #10141a;
+  padding: 14px;
+}
+
+.dungeon-run-stage > span {
+  color: #8f98a3;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.dungeon-run-stage strong {
+  font-size: 18px;
+}
+
+.dungeon-run-stage p {
+  margin: 2px 0 0;
+  line-height: 1.55;
+}
+
+.adventures-loading {
+  min-height: 220px;
+  display: grid;
+  align-content: center;
+}
+
+@media (max-width: 760px) {
+  .site-action-status-card,
+  .dungeon-active-card,
+  .site-result-card,
+  .adventures-header {
+    display: grid;
+  }
+
+  .adventure-counters {
+    justify-content: flex-start;
+  }
+
+  .adventure-site-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .adventure-site-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .adventure-site-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sector-site-actions .primary-button {
+    width: 100%;
+  }
+}
