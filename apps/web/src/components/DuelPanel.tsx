@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { CharacterSpell, CombatStatusEffectType } from '../types'
+import type { BowDistance, BowProfile, CharacterSpell, CombatStatusEffectType } from '../types'
 
 type Props = {
   characterId: string
@@ -65,6 +65,9 @@ type DuelParticipant = {
   counter_bonus_percent: number
   spell_damage_bonus_percent: number
   spell_damage_bonus_hits: number
+  bow_distance: BowDistance
+  bow_draw_pending: boolean
+  bloodshed_stacks: number
 }
 
 type DuelTurn = {
@@ -159,6 +162,7 @@ export function DuelPanel({ characterId }: Props) {
   const [overview, setOverview] = useState<DuelOverview>({ players: [], duels: [] })
   const [details, setDetails] = useState<DuelDetails | null>(null)
   const [spells, setSpells] = useState<CharacterSpell[]>([])
+  const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState('')
@@ -167,13 +171,14 @@ export function DuelPanel({ characterId }: Props) {
   async function load(silent = false) {
     if (!silent) setLoading(true)
 
-    const [overviewResult, spellsResult] = await Promise.all([
+    const [overviewResult, spellsResult, bowProfileResult] = await Promise.all([
       supabase.rpc('get_duel_overview', { p_character_id: characterId }),
       supabase.rpc('get_character_spells', { p_character_id: characterId }),
+      supabase.rpc('get_character_bow_profile', { p_character_id: characterId }),
     ])
 
-    if (overviewResult.error || spellsResult.error) {
-      setMessage(duelError(overviewResult.error?.message ?? spellsResult.error?.message ?? 'Не удалось загрузить дуэли.'))
+    if (overviewResult.error || spellsResult.error || bowProfileResult.error) {
+      setMessage(duelError(overviewResult.error?.message ?? spellsResult.error?.message ?? bowProfileResult.error?.message ?? 'Не удалось загрузить дуэли.'))
       if (!silent) setLoading(false)
       return
     }
@@ -181,6 +186,7 @@ export function DuelPanel({ characterId }: Props) {
     const nextOverview = (overviewResult.data as DuelOverview | null) ?? { players: [], duels: [] }
     setOverview(nextOverview)
     setSpells((spellsResult.data as CharacterSpell[] | null) ?? [])
+    setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
 
     const active = nextOverview.duels.find((duel) => duel.status === 'active') ?? null
 
@@ -307,7 +313,7 @@ export function DuelPanel({ characterId }: Props) {
     setBusy('')
   }
 
-  async function act(action: 'physical' | 'magic' | 'guard' | 'spell', spellId: string | null = null) {
+  async function act(action: 'physical' | 'bow_draw' | 'magic' | 'guard' | 'spell', spellId: string | null = null) {
     if (!details || !myTurn) return
 
     setBusy('action')
@@ -325,6 +331,22 @@ export function DuelPanel({ characterId }: Props) {
       setDetails((data as DuelDetails | null) ?? null)
       await load(true)
     }
+
+    setBusy('')
+  }
+
+  async function setBowDistance(distance: BowDistance) {
+    if (!details || !myTurn || !mine || !bowProfile?.weapon_family || mine.bow_draw_pending) return
+
+    setBusy('action')
+    setMessage('')
+    const { data, error } = await supabase.rpc('set_pvp_bow_distance', {
+      p_duel_id: details.duel.id,
+      p_distance: distance,
+    })
+
+    if (error) setMessage(duelError(error.message))
+    else setDetails((data as DuelDetails | null) ?? null)
 
     setBusy('')
   }
@@ -401,19 +423,60 @@ export function DuelPanel({ characterId }: Props) {
             <DuelFighter participant={opponent} statuses={opponentStatuses} />
           </div>
 
+          {bowProfile?.weapon_family && (
+            <div className="duel-turn-help">
+              <strong>Дистанция лучника:</strong>{' '}
+              {([
+                ['close', 'Ближняя · +10% урон · +3% dodge'],
+                ['medium', 'Средняя · +9% dodge'],
+                ['far', 'Дальняя · −10% урон · +15% dodge'],
+              ] as Array<[BowDistance, string]>).map(([distance, label]) => (
+                <button
+                  className={mine.bow_distance === distance ? 'primary-button' : 'ghost-button'}
+                  type="button"
+                  key={distance}
+                  disabled={!myTurn || busy === 'action' || mine.bow_draw_pending}
+                  onClick={() => void setBowDistance(distance)}
+                >
+                  {label}
+                </button>
+              ))}
+              {mine.bow_draw_pending && <span> · Натяг подготовлен, дистанция зафиксирована.</span>}
+            </div>
+          )}
+
           <div className="duel-actions">
+            {bowProfile?.weapon_family ? (
+              mine.bow_draw_pending ? (
+                <button className="primary-button" type="button" disabled={!myTurn || busy === 'action'} onClick={() => void act('physical')}>
+                  Выпустить стрелу · полный натяг
+                </button>
+              ) : (
+                <>
+                  {bowProfile.weapon_family === 'short_bow' && (
+                    <button className="primary-button" type="button" disabled={!myTurn || busy === 'action'} onClick={() => void act('physical')}>
+                      Быстрый выстрел
+                    </button>
+                  )}
+                  <button className="primary-button" type="button" disabled={!myTurn || busy === 'action'} onClick={() => void act('bow_draw')}>
+                    Полный натяг · пробитие {bowProfile.full_draw_armor_penetration_percent}%
+                  </button>
+                </>
+              )
+            ) : (
+              <button
+                className="primary-button"
+                type="button"
+                disabled={!myTurn || busy === 'action'}
+                onClick={() => void act('physical')}
+              >
+                Физическая атака
+              </button>
+            )}
             <button
               className="primary-button"
               type="button"
-              disabled={!myTurn || busy === 'action'}
-              onClick={() => void act('physical')}
-            >
-              Физическая атака
-            </button>
-            <button
-              className="primary-button"
-              type="button"
-              disabled={!myTurn || busy === 'action'}
+              disabled={!myTurn || busy === 'action' || mine.bow_draw_pending}
               onClick={() => void act('magic')}
             >
               Врождённая магия
@@ -421,7 +484,7 @@ export function DuelPanel({ characterId }: Props) {
             <button
               className="ghost-button"
               type="button"
-              disabled={!myTurn || busy === 'action'}
+              disabled={!myTurn || busy === 'action' || mine.bow_draw_pending}
               onClick={() => void act('guard')}
             >
               Защита
@@ -437,7 +500,7 @@ export function DuelPanel({ characterId }: Props) {
                     className="spell-action-button"
                     type="button"
                     key={spell.id}
-                    disabled={!myTurn || busy === 'action' || (mine.mana_current < spell.mana_cost)}
+                    disabled={!myTurn || busy === 'action' || mine.bow_draw_pending || (mine.mana_current < spell.mana_cost)}
                     onClick={() => void act('spell', spell.id)}
                   >
                     <span>{spell.name}</span>
@@ -688,6 +751,8 @@ function DuelFighter({
         <span>Физ. защ. {participant.physical_defense}</span>
         <span>Маг. защ. {participant.magic_defense}</span>
         <span>Иниц. {participant.initiative}</span>
+        <span>Дистанция {participant.bow_distance === 'close' ? 'ближняя' : participant.bow_distance === 'far' ? 'дальняя' : 'средняя'}</span>
+        {participant.bloodshed_stacks > 0 && <span>Кровопролитие ×{participant.bloodshed_stacks}</span>}
       </div>
 
       {participant.guard_reduction_percent > 0 && (
