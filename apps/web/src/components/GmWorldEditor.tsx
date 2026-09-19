@@ -8,6 +8,7 @@ import type {
   Profile,
   SectorContentType,
   SectorExpedition,
+  SectorSiteAction,
   SectorTerrain,
 } from '../types'
 
@@ -66,6 +67,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
   const [sectors, setSectors] = useState<GmMapSector[]>([])
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
   const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
+  const [siteActions, setSiteActions] = useState<SectorSiteAction[]>([])
   const [eventTemplates, setEventTemplates] = useState<ExplorationEventTemplate[]>([])
   const [eventTemplateDraft, setEventTemplateDraft] = useState(createEmptyEventTemplateDraft)
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
@@ -116,7 +118,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
     setLoading(true)
     setMessage('')
 
-    const [mapResult, expeditionResult, eventResult, templateResult] = await Promise.all([
+    const [mapResult, expeditionResult, eventResult, siteActionResult, templateResult] = await Promise.all([
       supabase.rpc('get_gm_map_state'),
       supabase
         .from('sector_expeditions')
@@ -128,10 +130,20 @@ export function GmWorldEditor({ characters, profiles }: Props) {
         .select('id, expedition_id, event_definition_id, encounter_template_id, source_kind, character_id, sector_id, title, player_prompt, gm_notes, status, resolution_text, outcome, created_at, resolved_at, resolved_by')
         .eq('status', 'pending')
         .order('created_at', { ascending: true }),
+      supabase
+        .from('sector_site_actions')
+        .select('id, character_id, sector_id, action_type, status, started_at, ends_at, completed_at, result_title, result_text, created_at')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false }),
       supabase.rpc('get_gm_exploration_event_templates'),
     ])
 
-    const error = mapResult.error ?? expeditionResult.error ?? eventResult.error ?? templateResult.error
+    const error =
+      mapResult.error ??
+      expeditionResult.error ??
+      eventResult.error ??
+      siteActionResult.error ??
+      templateResult.error
 
     if (error) {
       setMessage(error.message)
@@ -143,6 +155,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
     setSectors(nextSectors)
     setExpeditions((expeditionResult.data as SectorExpedition[] | null) ?? [])
     setEvents((eventResult.data as ExpeditionEventInstance[] | null) ?? [])
+    setSiteActions((siteActionResult.data as SectorSiteAction[] | null) ?? [])
     setEventTemplates((templateResult.data as ExplorationEventTemplate[] | null) ?? [])
 
     if (!selectedSectorId && nextSectors[0]) {
@@ -510,6 +523,25 @@ export function GmWorldEditor({ characters, profiles }: Props) {
     setMessage('Экспедиция завершена принудительно.')
     await loadWorld()
     if (selectedCharacterId) await loadCharacterDiscoveries(selectedCharacterId)
+    setBusy(false)
+  }
+
+  async function finishSiteAction(actionId: string) {
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('gm_finish_site_action_now', {
+      p_action_id: actionId,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    setMessage('Исследование места завершено принудительно.')
+    await loadWorld()
     setBusy(false)
   }
 
