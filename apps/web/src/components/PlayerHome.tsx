@@ -921,7 +921,10 @@ function InventoryPanel({
 
             const equipped = equippedItemIds.has(item.id)
             const modifiers = Object.entries(definition.stat_modifiers ?? {})
-              .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
+              .filter((entry): entry is [string, number] =>
+                typeof entry[1] === 'number'
+                && !['first_physical_strike_multiplier', 'first_physical_bonus_damage_multiplier'].includes(entry[0]),
+              )
             const resourceAmounts = getResourceAmounts(definition)
             const affixes = itemAffixes(item)
             const affixModifiers = Object.entries(affixStatModifiers(item))
