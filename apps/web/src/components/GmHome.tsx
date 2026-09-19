@@ -83,7 +83,7 @@ export function GmHome({ profile, onSignOut }: Props) {
         .order('created_at', { ascending: true }),
       supabase
         .from('item_definitions')
-        .select('id, slug, name, description, category, rarity, equip_group, stackable, max_stack, icon_url, stat_modifiers, effects, base_value, required_level, shop_tier, shop_price, shop_enabled, damage_type, damage_resistances, scroll_spell_id, scroll_mode')
+        .select('id, slug, name, description, category, rarity, equip_group, stackable, max_stack, icon_url, stat_modifiers, effects, base_value, required_level, shop_tier, shop_price, shop_enabled, damage_type, damage_resistances, scroll_spell_id, scroll_mode, unique_property_name, unique_property_description, unique_effect_type, unique_effect_value')
         .order('name', { ascending: true }),
       supabase
         .from('gm_audit_log')
