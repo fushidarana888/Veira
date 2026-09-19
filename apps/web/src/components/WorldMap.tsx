@@ -9,6 +9,7 @@ import type {
   SectorExpedition,
   SectorSiteAction,
   SectorSiteProgress,
+  SectorContentType,
 } from '../types'
 
 type Props = {
@@ -49,6 +50,101 @@ const contentLabels: Record<string, string> = {
   event: 'Событие',
 }
 
+type VisibleSectorContent = Exclude<SectorContentType, 'unassigned'>
+
+const mapContentLegend: Array<{
+  type: VisibleSectorContent
+  label: string
+}> = [
+  { type: 'settlement', label: 'Поселение' },
+  { type: 'ruins', label: 'Руины' },
+  { type: 'dungeon', label: 'Подземелье' },
+  { type: 'wilderness', label: 'Дикая зона' },
+  { type: 'resource', label: 'Ресурс' },
+  { type: 'npc', label: 'NPC' },
+  { type: 'landmark', label: 'Особое место' },
+  { type: 'event', label: 'Событие' },
+]
+
+function sectorContentClass(contentType: SectorContentType | null) {
+  if (!contentType || contentType === 'unassigned') return ''
+  return `content-${contentType}`
+}
+
+function SectorContentIcon({ type }: { type: VisibleSectorContent }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    'aria-hidden': true,
+    focusable: false,
+  } as const
+
+  if (type === 'settlement') {
+    return (
+      <svg {...common}>
+        <path d="M4 11 12 5l8 6v8H4z" />
+        <path d="M9 19v-5h6v5" />
+      </svg>
+    )
+  }
+
+  if (type === 'ruins') {
+    return (
+      <svg {...common}>
+        <path d="M5 7h14M7 7v11M12 7v11M17 7v11M5 18h14M4 5h16" />
+      </svg>
+    )
+  }
+
+  if (type === 'dungeon') {
+    return (
+      <svg {...common}>
+        <path d="M5 20V11a7 7 0 0 1 14 0v9" />
+        <path d="M9 20v-8a3 3 0 0 1 6 0v8M4 20h16" />
+      </svg>
+    )
+  }
+
+  if (type === 'wilderness') {
+    return (
+      <svg {...common}>
+        <path d="m12 4-5 7h3l-4 6h12l-4-6h3zM12 17v3" />
+      </svg>
+    )
+  }
+
+  if (type === 'resource') {
+    return (
+      <svg {...common}>
+        <path d="m12 3 6 6-6 12L6 9zM6 9h12M9 9l3 12 3-12" />
+      </svg>
+    )
+  }
+
+  if (type === 'npc') {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="8" r="3" />
+        <path d="M6 20c.5-4 2.5-6 6-6s5.5 2 6 6" />
+      </svg>
+    )
+  }
+
+  if (type === 'landmark') {
+    return (
+      <svg {...common}>
+        <path d="M7 21V4M8 5h10l-2.5 3L18 11H8" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg {...common}>
+      <path d="M12 4v10M12 18.5v.5" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  )
+}
+
 function formatRemaining(milliseconds: number) {
   const safe = Math.max(0, milliseconds)
   const totalSeconds = Math.floor(safe / 1000)
@@ -80,6 +176,7 @@ export function WorldMap({
   const [message, setMessage] = useState('')
   const [now, setNow] = useState(() => Date.now())
   const [mapSrc, setMapSrc] = useState(ORIGINAL_MAP_URL)
+  const [showGameplayOverlay, setShowGameplayOverlay] = useState(true)
 
   async function loadMapData() {
     setLoading(true)
@@ -463,6 +560,41 @@ export function WorldMap({
         </article>
       )}
 
+      <div className="world-map-tools">
+        <div className="world-map-mode" role="group" aria-label="Режим отображения карты">
+          <button
+            type="button"
+            className={showGameplayOverlay ? 'active' : ''}
+            onClick={() => setShowGameplayOverlay(true)}
+          >
+            Игровой слой
+          </button>
+          <button
+            type="button"
+            className={!showGameplayOverlay ? 'active' : ''}
+            onClick={() => setShowGameplayOverlay(false)}
+          >
+            Чистая карта
+          </button>
+        </div>
+
+        {showGameplayOverlay && (
+          <div className="world-map-legend" aria-label="Легенда игровой карты">
+            {mapContentLegend.map((entry) => (
+              <span
+                key={entry.type}
+                className={`map-legend-item content-${entry.type}`}
+              >
+                <span className="map-legend-icon">
+                  <SectorContentIcon type={entry.type} />
+                </span>
+                {entry.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="eilar-map-frame">
         <div className="eilar-map-stage">
           <img
@@ -475,15 +607,26 @@ export function WorldMap({
             }}
           />
 
-          <div className="fog-grid" aria-label="Сектора карты Эйлара">
+          <div
+            className={`fog-grid ${showGameplayOverlay ? 'gameplay-overlay' : 'clean-overlay'}`}
+            aria-label="Сектора карты Эйлара"
+          >
             {sectors.map((sector) => {
               const active = openExpedition?.sector_id === sector.id
               const selected = selectedSectorId === sector.id
+
+              const contentType =
+                sector.is_discovered
+                && sector.content_type
+                && sector.content_type !== 'unassigned'
+                  ? sector.content_type
+                  : null
 
               const classNames = [
                 'fog-sector',
                 sector.is_discovered ? 'discovered' : 'hidden',
                 sector.is_explorable ? 'explorable' : '',
+                contentType ? sectorContentClass(contentType) : '',
                 active ? 'active-expedition' : '',
                 waitingExpedition && active ? 'awaiting-event' : '',
                 selected ? 'selected' : '',
@@ -513,7 +656,16 @@ export function WorldMap({
                       {waitingExpedition ? '!' : '⌛'}
                     </span>
                   )}
-                  {sector.is_discovered && sector.title && (
+                  {showGameplayOverlay && contentType && (
+                    <span
+                      className="sector-content-mark"
+                      title={contentLabels[contentType]}
+                    >
+                      <SectorContentIcon type={contentType} />
+                    </span>
+                  )}
+
+                  {!showGameplayOverlay && sector.is_discovered && sector.title && (
                     <span className="sector-location-mark">◆</span>
                   )}
                 </button>
