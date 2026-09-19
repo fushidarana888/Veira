@@ -3583,6 +3583,27 @@ textarea {
   gap: 5px;
 }
 
+.damage-bonus-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.damage-bonus-list span {
+  border: 1px solid #65492c;
+  border-radius: 999px;
+  padding: 3px 6px;
+  background: rgba(151, 101, 45, .16);
+  color: #d9b47d;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.damage-bonus-list.compact span {
+  padding: 3px 5px;
+}
+
+
 .resistance-list span,
 .combat-resistance-summary span {
   border: 1px solid #343c46;
