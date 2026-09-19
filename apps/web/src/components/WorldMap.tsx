@@ -120,7 +120,7 @@ export function WorldMap({ characterId }: Props) {
         .eq('character_id', characterId),
       supabase
         .from('dungeon_runs')
-        .select('id, character_id, sector_id, status, current_stage, rooms_cleared, started_at, ended_at, created_at')
+        .select('id, character_id, sector_id, status, current_stage, rooms_cleared, total_rooms, reward_gold, reward_experience, started_at, ended_at, created_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
