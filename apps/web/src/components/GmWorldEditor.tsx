@@ -72,6 +72,8 @@ export function GmWorldEditor({ characters, profiles }: Props) {
   const [eventTemplateDraft, setEventTemplateDraft] = useState(createEmptyEventTemplateDraft)
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [unconfiguredHighlightMode, setUnconfiguredHighlightMode] = useState<'off' | 'terrain' | 'danger' | 'content'>('off')
+  const [attributeHighlightMode, setAttributeHighlightMode] = useState<'off' | 'terrain' | 'danger' | 'content'>('off')
+  const [attributeHighlightValue, setAttributeHighlightValue] = useState('')
   const [selectionMode, setSelectionMode] = useState<'single' | 'multi' | 'rectangle'>('single')
   const [selectedSectorIds, setSelectedSectorIds] = useState<Set<number>>(new Set())
   const [rectangleAnchorId, setRectangleAnchorId] = useState<number | null>(null)
@@ -649,6 +651,66 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                   <option value="content">Содержимого</option>
                 </select>
               </label>
+
+              <label className="gm-unconfigured-filter gm-attribute-highlight-filter">
+                <span>Подсветить по:</span>
+                <select
+                  value={attributeHighlightMode}
+                  onChange={(event) => {
+                    const mode = event.target.value as 'off' | 'terrain' | 'danger' | 'content'
+                    setAttributeHighlightMode(mode)
+                    setAttributeHighlightValue('')
+                  }}
+                >
+                  <option value="off">Выключено</option>
+                  <option value="terrain">Местности</option>
+                  <option value="content">Наполненности</option>
+                  <option value="danger">Сложности</option>
+                </select>
+
+                {attributeHighlightMode === 'terrain' && (
+                  <select
+                    value={attributeHighlightValue}
+                    onChange={(event) => setAttributeHighlightValue(event.target.value)}
+                    aria-label="Какая местность подсвечивается"
+                  >
+                    <option value="">Выбрать</option>
+                    {terrainOptions
+                      .filter((option) => option.value !== 'unassigned')
+                      .map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                  </select>
+                )}
+
+                {attributeHighlightMode === 'content' && (
+                  <select
+                    value={attributeHighlightValue}
+                    onChange={(event) => setAttributeHighlightValue(event.target.value)}
+                    aria-label="Какое содержимое подсвечивается"
+                  >
+                    <option value="">Выбрать</option>
+                    {contentOptions
+                      .filter((option) => option.value !== 'unassigned')
+                      .map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                  </select>
+                )}
+
+                {attributeHighlightMode === 'danger' && (
+                  <select
+                    value={attributeHighlightValue}
+                    onChange={(event) => setAttributeHighlightValue(event.target.value)}
+                    aria-label="Какая сложность подсвечивается"
+                  >
+                    <option value="">Выбрать</option>
+                    {[0, 1, 2, 3, 4, 5].map((level) => (
+                      <option key={level} value={String(level)}>Опасность {level}/5</option>
+                    ))}
+                  </select>
+                )}
+              </label>
               <strong>{selectedSectorIds.size}</strong>
               <span>выбрано</span>
               <button
@@ -680,6 +742,14 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     (unconfiguredHighlightMode === 'content' && sector.content_type === 'unassigned') ||
                     (unconfiguredHighlightMode === 'danger' && sector.danger_level === 0)
 
+                  const attributeHighlighted =
+                    Boolean(attributeHighlightValue) &&
+                    (
+                      (attributeHighlightMode === 'terrain' && sector.terrain_type === attributeHighlightValue) ||
+                      (attributeHighlightMode === 'content' && sector.content_type === attributeHighlightValue) ||
+                      (attributeHighlightMode === 'danger' && sector.danger_level === Number(attributeHighlightValue))
+                    )
+
                   return (
                     <button
                       key={sector.id}
@@ -691,6 +761,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                         rectangleAnchor ? 'rectangle-anchor' : '',
                         configured ? 'configured' : '',
                         unconfiguredHighlighted ? 'unconfigured-highlight' : '',
+                        attributeHighlighted ? 'attribute-highlight' : '',
                         event ? 'has-event' : '',
                       ].filter(Boolean).join(' ')}
                       title={`${sector.grid_col}:${sector.grid_row} · ${sector.title ?? 'без названия'}`}
