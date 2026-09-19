@@ -1562,3 +1562,268 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+.world-section {
+  display: grid;
+  gap: 14px;
+}
+
+.world-loading-panel {
+  min-height: 220px;
+  display: grid;
+  align-content: center;
+}
+
+.world-header-card,
+.expedition-status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.world-header-card p,
+.expedition-status-card p {
+  max-width: 720px;
+  margin: 8px 0 0;
+  line-height: 1.55;
+}
+
+.world-progress {
+  flex: 0 0 auto;
+  min-width: 112px;
+  border: 1px solid #4b4030;
+  border-radius: 15px;
+  padding: 12px 14px;
+  background: #17140f;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+}
+
+.world-progress strong {
+  color: #dec59a;
+  font-size: 22px;
+}
+
+.world-progress span {
+  color: #8f877b;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.expedition-status-card {
+  border-color: #5b4932;
+  background:
+    linear-gradient(145deg, rgba(180, 139, 79, .08), transparent 55%),
+    var(--panel);
+}
+
+.expedition-status-card h3 {
+  margin: 6px 0 0;
+  font-size: 20px;
+}
+
+.expedition-timer {
+  flex: 0 0 auto;
+  min-width: 150px;
+  border: 1px solid #6d5838;
+  border-radius: 14px;
+  padding: 10px 13px;
+  background: #1d1811;
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.expedition-timer span {
+  color: #a2947f;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.expedition-timer strong {
+  color: #e4c99a;
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+}
+
+.eilar-map-frame {
+  overflow: auto;
+  border: 1px solid #34302a;
+  border-radius: 20px;
+  background: #080a0d;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, .28),
+    inset 0 1px 0 rgba(255,255,255,.02);
+}
+
+.eilar-map-stage {
+  position: relative;
+  width: 100%;
+  min-width: 760px;
+  aspect-ratio: 760 / 551;
+  overflow: hidden;
+}
+
+.eilar-map-stage > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: fill;
+  user-select: none;
+  pointer-events: none;
+}
+
+.fog-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  grid-template-rows: repeat(15, minmax(0, 1fr));
+}
+
+.fog-sector {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(185, 194, 202, .055);
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: #fff;
+  cursor: default;
+  overflow: hidden;
+}
+
+.fog-sector.hidden {
+  background:
+    radial-gradient(circle at 42% 38%, rgba(39, 46, 52, .92), rgba(9, 12, 15, .985) 72%),
+    #0a0d10;
+  backdrop-filter: blur(1.5px);
+}
+
+.fog-sector.hidden::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(125deg, rgba(255,255,255,.018), transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(0,0,0,.2), transparent 55%);
+  pointer-events: none;
+}
+
+.fog-sector.discovered {
+  background: rgba(255, 255, 255, .005);
+  border-color: rgba(245, 228, 196, .08);
+  cursor: pointer;
+}
+
+.fog-sector.discovered:hover {
+  background: rgba(223, 192, 142, .08);
+  border-color: rgba(223, 192, 142, .2);
+}
+
+.fog-sector.explorable {
+  cursor: pointer;
+  border-color: rgba(203, 167, 108, .34);
+  box-shadow: inset 0 0 0 1px rgba(203, 167, 108, .07);
+}
+
+.fog-sector.explorable:hover,
+.fog-sector.explorable.selected {
+  background:
+    linear-gradient(rgba(67, 53, 35, .78), rgba(24, 22, 18, .88)),
+    #17130e;
+  border-color: rgba(225, 190, 133, .72);
+}
+
+.fog-sector.selected.discovered {
+  background: rgba(197, 161, 105, .12);
+  border-color: rgba(225, 190, 133, .55);
+}
+
+.fog-sector.active-expedition {
+  cursor: pointer;
+  border-color: rgba(223, 177, 99, .85);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(106, 77, 38, .76) 0,
+      rgba(106, 77, 38, .76) 6px,
+      rgba(35, 29, 21, .92) 6px,
+      rgba(35, 29, 21, .92) 12px
+    );
+}
+
+.sector-expedition-mark,
+.sector-location-mark {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-shadow: 0 1px 4px rgba(0,0,0,.9);
+}
+
+.sector-expedition-mark {
+  font-size: 15px;
+}
+
+.sector-location-mark {
+  color: rgba(232, 206, 162, .82);
+  font-size: 8px;
+}
+
+.sector-detail-card h3 {
+  margin: 7px 0 0;
+  font-size: 20px;
+}
+
+.sector-detail-card p {
+  max-width: 760px;
+  line-height: 1.6;
+}
+
+.sector-explore-button {
+  margin-top: 4px;
+  min-width: 220px;
+}
+
+@media (max-width: 760px) {
+  .world-header-card,
+  .expedition-status-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .world-progress,
+  .expedition-timer {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+    justify-items: start;
+    align-items: center;
+  }
+
+  .eilar-map-frame {
+    border-radius: 15px;
+  }
+
+  .eilar-map-stage {
+    min-width: 700px;
+  }
+
+  .sector-explore-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
