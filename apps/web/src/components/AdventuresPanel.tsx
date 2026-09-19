@@ -1958,6 +1958,12 @@ export function AdventuresPanel({
             <span className="badge">{dungeons.length}</span>
           </div>
 
+          <div className="dungeon-reward-preview">
+            <span>Боевой набор · {spells.length}/3</span>
+            <strong>{spells.length > 0 ? spells.map((spell) => spell.name).join(' · ') : 'без заклинаний'}</strong>
+            <small>Набор фиксируется после входа в подземелье. Изменить его можно заранее в разделе «Магия».</small>
+          </div>
+
           <div className="adventure-site-list">
             {dungeons.length === 0 && (
               <p className="muted">Подземелья пока не обнаружены.</p>
