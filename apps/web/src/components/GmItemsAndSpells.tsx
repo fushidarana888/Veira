@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { GmLootEditor } from './GmLootEditor'
 import type {
   CombatStatusEffectType,
   DamageType,
@@ -182,7 +183,7 @@ function healingAmount(item: ItemDefinition) {
 }
 
 export function GmItemsAndSpells() {
-  const [section, setSection] = useState<'items' | 'spells'>('items')
+  const [section, setSection] = useState<'items' | 'spells' | 'loot'>('items')
   const [items, setItems] = useState<ItemDefinition[]>([])
   const [spells, setSpells] = useState<SpellDefinition[]>([])
   const [itemDraft, setItemDraft] = useState<ItemDraft>(emptyItem)
@@ -427,6 +428,13 @@ export function GmItemsAndSpells() {
             >
               Заклинания · {spells.length}
             </button>
+            <button
+              type="button"
+              className={section === 'loot' ? 'active' : ''}
+              onClick={() => setSection('loot')}
+            >
+              Лут
+            </button>
           </div>
         </div>
 
@@ -603,7 +611,7 @@ export function GmItemsAndSpells() {
             </div>
           </article>
         </div>
-      ) : (
+      ) : section === 'spells' ? (
         <div className="gm-content-layout">
           <aside className="panel gm-content-list">
             <button className="primary-button" type="button" onClick={() => setSpellDraft(emptySpell())}>
@@ -761,6 +769,8 @@ export function GmItemsAndSpells() {
             </div>
           </article>
         </div>
+      ) : (
+        <GmLootEditor />
       )}
     </section>
   )
