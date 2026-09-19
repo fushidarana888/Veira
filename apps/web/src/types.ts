@@ -189,6 +189,7 @@ export type GmMapSector = {
   content_type: SectorContentType
   player_description: string
   danger_level: number
+  danger_configured: boolean
   requires_gm: boolean
   gm_notes: string
   event_enabled: boolean
