@@ -61,7 +61,7 @@ export function SettlementShop({
   async function loadShop() {
     setLoading(true)
 
-    const { data, error } = await supabase.rpc('get_settlement_shop', {
+    const { data, error } = await supabase.rpc('get_settlement_shop_v2', {
       p_character_id: characterId,
       p_sector_id: sectorId,
     })
@@ -183,6 +183,8 @@ export function SettlementShop({
                   .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
                 const resistances = Object.entries(item.damage_resistances ?? {})
                   .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                const damageBonuses = Object.entries(item.damage_bonuses ?? {})
+                  .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
                 const locked = !item.level_unlocked
                 const busy = busyItemId === item.item_id
 
@@ -226,6 +228,16 @@ export function SettlementShop({
                         {resistances.map(([type, value]) => (
                           <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
                             {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {damageBonuses.length > 0 && (
+                      <div className="damage-bonus-list">
+                        {damageBonuses.map(([type, value]) => (
+                          <span key={'shop-damage-bonus-' + type}>
+                            {damageTypeLabels[type]} урон +{value}%
                           </span>
                         ))}
                       </div>
