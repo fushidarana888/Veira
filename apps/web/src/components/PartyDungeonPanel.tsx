@@ -238,6 +238,14 @@ function hpPercent(current: number, max: number) {
   return Math.max(0, Math.min(100, Math.round(current / max * 100)))
 }
 
+function dungeonZeroExperience(level: number) {
+  if (level <= 1) return 15
+  if (level === 2) return 11
+  if (level === 3) return 6
+  if (level === 4) return 2
+  return 0
+}
+
 export function PartyDungeonPanel({
   characterId,
   onProgressChanged,
@@ -732,8 +740,21 @@ export function PartyDungeonPanel({
               }} />
             </div>
             <div className="party-dungeon-reward">
-              <span>Каждому за полную зачистку</span>
-              <strong>{activeRun.reward_gold} золота · {activeRun.reward_experience} опыта</strong>
+              <span>
+                {activeRun.danger_level === 0
+                  ? 'За полную зачистку · XP зависит от уровня'
+                  : 'Каждому за полную зачистку'}
+              </span>
+              <strong>
+                {activeRun.reward_gold} золота · {
+                  activeRun.danger_level === 0 && me
+                    ? dungeonZeroExperience(me.level)
+                    : activeRun.reward_experience
+                } опыта тебе
+              </strong>
+              {activeRun.danger_level === 0 && (
+                <small>LVL 1: 15 · LVL 2: 11 · LVL 3: 6 · LVL 4: 2 · LVL 5+: 0 XP</small>
+              )}
             </div>
           </div>
 
