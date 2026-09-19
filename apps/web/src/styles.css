@@ -1037,3 +1037,199 @@ textarea {
     flex-direction: column;
   }
 }
+
+
+.form-label {
+  display: block;
+  color: #c2c7ce;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.race-picker-block {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #2d333d;
+  border-radius: 16px;
+  padding: 14px;
+  background: #0d1116;
+}
+
+.race-picker-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.race-picker-heading p {
+  margin: 5px 0 0;
+  max-width: 560px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.selected-race-badge {
+  flex: 0 0 auto;
+  border: 1px solid #66543e;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #201b14;
+  color: #d8c19c;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.race-search {
+  min-height: 44px;
+}
+
+.race-category-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.race-category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.race-category-tabs button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  border: 1px solid #303641;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #13171d;
+  color: #949ca7;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.race-category-tabs button.active {
+  border-color: #776247;
+  background: #252018;
+  color: #e1cfb1;
+}
+
+.race-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 2px 3px 2px 1px;
+}
+
+.race-card {
+  min-width: 0;
+  min-height: 148px;
+  border: 1px solid #2b313a;
+  border-radius: 13px;
+  padding: 12px;
+  background: #11151b;
+  color: #e6e8eb;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, transform .12s ease;
+}
+
+.race-card:hover {
+  border-color: #4a515d;
+  background: #151a21;
+}
+
+.race-card:active {
+  transform: translateY(1px);
+}
+
+.race-card.selected {
+  border-color: #917650;
+  background:
+    linear-gradient(145deg, rgba(157, 126, 79, .16), rgba(255,255,255,.01)),
+    #171812;
+  box-shadow: inset 0 0 0 1px rgba(196, 163, 111, .08);
+}
+
+.race-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.race-card-top strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.race-card-top span {
+  color: #d6b982;
+  font-weight: 850;
+}
+
+.race-card small {
+  display: block;
+  margin-top: 4px;
+  color: #837b6d;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.race-card p {
+  margin: 9px 0 0;
+  color: #9fa6af;
+  font-size: 11px;
+  line-height: 1.48;
+}
+
+.race-loading,
+.race-empty {
+  min-height: 120px;
+  border: 1px dashed #303641;
+  border-radius: 12px;
+  padding: 20px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 5px;
+  color: #949ca7;
+  text-align: center;
+}
+
+.race-empty {
+  grid-column: 1 / -1;
+}
+
+.race-empty strong {
+  color: #d9dde2;
+  font-size: 13px;
+}
+
+.race-empty span {
+  font-size: 11px;
+}
+
+@media (max-width: 700px) {
+  .race-picker-heading {
+    flex-direction: column;
+  }
+
+  .selected-race-badge {
+    flex: none;
+  }
+
+  .race-grid {
+    grid-template-columns: 1fr;
+    max-height: 460px;
+  }
+
+  .race-card {
+    min-height: 126px;
+  }
+}
