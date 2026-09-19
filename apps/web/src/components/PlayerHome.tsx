@@ -14,6 +14,7 @@ import type {
   DamageType,
   ItemDefinition,
   Profile,
+  RaceDefinition,
 } from '../types'
 
 type Props = {
@@ -116,6 +117,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
   const [items, setItems] = useState<CharacterItem[]>([])
   const [equipment, setEquipment] = useState<CharacterEquipment[]>([])
   const [inventoryBusy, setInventoryBusy] = useState(false)
+  const [raceDefinition, setRaceDefinition] = useState<RaceDefinition | null>(null)
   const [inventoryMessage, setInventoryMessage] = useState('')
   const [statBusy, setStatBusy] = useState(false)
   const [progressMessage, setProgressMessage] = useState('')
@@ -126,6 +128,21 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
   useEffect(() => {
     setProgress(normalizeProgress(character.character_progress))
   }, [character.character_progress])
+
+  async function loadRace() {
+    const { data, error } = await supabase.rpc('get_character_race_state', {
+      p_character_id: character.id,
+    })
+
+    if (error) {
+      setProgressMessage(error.message)
+      return null
+    }
+
+    const race = (Array.isArray(data) ? data[0] : data) as RaceDefinition | null
+    setRaceDefinition(race)
+    return race
+  }
 
   async function loadProgress() {
     const { data, error } = await supabase.rpc('get_character_progress_state', {
@@ -216,6 +233,7 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
   useEffect(() => {
     void loadProgress()
     void loadInventory()
+    void loadRace()
   }, [character.id])
 
   const itemById = useMemo(
@@ -483,7 +501,9 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
                     <strong>{progress.hp_current} / {progress.hp_max}</strong>
                   </div>
                   <div className="meter"><span style={{ width: hpPercent + '%' }} /></div>
-                  <small className="passive-regen-note">Пассивное восстановление: +8 HP в час вне активного боя</small>
+                  <small className="passive-regen-note">
+                    Пассивное восстановление: +{raceDefinition?.hp_regen_per_hour ?? 8} HP в час вне активного боя
+                  </small>
                 </article>
 
                 <article className="panel vital-card">
@@ -500,7 +520,9 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
                       }}
                     />
                   </div>
-                  <small className="passive-regen-note">Пассивное восстановление: +10 маны в час вне активного боя</small>
+                  <small className="passive-regen-note">
+                    Пассивное восстановление: +{raceDefinition?.mana_regen_per_hour ?? 10} маны в час вне активного боя
+                  </small>
                 </article>
 
                 <article className="panel vital-card">
@@ -516,6 +538,49 @@ export function PlayerHome({ profile, character, onSignOut }: Props) {
                   <strong>{progress.gold.toLocaleString('ru-RU')}</strong>
                 </article>
               </section>
+
+              {raceDefinition && (
+                <section className="panel player-race-panel">
+                  <div className="section-heading">
+                    <div>
+                      <span className="eyebrow">РАСА</span>
+                      <h2>{raceDefinition.name}</h2>
+                      <p className="muted">{raceDefinition.description}</p>
+                    </div>
+                    <span className="badge">
+                      {damageTypeLabels[raceDefinition.innate_magic_damage_type]}
+                    </span>
+                  </div>
+
+                  <div className="race-mechanic-grid">
+                    <span><small>Макс. HP</small><strong>{raceDefinition.hp_bonus >= 0 ? '+' : ''}{raceDefinition.hp_bonus}</strong></span>
+                    <span><small>Макс. MP</small><strong>{raceDefinition.mana_bonus >= 0 ? '+' : ''}{raceDefinition.mana_bonus}</strong></span>
+                    <span><small>Реген HP/ч</small><strong>{raceDefinition.hp_regen_per_hour}</strong></span>
+                    <span><small>Реген MP/ч</small><strong>{raceDefinition.mana_regen_per_hour}</strong></span>
+                  </div>
+
+                  {Object.entries(raceDefinition.damage_resistances ?? {})
+                    .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                    .length > 0 && (
+                      <div className="race-resistance-list">
+                        {Object.entries(raceDefinition.damage_resistances ?? {})
+                          .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                          .map(([type, value]) => (
+                            <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
+                              {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                            </span>
+                          ))}
+                      </div>
+                    )}
+
+                  {raceDefinition.passive_name && (
+                    <div className="race-passive-card">
+                      <strong>{raceDefinition.passive_name}</strong>
+                      <p>{raceDefinition.passive_description}</p>
+                    </div>
+                  )}
+                </section>
+              )}
 
               <section className="panel">
                 <div className="section-heading">
