@@ -3586,3 +3586,16 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+.passive-regen-note {
+  color: #82908d;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.equipment-damage-type {
+  color: #aeb9c5;
+  font-size: 10px;
+  font-weight: 700;
+}
