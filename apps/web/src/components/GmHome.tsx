@@ -19,13 +19,6 @@ type AuditEntry = {
   created_at: string
 }
 
-const starterSlugs = [
-  ['traveler_sword', 1],
-  ['worn_cloak', 1],
-  ['minor_healing_potion', 3],
-  ['old_copper_charm', 1],
-] as const
-
 function normalizeProgress(value: Character['character_progress']): CharacterProgress | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value
@@ -55,6 +48,7 @@ export function GmHome({ profile, onSignOut }: Props) {
           owner_user_id,
           name,
           race,
+          race_id,
           bio,
           avatar_url,
           created_at,
@@ -108,8 +102,13 @@ export function GmHome({ profile, onSignOut }: Props) {
     setDefinitions((definitionsResult.data as ItemDefinition[] | null) ?? [])
     setAudit((auditResult.data as AuditEntry[] | null) ?? [])
 
-    if (!selectedId && nextCharacters[0]) setSelectedId(nextCharacters[0].id)
-    if (!selectedItemId && definitionsResult.data?.[0]) setSelectedItemId(definitionsResult.data[0].id)
+    if (!nextCharacters.some((character) => character.id === selectedId)) {
+      setSelectedId(nextCharacters[0]?.id ?? '')
+    }
+
+    if (!selectedItemId && definitionsResult.data?.[0]) {
+      setSelectedItemId(definitionsResult.data[0].id)
+    }
 
     setLoading(false)
   }
@@ -185,75 +184,36 @@ export function GmHome({ profile, onSignOut }: Props) {
     setBusy(false)
   }
 
-  async function resetCharacter() {
+  async function resetCharacterToCreation() {
     if (!selectedCharacter) return
-    if (!window.confirm(`Сбросить тестовый прогресс персонажа «${selectedCharacter.name}»?`)) return
+
+    const owner = profileById.get(selectedCharacter.owner_user_id)
+    const confirmed = window.confirm(
+      `Вернуть аккаунт @${owner?.display_name ?? 'unknown'} к созданию персонажа?\n\n` +
+      `Персонаж «${selectedCharacter.name}», его прогресс, экипировка и инвентарь будут удалены. ` +
+      'Сам аккаунт останется, и при следующем входе игрок снова увидит форму имени, расы и биографии.',
+    )
+
+    if (!confirmed) return
 
     setBusy(true)
     setNotice('')
 
-    const { error: deleteError } = await supabase
-      .from('character_items')
-      .delete()
-      .eq('character_id', selectedCharacter.id)
-
-    if (deleteError) {
-      setNotice(deleteError.message)
-      setBusy(false)
-      return
-    }
-
-    const { error: progressError } = await supabase
-      .from('character_progress')
-      .update({
-        level: 1,
-        experience: 0,
-        hp_current: 100,
-        hp_max: 100,
-        strength: 5,
-        agility: 5,
-        intellect: 5,
-        vitality: 5,
-        luck: 5,
-        gold: 0,
-      })
-      .eq('character_id', selectedCharacter.id)
-
-    if (progressError) {
-      setNotice(progressError.message)
-      setBusy(false)
-      return
-    }
-
-    const starterRows = starterSlugs.flatMap(([slug, count]) => {
-      const definition = definitions.find((entry) => entry.slug === slug)
-      if (!definition) return []
-
-      if (definition.stackable) {
-        return [{
-          character_id: selectedCharacter.id,
-          item_definition_id: definition.id,
-          quantity: count,
-        }]
-      }
-
-      return Array.from({ length: count }, () => ({
-        character_id: selectedCharacter.id,
-        item_definition_id: definition.id,
-        quantity: 1,
-      }))
+    const { error } = await supabase.rpc('gm_reset_character_to_creation', {
+      p_character_id: selectedCharacter.id,
     })
 
-    if (starterRows.length > 0) {
-      const { error: starterError } = await supabase.from('character_items').insert(starterRows)
-      if (starterError) {
-        setNotice(starterError.message)
-        setBusy(false)
-        return
-      }
+    if (error) {
+      setNotice(error.message)
+      setBusy(false)
+      return
     }
 
-    setNotice('Персонаж сброшен к стартовому состоянию.')
+    setSelectedId('')
+    setNotice(
+      `Аккаунт @${owner?.display_name ?? 'unknown'} возвращён к созданию персонажа. ` +
+      'Игроку достаточно обновить страницу или войти заново.',
+    )
     await loadData()
     setBusy(false)
   }
@@ -422,12 +382,18 @@ export function GmHome({ profile, onSignOut }: Props) {
 
                 <article className="panel danger-panel">
                   <span className="eyebrow">ТЕСТИРОВАНИЕ</span>
-                  <h2>Сброс персонажа</h2>
+                  <h2>Вернуть к созданию персонажа</h2>
                   <p className="muted">
-                    Возвращает базовые характеристики, HP, уровень, опыт, золото и стартовый инвентарь.
+                    Удаляет текущего персонажа вместе с прогрессом, инвентарём и экипировкой, но сохраняет сам аккаунт.
+                    После обновления страницы игрок снова попадёт на выбор имени, расы и биографии.
                   </p>
-                  <button className="ghost-button danger-button" type="button" disabled={busy} onClick={() => void resetCharacter()}>
-                    Сбросить прогресс
+                  <button
+                    className="ghost-button danger-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void resetCharacterToCreation()}
+                  >
+                    Сбросить до создания
                   </button>
                 </article>
               </>
