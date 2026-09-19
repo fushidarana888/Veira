@@ -259,3 +259,51 @@ export type ExplorationEventTemplate = {
   created_at: string
   updated_at: string
 }
+
+
+export type SectorSiteProgress = {
+  character_id: string
+  sector_id: number
+  site_type: 'ruins' | 'dungeon'
+  status: 'explored' | 'scouted' | 'cleared'
+  first_interacted_at: string
+  completed_at: string
+  updated_at: string
+}
+
+export type SectorSiteAction = {
+  id: string
+  character_id: string
+  sector_id: number
+  action_type: 'explore_ruins' | 'scout_dungeon'
+  status: 'active' | 'completed' | 'cancelled'
+  started_at: string
+  ends_at: string
+  completed_at: string | null
+  result_title: string
+  result_text: string
+  created_at: string
+}
+
+export type DungeonRun = {
+  id: string
+  character_id: string
+  sector_id: number
+  status: 'active' | 'completed' | 'abandoned'
+  current_stage: string
+  rooms_cleared: number
+  started_at: string
+  ended_at: string | null
+  created_at: string
+}
+
+export type CharacterAdventureSite = {
+  sector_id: number
+  title: string
+  content_type: 'ruins' | 'dungeon'
+  site_status: 'explored' | 'scouted' | 'cleared' | null
+  active_run_id: string | null
+  run_status: 'active' | 'completed' | 'abandoned' | null
+  run_stage: string | null
+  run_started_at: string | null
+}
