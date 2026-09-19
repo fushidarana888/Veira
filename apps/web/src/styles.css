@@ -6271,6 +6271,20 @@ textarea {
   opacity: .56;
 }
 
+.party-combat-member.dead {
+  opacity: .62;
+  border-color: #554044;
+}
+
+.party-combat-member.lost {
+  opacity: .46;
+  border-color: #6a3c45;
+  background:
+    linear-gradient(rgba(80, 35, 44, .12), rgba(80, 35, 44, .12)),
+    #0f141a;
+}
+
+
 .party-combat-member-head,
 .party-enemy-head {
   display: flex;
@@ -6578,6 +6592,20 @@ textarea {
 .party-spell-card.buff {
   border-color: #3d4651;
 }
+
+.party-spell-card.sacrifice {
+  border-color: #71454d;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(137, 68, 81, .12), transparent 48%),
+    #141116;
+}
+
+.party-spell-card.sacrifice > p {
+  margin: 0;
+  line-height: 1.45;
+  font-size: 9px;
+}
+
 
 .party-spell-card > div:first-child {
   display: grid;
