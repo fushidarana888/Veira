@@ -239,14 +239,16 @@ export function MagicPanel({ characterId, progress }: Props) {
                 <button
                   className="ghost-button"
                   type="button"
-                  disabled={busy}
+                  disabled={busy || spell.spell_kind === 'sacrifice'}
                   onClick={() => void toggleCombatSpell(spell)}
                 >
-                  {spell.combat_slot !== null
-                    ? `Убрать из набора · слот ${spell.combat_slot}`
-                    : selectedSpells.length >= 3
-                      ? 'Набор заполнен'
-                      : 'Взять в бой'}
+                  {spell.spell_kind === 'sacrifice'
+                    ? 'Используется отдельно через свиток'
+                    : spell.combat_slot !== null
+                      ? `Убрать из набора · слот ${spell.combat_slot}`
+                      : selectedSpells.length >= 3
+                        ? 'Набор заполнен'
+                        : 'Взять в бой'}
                 </button>
               </article>
             ))}
