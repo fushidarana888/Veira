@@ -39,6 +39,12 @@ const damageTypeLabels: Record<DamageType, string> = {
   ice: 'Ледяной',
 }
 
+const weaponScalingLabels: Record<'strength' | 'agility' | 'hybrid', string> = {
+  strength: 'Силовое',
+  agility: 'Ловкостное',
+  hybrid: 'Гибридное',
+}
+
 const statLabels: Record<string, string> = {
   strength: 'Сила',
   agility: 'Ловкость',
@@ -61,7 +67,7 @@ export function SettlementShop({
   async function loadShop() {
     setLoading(true)
 
-    const { data, error } = await supabase.rpc('get_settlement_shop_v2', {
+    const { data, error } = await supabase.rpc('get_settlement_shop_v3', {
       p_character_id: characterId,
       p_sector_id: sectorId,
     })
@@ -220,6 +226,13 @@ export function SettlementShop({
                     {item.damage_type && (
                       <div className="damage-type-chip">
                         Тип урона · {damageTypeLabels[item.damage_type]}
+                      </div>
+                    )}
+
+                    {item.category === 'weapon' && (
+                      <div className="modifier-list">
+                        <span>Базовый урон +{item.weapon_base_damage ?? 0}</span>
+                        <span>{weaponScalingLabels[item.weapon_scaling ?? 'strength']}</span>
                       </div>
                     )}
 
