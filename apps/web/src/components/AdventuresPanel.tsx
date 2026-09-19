@@ -4,12 +4,28 @@ import type {
   CharacterAdventureSite,
   CombatEncounter,
   CombatTurn,
+  DamageType,
+  ElementalDamageType,
 } from '../types'
 
 type Props = {
   characterId: string
   onProgressChanged?: () => Promise<unknown> | void
 }
+
+const damageTypeLabels: Record<DamageType, string> = {
+  slashing: 'Режущий',
+  piercing: 'Колющий',
+  blunt: 'Дробящий',
+  fire: 'Огненный',
+  water: 'Водный',
+  earth: 'Земляной',
+  air: 'Воздушный',
+  lightning: 'Электрический',
+  ice: 'Ледяной',
+}
+
+const elementalTypes: ElementalDamageType[] = ['fire', 'water', 'earth', 'air', 'lightning', 'ice']
 
 export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
   const [sites, setSites] = useState<CharacterAdventureSite[]>([])
@@ -18,6 +34,7 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [magicDamageType, setMagicDamageType] = useState<ElementalDamageType>('fire')
 
   async function loadAdventures() {
     setLoading(true)
@@ -28,7 +45,7 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, player_hp_current, player_hp_max, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, player_physical_damage_type, player_hp_current, player_hp_max, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
@@ -154,7 +171,9 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
     setBusy(false)
   }
 
-  async function performCombatAction(action: 'physical' | 'magic' | 'guard') {
+  async function performCombatAction(
+    action: 'physical' | 'guard' | `magic_${ElementalDamageType}`,
+  ) {
     if (!activeCombat) return
 
     setBusy(true)
@@ -310,6 +329,7 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
                   <span className="muted">
                     Уровень {activeCombat.enemy_level}
                     {activeCombat.is_boss ? ' · финальный противник' : ''}
+                    {' · '}атака: {damageTypeLabels[activeCombat.enemy_damage_type]}
                   </span>
                 </div>
                 <span className="badge">
@@ -332,6 +352,15 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
                     <strong>{activeCombat.enemy_hp_current} / {activeCombat.enemy_hp_max} HP</strong>
                   </div>
                   <div className="combat-hp-meter enemy"><span style={{ width: enemyHpPercent + '%' }} /></div>
+                  <div className="combat-resistance-summary">
+                    {Object.entries(activeCombat.enemy_resistances ?? {})
+                      .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                      .map(([type, value]) => (
+                        <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
+                          {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                        </span>
+                      ))}
+                  </div>
                 </div>
               </div>
 
@@ -342,16 +371,28 @@ export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
                   disabled={busy}
                   onClick={() => void performCombatAction('physical')}
                 >
-                  Физическая атака
+                  Физическая · {damageTypeLabels[activeCombat.player_physical_damage_type]}
                 </button>
-                <button
-                  className="primary-button"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void performCombatAction('magic')}
-                >
-                  Магическая атака
-                </button>
+
+                <div className="magic-action-control">
+                  <select
+                    value={magicDamageType}
+                    disabled={busy}
+                    onChange={(event) => setMagicDamageType(event.target.value as ElementalDamageType)}
+                  >
+                    {elementalTypes.map((type) => (
+                      <option value={type} key={type}>{damageTypeLabels[type]}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="primary-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void performCombatAction(`magic_${magicDamageType}`)}
+                  >
+                    Магическая · {damageTypeLabels[magicDamageType]}
+                  </button>
+                </div>
                 <button
                   className="ghost-button"
                   type="button"
