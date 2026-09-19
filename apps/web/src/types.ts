@@ -99,6 +99,10 @@ export type ItemDefinition = {
   stat_modifiers: Record<string, number>
   effects: unknown[]
   base_value: number
+  required_level: number
+  shop_tier: number
+  shop_price: number
+  shop_enabled: boolean
 }
 
 export type CharacterItem = {
@@ -190,6 +194,7 @@ export type GmMapSector = {
   player_description: string
   danger_level: number
   danger_configured: boolean
+  settlement_level: number
   requires_gm: boolean
   gm_notes: string
   event_enabled: boolean
@@ -350,4 +355,24 @@ export type CombatTurn = {
   enemy_hp_after: number
   message: string
   created_at: string
+}
+
+
+export type SettlementShopItem = {
+  settlement_name: string
+  settlement_level: number
+  item_id: string
+  slug: string
+  item_name: string
+  description: string
+  category: ItemCategory
+  rarity: ItemRarity
+  equip_group: ItemEquipGroup | null
+  stat_modifiers: Record<string, number>
+  heal_amount: number
+  price: number
+  required_level: number
+  shop_tier: number
+  can_afford: boolean
+  level_unlocked: boolean
 }
