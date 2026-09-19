@@ -12,6 +12,7 @@ import type {
   ItemEquipGroup,
   ItemRarity,
   SpellDefinition,
+  WeaponScaling,
 } from '../types'
 
 const damageTypes: DamageType[] = [
@@ -134,6 +135,12 @@ function itemSlugFromName(value: string) {
     .replace(/_+/g, '_')
 }
 
+const weaponScalingLabels: Record<WeaponScaling, string> = {
+  strength: 'Силовое · STR ×3 + AGI ×0.5',
+  agility: 'Ловкостное · AGI ×3 + STR ×0.5',
+  hybrid: 'Гибридное · STR ×1.75 + AGI ×1.75',
+}
+
 const statKeys = ['strength', 'agility', 'intellect', 'vitality', 'luck'] as const
 const statLabels: Record<(typeof statKeys)[number], string> = {
   strength: 'Сила',
@@ -162,6 +169,8 @@ type ItemDraft = {
   shop_price: number
   shop_enabled: boolean
   damage_type: DamageType | null
+  weapon_base_damage: number
+  weapon_scaling: WeaponScaling
   damage_resistances: Partial<Record<DamageType, number>>
   damage_bonuses: Partial<Record<DamageType, number>>
   scroll_spell_id: string | null
@@ -213,6 +222,8 @@ function emptyItem(): ItemDraft {
     shop_price: 0,
     shop_enabled: false,
     damage_type: 'slashing',
+    weapon_base_damage: 5,
+    weapon_scaling: 'strength',
     damage_resistances: {},
     damage_bonuses: {},
     scroll_spell_id: null,
@@ -335,6 +346,8 @@ export function GmItemsAndSpells() {
       shop_price: item.shop_price,
       shop_enabled: item.shop_enabled,
       damage_type: item.damage_type,
+      weapon_base_damage: item.weapon_base_damage ?? 0,
+      weapon_scaling: item.weapon_scaling ?? 'strength',
       damage_resistances: item.damage_resistances ?? {},
       damage_bonuses: item.damage_bonuses ?? {},
       scroll_spell_id: item.scroll_spell_id,
@@ -436,6 +449,8 @@ export function GmItemsAndSpells() {
       stackable: defaultEquipGroup ? false : current.stackable,
       max_stack: defaultEquipGroup ? 1 : current.max_stack,
       damage_type: category === 'weapon' ? current.damage_type ?? 'slashing' : null,
+      weapon_base_damage: category === 'weapon' ? Math.max(1, current.weapon_base_damage || 5) : 0,
+      weapon_scaling: category === 'weapon' ? current.weapon_scaling : 'strength',
       damage_resistances: defaultEquipGroup ? current.damage_resistances : {},
       damage_bonuses: defaultEquipGroup ? current.damage_bonuses : {},
       unique_effect_type: defaultEquipGroup ? current.unique_effect_type : null,
@@ -507,6 +522,18 @@ export function GmItemsAndSpells() {
 
     if (!savedId) {
       setMessage('Предмет сохранён, но не удалось получить его ID.')
+      setBusy(false)
+      return
+    }
+
+    const { error: weaponProfileError } = await supabase.rpc('gm_set_weapon_profile', {
+      p_item_id: savedId,
+      p_weapon_base_damage: itemDraft.category === 'weapon' ? itemDraft.weapon_base_damage : 0,
+      p_weapon_scaling: itemDraft.category === 'weapon' ? itemDraft.weapon_scaling : null,
+    })
+
+    if (weaponProfileError) {
+      setMessage(weaponProfileError.message)
       setBusy(false)
       return
     }
@@ -845,7 +872,7 @@ export function GmItemsAndSpells() {
 
             {itemDraft.category === 'weapon' && (
               <>
-                <div className="gm-form-grid two">
+                <div className="gm-form-grid three">
                   <label>
                     <span>Тип урона оружия</span>
                     <select value={itemDraft.damage_type ?? ''} onChange={(e) => setItemDraft({ ...itemDraft, damage_type: e.target.value ? e.target.value as DamageType : null })}>
@@ -855,7 +882,37 @@ export function GmItemsAndSpells() {
                       ))}
                     </select>
                   </label>
+                  <label>
+                    <span>Базовый урон оружия</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={10000}
+                      value={itemDraft.weapon_base_damage}
+                      onChange={(e) => setItemDraft({
+                        ...itemDraft,
+                        weapon_base_damage: Math.max(0, Math.min(10000, Number(e.target.value) || 0)),
+                      })}
+                    />
+                  </label>
+                  <label>
+                    <span>Скейлинг оружия</span>
+                    <select
+                      value={itemDraft.weapon_scaling}
+                      onChange={(e) => setItemDraft({
+                        ...itemDraft,
+                        weapon_scaling: e.target.value as WeaponScaling,
+                      })}
+                    >
+                      {(Object.keys(weaponScalingLabels) as WeaponScaling[]).map((scaling) => (
+                        <option key={scaling} value={scaling}>{weaponScalingLabels[scaling]}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
+                <p className="muted">
+                  Базовый урон добавляется к урону от характеристик и уровня. Он ничего не заменяет.
+                </p>
 
                 <div className="gm-editor-box">
                   <div>
