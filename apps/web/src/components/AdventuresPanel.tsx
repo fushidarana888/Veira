@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { CharacterAdventureSite } from '../types'
+import type {
+  CharacterAdventureSite,
+  CombatEncounter,
+  CombatTurn,
+} from '../types'
 
 type Props = {
   characterId: string
+  onProgressChanged?: () => Promise<unknown> | void
 }
 
-export function AdventuresPanel({ characterId }: Props) {
+export function AdventuresPanel({ characterId, onProgressChanged }: Props) {
   const [sites, setSites] = useState<CharacterAdventureSite[]>([])
+  const [encounters, setEncounters] = useState<CombatEncounter[]>([])
+  const [turns, setTurns] = useState<CombatTurn[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -15,9 +22,19 @@ export function AdventuresPanel({ characterId }: Props) {
   async function loadAdventures() {
     setLoading(true)
 
-    const { data, error } = await supabase.rpc('get_character_adventures', {
-      p_character_id: characterId,
-    })
+    const [siteResult, encounterResult] = await Promise.all([
+      supabase.rpc('get_character_adventures', {
+        p_character_id: characterId,
+      }),
+      supabase
+        .from('combat_encounters')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, player_hp_current, player_hp_max, created_at, ended_at')
+        .eq('character_id', characterId)
+        .order('created_at', { ascending: false })
+        .limit(12),
+    ])
+
+    const error = siteResult.error ?? encounterResult.error
 
     if (error) {
       setMessage(error.message)
@@ -25,7 +42,31 @@ export function AdventuresPanel({ characterId }: Props) {
       return
     }
 
-    setSites((data as CharacterAdventureSite[] | null) ?? [])
+    const nextSites = (siteResult.data as CharacterAdventureSite[] | null) ?? []
+    const nextEncounters = (encounterResult.data as CombatEncounter[] | null) ?? []
+
+    setSites(nextSites)
+    setEncounters(nextEncounters)
+
+    const latestEncounter = nextEncounters[0] ?? null
+
+    if (latestEncounter) {
+      const { data: turnData, error: turnError } = await supabase
+        .from('combat_turns')
+        .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
+        .eq('encounter_id', latestEncounter.id)
+        .order('id', { ascending: false })
+        .limit(14)
+
+      if (turnError) {
+        setMessage(turnError.message)
+      } else {
+        setTurns(((turnData as CombatTurn[] | null) ?? []).reverse())
+      }
+    } else {
+      setTurns([])
+    }
+
     setLoading(false)
   }
 
@@ -47,6 +88,9 @@ export function AdventuresPanel({ characterId }: Props) {
     () => sites.filter((site) => site.content_type === 'dungeon'),
     [sites],
   )
+
+  const latestCombat = encounters[0] ?? null
+  const activeCombat = latestCombat?.status === 'active' ? latestCombat : null
 
   async function startDungeon(site: CharacterAdventureSite) {
     setBusy(true)
@@ -78,6 +122,55 @@ export function AdventuresPanel({ characterId }: Props) {
     setBusy(false)
   }
 
+  async function startCombat(runId: string) {
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('start_dungeon_combat', {
+      p_run_id: runId,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('COMBAT_ALREADY_EXISTS')) {
+        setMessage('Бой для этого прохождения уже начат.')
+      } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
+        setMessage('У персонажа нет здоровья для начала боя.')
+      } else {
+        setMessage(raw)
+      }
+
+      setBusy(false)
+      return
+    }
+
+    await loadAdventures()
+    setMessage('Первый бой начался.')
+    setBusy(false)
+  }
+
+  async function performCombatAction(action: 'physical' | 'magic' | 'guard') {
+    if (!activeCombat) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('perform_combat_action', {
+      p_encounter_id: activeCombat.id,
+      p_action: action,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    await Promise.resolve(onProgressChanged?.())
+    await loadAdventures()
+    setBusy(false)
+  }
+
   async function leaveDungeon(runId: string) {
     setBusy(true)
     setMessage('')
@@ -105,6 +198,13 @@ export function AdventuresPanel({ characterId }: Props) {
       </section>
     )
   }
+
+  const playerHpPercent = activeCombat
+    ? Math.max(0, Math.min(100, Math.round((activeCombat.player_hp_current / activeCombat.player_hp_max) * 100)))
+    : 0
+  const enemyHpPercent = activeCombat
+    ? Math.max(0, Math.min(100, Math.round((activeCombat.enemy_hp_current / activeCombat.enemy_hp_max) * 100)))
+    : 0
 
   return (
     <section className="adventures-section">
@@ -134,22 +234,135 @@ export function AdventuresPanel({ characterId }: Props) {
             <span className="badge">сектор #{activeDungeon.sector_id}</span>
           </div>
 
-          <div className="dungeon-run-stage">
-            <span>Текущий этап</span>
-            <strong>Вход в подземелье</strong>
+          {!activeCombat ? (
+            <>
+              <div className="dungeon-run-stage">
+                <span>Текущий этап</span>
+                <strong>Вход в подземелье</strong>
+                <p className="muted">
+                  Вход разведан. Первый зал уже можно начать как отдельный серверный бой.
+                </p>
+              </div>
+
+              <div className="dungeon-entry-actions">
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void startCombat(activeDungeon.active_run_id!)}
+                >
+                  Войти в первый зал
+                </button>
+
+                <button
+                  className="ghost-button danger-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
+                >
+                  Покинуть подземелье
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="combat-shell">
+              <div className="combat-heading">
+                <div>
+                  <span className="eyebrow">БОЙ · РАУНД {activeCombat.round + 1}</span>
+                  <h3>{activeCombat.enemy_name}</h3>
+                  <span className="muted">Уровень {activeCombat.enemy_level}</span>
+                </div>
+                <span className="badge">серверный бой</span>
+              </div>
+
+              <div className="combatants-grid">
+                <div className="combatant-card">
+                  <div className="combatant-head">
+                    <span>Персонаж</span>
+                    <strong>{activeCombat.player_hp_current} / {activeCombat.player_hp_max} HP</strong>
+                  </div>
+                  <div className="combat-hp-meter player"><span style={{ width: playerHpPercent + '%' }} /></div>
+                </div>
+
+                <div className="combatant-card enemy">
+                  <div className="combatant-head">
+                    <span>{activeCombat.enemy_name}</span>
+                    <strong>{activeCombat.enemy_hp_current} / {activeCombat.enemy_hp_max} HP</strong>
+                  </div>
+                  <div className="combat-hp-meter enemy"><span style={{ width: enemyHpPercent + '%' }} /></div>
+                </div>
+              </div>
+
+              <div className="combat-actions">
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void performCombatAction('physical')}
+                >
+                  Физическая атака
+                </button>
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void performCombatAction('magic')}
+                >
+                  Магическая атака
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void performCombatAction('guard')}
+                >
+                  Защита
+                </button>
+                <button
+                  className="ghost-button danger-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
+                >
+                  Отступить
+                </button>
+              </div>
+
+              <div className="combat-log">
+                {turns.map((turn) => (
+                  <div className={'combat-log-row ' + turn.actor} key={turn.id}>
+                    <span>{turn.actor === 'player' ? 'Ты' : turn.actor === 'enemy' ? 'Противник' : 'Система'}</span>
+                    <p>{turn.message}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </article>
+      )}
+
+      {!activeCombat && latestCombat && latestCombat.status !== 'active' && (
+        <article className="panel combat-result-panel">
+          <div>
+            <span className="eyebrow">
+              {latestCombat.status === 'victory'
+                ? 'ПОБЕДА'
+                : latestCombat.status === 'defeat'
+                  ? 'ПОРАЖЕНИЕ'
+                  : 'БОЙ ПРЕКРАЩЁН'}
+            </span>
+            <h3>{latestCombat.enemy_name}</h3>
             <p className="muted">
-              Прохождение создано и закреплено за персонажем. Следующим слоем сюда подключаются комнаты, противники и боевая система.
+              {latestCombat.status === 'victory'
+                ? 'Первый зал очищен. Эта боевая основа готова для подключения следующих комнат и наград.'
+                : latestCombat.status === 'defeat'
+                  ? 'Персонаж отступил из подземелья и остался с 1 HP.'
+                  : 'Прохождение было прервано.'}
             </p>
           </div>
-
-          <button
-            className="ghost-button danger-button"
-            type="button"
-            disabled={busy}
-            onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
-          >
-            Покинуть подземелье
-          </button>
+          <span className="badge">
+            {latestCombat.status === 'victory' ? 'зал очищен' : latestCombat.status}
+          </span>
         </article>
       )}
 
