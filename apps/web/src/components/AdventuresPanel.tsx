@@ -85,6 +85,24 @@ const damageTypeLabels: Record<DamageType, string> = {
   ice: 'Ледяной',
 }
 
+const enemySpecialLabels: Record<CombatEncounter['enemy_special_kind'], string> = {
+  attack: 'Усиленная атака',
+  heal: 'Самолечение',
+  guard: 'Защитная стойка',
+  enrage: 'Усиление атаки',
+  cleanse: 'Снятие эффектов',
+}
+
+function enemySpecialValueText(encounter: CombatEncounter) {
+  if (encounter.enemy_special_kind === 'attack') {
+    return '×' + Number(encounter.enemy_special_damage_multiplier).toFixed(2)
+  }
+  if (encounter.enemy_special_kind === 'heal') return '+' + encounter.enemy_special_value + '% max HP'
+  if (encounter.enemy_special_kind === 'guard') return '-' + encounter.enemy_special_value + '% следующего урона'
+  if (encounter.enemy_special_kind === 'enrage') return '+' + encounter.enemy_special_value + '% атаки'
+  return 'снимает негативные эффекты'
+}
+
 export function AdventuresPanel({
   characterId,
   onProgressChanged,
@@ -114,7 +132,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
@@ -1148,9 +1166,24 @@ export function AdventuresPanel({
                     <div className={'enemy-special-summary ' + (activeCombat.enemy_special_charging ? 'charging' : '')}>
                       <strong>{activeCombat.enemy_special_name}</strong>
                       <span>
-                        особая атака · подготовка видна за 1 ход
-                        {' · '}×{Number(activeCombat.enemy_special_damage_multiplier).toFixed(2)}
+                        {enemySpecialLabels[activeCombat.enemy_special_kind]}
+                        {' · '}подготовка видна за 1 ход
+                        {' · '}{enemySpecialValueText(activeCombat)}
                       </span>
+                    </div>
+                  )}
+
+                  {(activeCombat.enemy_guard_hits > 0 || activeCombat.enemy_attack_bonus_percent > 0 || activeCombat.enemy_phase > 1) && (
+                    <div className="enemy-combat-state">
+                      {activeCombat.enemy_phase > 1 && (
+                        <span>Фаза {activeCombat.enemy_phase}{activeCombat.enemy_phase2_name ? ' · ' + activeCombat.enemy_phase2_name : ''}</span>
+                      )}
+                      {activeCombat.enemy_guard_hits > 0 && (
+                        <span>Стойка · −{activeCombat.enemy_guard_percent}% следующего урона</span>
+                      )}
+                      {activeCombat.enemy_attack_bonus_percent > 0 && (
+                        <span>Усиление · +{activeCombat.enemy_attack_bonus_percent}% атаки</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1158,18 +1191,20 @@ export function AdventuresPanel({
 
               {activeCombat.enemy_special_charging && (
                 <div className="enemy-special-warning" role="status" aria-live="polite">
-                  <span>ПОДГОТОВКА ОСОБОЙ АТАКИ</span>
-                  <strong>{activeCombat.enemy_special_name || 'Усиленная атака'}</strong>
+                  <span>ПОДГОТОВКА · {enemySpecialLabels[activeCombat.enemy_special_kind].toUpperCase()}</span>
+                  <strong>{activeCombat.enemy_special_name || enemySpecialLabels[activeCombat.enemy_special_kind]}</strong>
                   <p>
-                    Противник уже начал подготовку. На следующем его действии атака сработает, если её не сорвать.
-                    {activeCombat.enemy_special_damage_type
+                    Противник уже начал подготовку. На следующем его действии способность сработает, если её не сорвать оглушением.
+                    {' '}{enemySpecialValueText(activeCombat)}.
+                    {activeCombat.enemy_special_kind === 'attack' && activeCombat.enemy_special_damage_type
                       ? ' Тип урона: ' + damageTypeLabels[activeCombat.enemy_special_damage_type] + '.'
                       : ''}
-                    {Number(activeCombat.enemy_special_damage_multiplier) > 0
-                      ? ' Сила: ×' + Number(activeCombat.enemy_special_damage_multiplier).toFixed(2) + '.'
-                      : ''}
                   </p>
-                  <small>Это не скрытая информация: подготовка уже произошла в истории боя. Защита сейчас уменьшит этот удар.</small>
+                  <small>
+                    {activeCombat.enemy_special_kind === 'attack'
+                      ? 'Подготовка уже видна в истории боя: защита сейчас уменьшит удар.'
+                      : 'Это не атака: обычная защита не отменит эффект. Можно атаковать, оглушить врага или принять решение по ситуации.'}
+                  </small>
                 </div>
               )}
 
