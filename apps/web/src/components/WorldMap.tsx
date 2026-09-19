@@ -133,6 +133,9 @@ export function WorldMap({ characterId }: Props) {
   const pendingEvent =
     events.find((entry) => entry.status === 'pending') ?? null
 
+  const recentResolvedEvent =
+    events.find((entry) => entry.status === 'resolved' && entry.resolution_text.trim()) ?? null
+
   const selectedSector = selectedSectorId
     ? sectorById.get(selectedSectorId) ?? null
     : null
@@ -236,6 +239,19 @@ export function WorldMap({ characterId }: Props) {
             <p>{pendingEvent.player_prompt || 'Экспедиция столкнулась с ситуацией, требующей решения GM.'}</p>
           </div>
           <span className="badge event-waiting-badge">Ожидает GM</span>
+        </article>
+      )}
+
+      {!pendingEvent && recentResolvedEvent && (
+        <article className="panel expedition-result-card">
+          <div>
+            <span className="eyebrow">ИТОГ ПОСЛЕДНЕГО СОБЫТИЯ</span>
+            <h3>{recentResolvedEvent.title}</h3>
+            <p>{recentResolvedEvent.resolution_text}</p>
+          </div>
+          <span className="badge">
+            {recentResolvedEvent.outcome === 'discovered' ? 'Сектор открыт' : 'Экспедиция остановлена'}
+          </span>
         </article>
       )}
 
