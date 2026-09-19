@@ -3357,3 +3357,232 @@ textarea {
     grid-template-columns: 1fr auto;
   }
 }
+
+
+/* Damage types, resistances and enemy templates */
+.damage-type-chip {
+  justify-self: start;
+  border: 1px solid #3a424d;
+  border-radius: 999px;
+  background: rgba(84, 103, 124, .12);
+  color: #bdc8d4;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.resistance-list,
+.combat-resistance-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.resistance-list span,
+.combat-resistance-summary span {
+  border: 1px solid #343c46;
+  border-radius: 999px;
+  padding: 3px 6px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.resistance-list .positive,
+.combat-resistance-summary .positive {
+  border-color: #355343;
+  background: rgba(55, 93, 68, .16);
+  color: #9ec4a8;
+}
+
+.resistance-list .negative,
+.combat-resistance-summary .negative {
+  border-color: #5b3939;
+  background: rgba(107, 56, 56, .15);
+  color: #dfa0a0;
+}
+
+.combat-resistance-summary {
+  margin-top: 8px;
+}
+
+.magic-action-control {
+  display: flex;
+  gap: 7px;
+  flex: 2 1 290px;
+}
+
+.magic-action-control select {
+  min-width: 116px;
+  border: 1px solid #343b45;
+  border-radius: 11px;
+  background: #10151b;
+  color: #e8eaed;
+  padding: 8px 10px;
+}
+
+.magic-action-control .primary-button {
+  flex: 1 1 auto;
+}
+
+.gm-enemy-templates {
+  display: grid;
+  gap: 15px;
+}
+
+.gm-enemy-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, .68fr) minmax(0, 1.55fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.gm-enemy-list {
+  display: grid;
+  gap: 7px;
+  max-height: 650px;
+  overflow: auto;
+  padding-right: 3px;
+}
+
+.gm-enemy-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid #2f363f;
+  border-radius: 11px;
+  background: #10151b;
+  color: #cbd1d8;
+  padding: 9px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gm-enemy-card:hover,
+.gm-enemy-card.active {
+  border-color: rgba(207, 165, 104, .72);
+  background: rgba(189, 145, 80, .08);
+}
+
+.gm-enemy-card.disabled {
+  opacity: .5;
+}
+
+.gm-enemy-card > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gm-enemy-card strong {
+  font-size: 12px;
+  color: #eef0f3;
+}
+
+.gm-enemy-card span,
+.gm-enemy-card small {
+  color: #929ba6;
+  font-size: 9px;
+}
+
+.gm-enemy-editor {
+  display: grid;
+  gap: 11px;
+  border: 1px solid #2d343d;
+  border-radius: 14px;
+  background: #0d1217;
+  padding: 13px;
+}
+
+.gm-enemy-editor > label,
+.gm-enemy-number-grid label,
+.gm-enemy-multipliers label,
+.gm-enemy-resistance-grid label {
+  display: grid;
+  gap: 5px;
+}
+
+.gm-enemy-editor label > span {
+  color: #b4bcc5;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.gm-enemy-editor input:not([type="checkbox"]),
+.gm-enemy-editor select,
+.gm-enemy-editor textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #303742;
+  border-radius: 9px;
+  background: #0f141a;
+  color: #e7e9ec;
+  padding: 8px 9px;
+}
+
+.gm-enemy-number-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gm-enemy-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gm-enemy-multipliers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gm-enemy-resistances {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid #29303a;
+  padding-top: 10px;
+}
+
+.gm-enemy-resistances > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.gm-enemy-resistances > div:first-child span {
+  color: #89939e;
+  font-size: 10px;
+}
+
+.gm-enemy-resistance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+@media (max-width: 900px) {
+  .gm-enemy-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-enemy-list {
+    max-height: 280px;
+  }
+}
+
+@media (max-width: 620px) {
+  .magic-action-control {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .magic-action-control select {
+    width: 100%;
+  }
+
+  .gm-enemy-number-grid,
+  .gm-enemy-multipliers,
+  .gm-enemy-resistance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
