@@ -51,6 +51,7 @@ const spellKindLabels: Record<SpellDefinition['spell_kind'], string> = {
   guard: 'Защита',
   cleanse: 'Очищение',
   buff: 'Усиление',
+  taunt: 'Провокация',
 }
 
 const categories: Array<{ value: ItemCategory; label: string }> = [
@@ -166,7 +167,7 @@ type ItemDraft = {
   scroll_mode: 'learn' | 'cast' | null
   unique_property_name: string
   unique_property_description: string
-  unique_effect_type: 'lifesteal' | 'mana_on_hit' | 'damage_vs_wounded' | 'guard_boost' | null
+  unique_effect_type: 'lifesteal' | 'mana_on_hit' | 'damage_vs_wounded' | 'guard_boost' | 'taunt' | null
   unique_effect_value: number
 }
 
@@ -176,7 +177,7 @@ type SpellDraft = {
   name: string
   description: string
   enabled: boolean
-  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt'
   damage_type: ElementalDamageType | null
   mana_cost: number
   required_level: number
@@ -186,7 +187,7 @@ type SpellDraft = {
   status_effect_chance: number
   status_effect_turns: number
   status_effect_potency: number
-  support_effect_type: 'guard' | 'cleanse' | 'empower' | null
+  support_effect_type: 'guard' | 'cleanse' | 'empower' | 'taunt' | null
   support_value: number
   support_turns: number
 }
@@ -366,6 +367,15 @@ export function GmItemsAndSpells() {
 
   function updateStat(key: string, raw: string) {
     const value = Math.max(-99, Math.min(99, Number(raw) || 0))
+    const next = { ...itemDraft.stat_modifiers }
+    if (value === 0) delete next[key]
+    else next[key] = value
+    setItemDraft({ ...itemDraft, stat_modifiers: next })
+  }
+
+  function updatePercentStat(key: 'max_hp_percent' | 'defense_percent', raw: string) {
+    const limits = key === 'max_hp_percent' ? [-80, 200] : [-75, 100]
+    const value = Math.max(limits[0], Math.min(limits[1], Number(raw) || 0))
     const next = { ...itemDraft.stat_modifiers }
     if (value === 0) delete next[key]
     else next[key] = value
@@ -778,6 +788,40 @@ export function GmItemsAndSpells() {
               </div>
             </div>
 
+            {itemDraft.equip_group && (
+              <div className="gm-editor-box">
+                <div>
+                  <strong>Процентные модификаторы</strong>
+                  <small>Меняют итоговый максимум HP и обе защиты персонажа</small>
+                </div>
+                <div className="gm-form-grid two">
+                  <label>
+                    <span>Максимальное HP %</span>
+                    <input
+                      type="number"
+                      min={-80}
+                      max={200}
+                      value={itemDraft.stat_modifiers.max_hp_percent ?? 0}
+                      onChange={(e) => updatePercentStat('max_hp_percent', e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Вся защита %</span>
+                    <input
+                      type="number"
+                      min={-75}
+                      max={100}
+                      value={itemDraft.stat_modifiers.defense_percent ?? 0}
+                      onChange={(e) => updatePercentStat('defense_percent', e.target.value)}
+                    />
+                  </label>
+                </div>
+                <p className="muted">
+                  «Вся защита» одинаково масштабирует физическую и магическую защиту. Отрицательное значение является штрафом.
+                </p>
+              </div>
+            )}
+
             {itemDraft.category === 'weapon' && (
               <div className="gm-form-grid two">
                 <label>
@@ -924,6 +968,7 @@ export function GmItemsAndSpells() {
                       <option value="mana_on_hit">Мана при попадании · фикс.</option>
                       <option value="damage_vs_wounded">Добивание · % урона при HP ≤30%</option>
                       <option value="guard_boost">Усиление защиты · процентные пункты</option>
+                      <option value="taunt">Провокация · шанс стать целью в группе</option>
                     </select>
                   </label>
 
@@ -1039,12 +1084,17 @@ export function GmItemsAndSpells() {
                         kind === 'guard' ? 'guard'
                           : kind === 'cleanse' ? 'cleanse'
                             : kind === 'buff' ? 'empower'
-                              : null,
+                              : kind === 'taunt' ? 'taunt'
+                                : null,
                       support_value:
                         kind === 'guard' ? Math.max(70, spellDraft.support_value)
                           : kind === 'buff' ? Math.max(20, spellDraft.support_value)
+                            : kind === 'taunt' ? Math.max(90, spellDraft.support_value)
+                              : 0,
+                      support_turns:
+                        kind === 'buff' ? Math.max(2, spellDraft.support_turns)
+                          : kind === 'guard' ? 1
                             : 0,
-                      support_turns: kind === 'buff' ? Math.max(2, spellDraft.support_turns) : kind === 'guard' ? 1 : 0,
                     })
                   }}
                 >
@@ -1053,6 +1103,7 @@ export function GmItemsAndSpells() {
                   <option value="guard">Магическая защита</option>
                   <option value="cleanse">Очищение дебаффов</option>
                   <option value="buff">Усиление урона</option>
+                  <option value="taunt">Провокация союзника</option>
                 </select>
               </label>
               <label>
@@ -1150,19 +1201,33 @@ export function GmItemsAndSpells() {
   
             )}
 
-            {['guard', 'buff'].includes(spellDraft.spell_kind) && (
+            {['guard', 'buff', 'taunt'].includes(spellDraft.spell_kind) && (
               <div className="gm-editor-box">
                 <div>
-                  <strong>{spellDraft.spell_kind === 'guard' ? 'Магический щит' : 'Боевое усиление'}</strong>
+                  <strong>
+                    {spellDraft.spell_kind === 'guard'
+                      ? 'Магический щит'
+                      : spellDraft.spell_kind === 'taunt'
+                        ? 'Провокация'
+                        : 'Боевое усиление'}
+                  </strong>
                   <small>
                     {spellDraft.spell_kind === 'guard'
                       ? 'Процент снижения следующего входящего удара'
-                      : 'Бонус к прямому урону и число усиленных атак'}
+                      : spellDraft.spell_kind === 'taunt'
+                        ? 'Шанс, с которым враг выберет отмеченного союзника целью'
+                        : 'Бонус к прямому урону и число усиленных атак'}
                   </small>
                 </div>
                 <div className="gm-form-grid two">
                   <label>
-                    <span>{spellDraft.spell_kind === 'guard' ? 'Снижение урона %' : 'Бонус урона %'}</span>
+                    <span>
+                      {spellDraft.spell_kind === 'guard'
+                        ? 'Снижение урона %'
+                        : spellDraft.spell_kind === 'taunt'
+                          ? 'Шанс стать целью %'
+                          : 'Бонус урона %'}
+                    </span>
                     <input
                       type="number"
                       min={spellDraft.spell_kind === 'guard' ? 55 : 1}
@@ -1177,20 +1242,29 @@ export function GmItemsAndSpells() {
                       })}
                     />
                   </label>
-                  <label>
-                    <span>Атак</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      disabled={spellDraft.spell_kind === 'guard'}
-                      value={spellDraft.spell_kind === 'guard' ? 1 : spellDraft.support_turns}
-                      onChange={(e) => setSpellDraft({
-                        ...spellDraft,
-                        support_turns: Math.max(1, Math.min(10, Number(e.target.value))),
-                      })}
-                    />
-                  </label>
+                  {spellDraft.spell_kind === 'buff' ? (
+                    <label>
+                      <span>Атак</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={spellDraft.support_turns}
+                        onChange={(e) => setSpellDraft({
+                          ...spellDraft,
+                          support_turns: Math.max(1, Math.min(10, Number(e.target.value))),
+                        })}
+                      />
+                    </label>
+                  ) : (
+                    <label>
+                      <span>Длительность</span>
+                      <input
+                        disabled
+                        value={spellDraft.spell_kind === 'taunt' ? 'до конца боя / нокаута цели' : '1 входящий удар'}
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
             )}
@@ -1205,7 +1279,9 @@ export function GmItemsAndSpells() {
                     ? 'Очищение снимает все текущие негативные эффекты. Если персонаж уже оглушён, он пропускает ход и не успевает применить очищение.'
                     : spellDraft.spell_kind === 'buff'
                       ? 'Усиление повышает прямой физический и магический урон на заданное число следующих атак.'
-                      : 'Базовая магическая атака остаётся стихией расы. Это заклинание использует собственную стихию и расходует ману.'}
+                      : spellDraft.spell_kind === 'taunt'
+                        ? 'Провокация работает только в групповом бою: выбранный живой союзник становится целью врага с указанным шансом до своего нокаута или конца боя.'
+                        : 'Базовая магическая атака остаётся стихией расы. Это заклинание использует собственную стихию и расходует ману.'}
             </p>
 
             <div className="gm-form-actions">
