@@ -3082,3 +3082,59 @@ textarea {
     gap: 3px;
   }
 }
+
+
+/* Multi-room dungeon progression */
+.dungeon-progress-block {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #303641;
+  border-radius: 14px;
+  background: #10141a;
+  padding: 13px 14px;
+}
+
+.dungeon-progress-head,
+.dungeon-reward-preview {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dungeon-progress-head span,
+.dungeon-reward-preview span {
+  color: #949da8;
+  font-size: 11px;
+}
+
+.dungeon-progress-head strong,
+.dungeon-reward-preview strong {
+  color: #ddd3c2;
+  font-size: 13px;
+}
+
+.dungeon-progress-meter {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid #2a3038;
+  border-radius: 999px;
+  background: #0b0e12;
+}
+
+.dungeon-progress-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #70593b, #c2a06c);
+  transition: width .2s ease;
+}
+
+@media (max-width: 620px) {
+  .dungeon-progress-head,
+  .dungeon-reward-preview {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
