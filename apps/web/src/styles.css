@@ -753,3 +753,287 @@ textarea {
     padding: 5px 1px;
   }
 }
+
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, .75fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 28px;
+}
+
+.setup-grid .character-create {
+  max-width: none;
+  margin: 0;
+}
+
+.setup-form {
+  margin-top: 18px;
+}
+
+.gm-claim-card {
+  position: sticky;
+  top: 18px;
+}
+
+.gm-claim-card p {
+  line-height: 1.6;
+}
+
+.gm-code-field {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.gm-code-field > span {
+  color: #c2c7ce;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.gm-claim-button {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.gm-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.gm-subnav {
+  margin-top: 2px;
+}
+
+.gm-notice {
+  margin: 0;
+  border: 1px solid #4a4030;
+  border-radius: 13px;
+  padding: 11px 13px;
+  background: #18150f;
+  color: #dcc49b;
+  font-size: 13px;
+}
+
+.gm-console {
+  display: grid;
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.7fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.gm-player-list {
+  position: sticky;
+  top: 18px;
+}
+
+.gm-player-list h2 {
+  margin-bottom: 15px;
+}
+
+.gm-player-buttons {
+  display: grid;
+  gap: 8px;
+  max-height: 68vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.gm-player-buttons button {
+  width: 100%;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  border: 1px solid #2c323d;
+  border-radius: 13px;
+  padding: 11px 12px;
+  background: #10141a;
+  color: #dce0e6;
+  cursor: pointer;
+}
+
+.gm-player-buttons button.active {
+  border-color: #776247;
+  background: #211d17;
+}
+
+.gm-player-buttons strong {
+  font-size: 14px;
+}
+
+.gm-player-buttons span {
+  color: #aeb4bd;
+  font-size: 12px;
+}
+
+.gm-player-buttons small {
+  color: #7f8792;
+  font-size: 10px;
+}
+
+.gm-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.gm-character-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.gm-character-card h2 {
+  font-size: 28px;
+}
+
+.gm-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.gm-stat-strip > span {
+  min-width: 78px;
+  border: 1px solid #303641;
+  border-radius: 12px;
+  padding: 10px;
+  background: #10141a;
+  display: grid;
+  gap: 5px;
+}
+
+.gm-stat-strip small {
+  color: #858e99;
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+
+.gm-stat-strip strong {
+  font-size: 16px;
+}
+
+.gm-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.gm-loot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px auto;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.gm-loot-row select {
+  min-width: 0;
+  border: 1px solid #303641;
+  border-radius: 12px;
+  background: #0f1217;
+  color: #f2f4f7;
+  padding: 12px 14px;
+}
+
+.gm-loot-row input {
+  min-width: 0;
+}
+
+.danger-panel {
+  border-color: #432d2d;
+}
+
+.danger-button {
+  margin-top: 12px;
+  border-color: #633d3d;
+  color: #e1a0a0;
+}
+
+.audit-list {
+  display: grid;
+  gap: 8px;
+}
+
+.audit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #292f38;
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: #10141a;
+}
+
+.audit-row > div {
+  display: grid;
+  gap: 4px;
+}
+
+.audit-row strong {
+  font-size: 13px;
+}
+
+.audit-row span,
+.audit-row time {
+  color: #89919c;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-claim-card,
+  .gm-player-list {
+    position: static;
+  }
+
+  .gm-console {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-player-buttons {
+    max-height: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gm-character-card {
+    flex-direction: column;
+  }
+
+  .gm-stat-strip {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .gm-player-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gm-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gm-loot-row {
+    grid-template-columns: 1fr 82px;
+  }
+
+  .gm-loot-row .primary-button {
+    grid-column: 1 / -1;
+  }
+
+  .audit-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
