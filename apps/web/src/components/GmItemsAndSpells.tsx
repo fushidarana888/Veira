@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { GmCraftingEditor } from './GmCraftingEditor'
 import { GmLootEditor } from './GmLootEditor'
 import type {
   CombatStatusEffectType,
@@ -102,6 +103,10 @@ type ItemDraft = {
   damage_resistances: Partial<Record<DamageType, number>>
   scroll_spell_id: string | null
   scroll_mode: 'learn' | 'cast' | null
+  unique_property_name: string
+  unique_property_description: string
+  unique_effect_type: 'lifesteal' | 'mana_on_hit' | 'damage_vs_wounded' | 'guard_boost' | null
+  unique_effect_value: number
 }
 
 type SpellDraft = {
@@ -144,6 +149,10 @@ function emptyItem(): ItemDraft {
     damage_resistances: {},
     scroll_spell_id: null,
     scroll_mode: null,
+    unique_property_name: '',
+    unique_property_description: '',
+    unique_effect_type: null,
+    unique_effect_value: 0,
   }
 }
 
@@ -183,7 +192,7 @@ function healingAmount(item: ItemDefinition) {
 }
 
 export function GmItemsAndSpells() {
-  const [section, setSection] = useState<'items' | 'spells' | 'loot'>('items')
+  const [section, setSection] = useState<'items' | 'spells' | 'loot' | 'crafting'>('items')
   const [items, setItems] = useState<ItemDefinition[]>([])
   const [spells, setSpells] = useState<SpellDefinition[]>([])
   const [itemDraft, setItemDraft] = useState<ItemDraft>(emptyItem)
@@ -243,6 +252,10 @@ export function GmItemsAndSpells() {
       damage_resistances: item.damage_resistances ?? {},
       scroll_spell_id: item.scroll_spell_id,
       scroll_mode: item.scroll_mode,
+      unique_property_name: item.unique_property_name ?? '',
+      unique_property_description: item.unique_property_description ?? '',
+      unique_effect_type: item.unique_effect_type,
+      unique_effect_value: item.unique_effect_value ?? 0,
     })
     setMessage('')
   }
@@ -309,6 +322,10 @@ export function GmItemsAndSpells() {
       p_damage_resistances: itemDraft.damage_resistances,
       p_scroll_spell_id: itemDraft.scroll_spell_id,
       p_scroll_mode: itemDraft.scroll_mode,
+      p_unique_property_name: itemDraft.unique_property_name || null,
+      p_unique_property_description: itemDraft.unique_property_description,
+      p_unique_effect_type: itemDraft.unique_effect_type,
+      p_unique_effect_value: itemDraft.unique_effect_value,
     })
 
     if (error) {
@@ -427,6 +444,13 @@ export function GmItemsAndSpells() {
               onClick={() => setSection('spells')}
             >
               Заклинания · {spells.length}
+            </button>
+            <button
+              type="button"
+              className={section === 'crafting' ? 'active' : ''}
+              onClick={() => setSection('crafting')}
+            >
+              Ремесло
             </button>
             <button
               type="button"
@@ -594,6 +618,75 @@ export function GmItemsAndSpells() {
                       <option value="">Выбрать</option>
                       {spells.map((spell) => <option key={spell.id} value={spell.id}>{spell.name}</option>)}
                     </select>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {itemDraft.equip_group && (
+              <div className="gm-editor-box">
+                <div>
+                  <strong>Уникальное свойство</strong>
+                  <small>Фиксированный эффект предмета, не случайный аффикс</small>
+                </div>
+
+                <div className="gm-form-grid two">
+                  <label>
+                    <span>Тип эффекта</span>
+                    <select
+                      value={itemDraft.unique_effect_type ?? ''}
+                      onChange={(e) => setItemDraft({
+                        ...itemDraft,
+                        unique_effect_type: e.target.value
+                          ? e.target.value as ItemDraft['unique_effect_type']
+                          : null,
+                        unique_effect_value: e.target.value ? itemDraft.unique_effect_value : 0,
+                        unique_property_name: e.target.value ? itemDraft.unique_property_name : '',
+                        unique_property_description: e.target.value ? itemDraft.unique_property_description : '',
+                      })}
+                    >
+                      <option value="">Нет</option>
+                      <option value="lifesteal">Вампиризм · % от прямого урона</option>
+                      <option value="mana_on_hit">Мана при попадании · фикс.</option>
+                      <option value="damage_vs_wounded">Добивание · % урона при HP ≤30%</option>
+                      <option value="guard_boost">Усиление защиты · процентные пункты</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Значение</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      disabled={!itemDraft.unique_effect_type}
+                      value={itemDraft.unique_effect_value}
+                      onChange={(e) => setItemDraft({
+                        ...itemDraft,
+                        unique_effect_value: Math.max(0, Math.min(100, Number(e.target.value))),
+                      })}
+                    />
+                  </label>
+                </div>
+
+                <div className="gm-form-grid two">
+                  <label>
+                    <span>Название свойства</span>
+                    <input
+                      disabled={!itemDraft.unique_effect_type}
+                      value={itemDraft.unique_property_name}
+                      onChange={(e) => setItemDraft({ ...itemDraft, unique_property_name: e.target.value })}
+                      placeholder="Жажда жизни"
+                    />
+                  </label>
+                  <label>
+                    <span>Описание</span>
+                    <input
+                      disabled={!itemDraft.unique_effect_type}
+                      value={itemDraft.unique_property_description}
+                      onChange={(e) => setItemDraft({ ...itemDraft, unique_property_description: e.target.value })}
+                      placeholder="Восстанавливает часть нанесённого урона как HP"
+                    />
                   </label>
                 </div>
               </div>
@@ -769,6 +862,8 @@ export function GmItemsAndSpells() {
             </div>
           </article>
         </div>
+      ) : section === 'crafting' ? (
+        <GmCraftingEditor />
       ) : (
         <GmLootEditor />
       )}
