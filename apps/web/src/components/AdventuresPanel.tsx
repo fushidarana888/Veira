@@ -1646,8 +1646,10 @@ export function AdventuresPanel({
                 <button
                   className="autobattle-button"
                   type="button"
-                  disabled={busy || Boolean(bowProfile?.weapon_family)}
-                  title={bowProfile?.weapon_family ? 'Автобой для луков будет настроен отдельно.' : undefined}
+                  disabled={busy}
+                  title={bowProfile?.weapon_family
+                    ? 'Для лука автобой сам выбирает дистанцию и решает между быстрым выстрелом и полным натягом.'
+                    : undefined}
                   onClick={() => void runCombatAutobattle()}
                 >
                   {busy ? 'Автобой…' : 'Автобой'}
@@ -1656,10 +1658,12 @@ export function AdventuresPanel({
                 <button
                   className="style-autobattle-button compact"
                   type="button"
-                  disabled={busy || !normalStyleReady || Boolean(bowProfile?.weapon_family)}
-                  title={bowProfile?.weapon_family
-                    ? 'Автобой для луков будет настроен отдельно.'
-                    : normalStyleReady ? 'Повторяет твой изученный стиль в этом бою.' : 'Стиль ещё изучается на ручных боях.'}
+                  disabled={busy || !normalStyleReady}
+                  title={normalStyleReady
+                    ? bowProfile?.weapon_family
+                      ? 'Повторяет твой общий боевой стиль, а луковую дистанцию и Fast/Full выбирает тактически.'
+                      : 'Повторяет твой изученный стиль в этом бою.'
+                    : 'Стиль ещё изучается на ручных боях.'}
                   onClick={() => void runCombatStyleAutobattle()}
                 >
                   Играть как я
