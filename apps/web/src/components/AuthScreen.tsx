@@ -26,20 +26,51 @@ export function AuthScreen() {
     setBusy(true)
 
     if (mode === 'register') {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: { display_name: displayName.trim() },
+      const normalizedEmail = email.trim().toLowerCase()
+
+      const { data: registrationData, error: registrationError } = await supabase.functions.invoke(
+        'register-user',
+        {
+          body: {
+            email: normalizedEmail,
+            password,
+            displayName: displayName.trim(),
+          },
         },
+      )
+
+      if (registrationError) {
+        setMessage('Не удалось создать аккаунт. Попробуй ещё раз чуть позже.')
+        setBusy(false)
+        return
+      }
+
+      const registrationCode =
+        registrationData && typeof registrationData === 'object' && 'error' in registrationData
+          ? String((registrationData as { error?: unknown }).error ?? '')
+          : ''
+
+      if (registrationCode) {
+        if (registrationCode === 'EMAIL_ALREADY_REGISTERED') {
+          setMessage('Аккаунт с такой почтой уже существует.')
+        } else if (registrationCode === 'RATE_LIMITED') {
+          setMessage('Слишком много регистраций за короткое время. Попробуй позже.')
+        } else if (registrationCode === 'INVALID_PASSWORD') {
+          setMessage('Пароль должен содержать от 6 до 72 символов.')
+        } else {
+          setMessage('Не удалось создать аккаунт. Проверь данные и попробуй ещё раз.')
+        }
+        setBusy(false)
+        return
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
       })
 
-      if (error) {
-        setMessage(error.message)
-      } else if (!data.session) {
-        setMessage('Аккаунт создан. Если подтверждение почты включено, открой письмо от Veira.')
-      } else {
-        setMessage('Аккаунт создан.')
+      if (signInError) {
+        setMessage('Аккаунт создан. Войди с указанной почтой и паролем.')
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -60,7 +91,7 @@ export function AuthScreen() {
         <h1>Войди в Эйлар</h1>
         <p>
           Один аккаунт хранит твоих персонажей и весь игровой прогресс.
-          GM-аккаунты создаются отдельно и не получают игровых персонажей.
+          При регистрации письмо подтверждать не нужно — играть можно сразу.
         </p>
       </section>
 
@@ -121,6 +152,13 @@ export function AuthScreen() {
           <button className="primary-button" type="submit" disabled={busy}>
             {busy ? 'Подожди…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
           </button>
+
+          {mode === 'register' && (
+            <p className="auth-register-note">
+              Почта станет подтверждённой только после отдельной проверки из настроек аккаунта.
+              Это не мешает сразу создать персонажа и играть.
+            </p>
+          )}
         </form>
 
         {message && <p className="form-message" aria-live="polite">{message}</p>}
