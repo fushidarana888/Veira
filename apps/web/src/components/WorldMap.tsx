@@ -366,6 +366,41 @@ export function WorldMap({ characterId }: Props) {
         </article>
       )}
 
+      {activeSiteAction && (
+        <article className="panel expedition-status-card site-action-status-card">
+          <div>
+            <span className="eyebrow">
+              {activeSiteAction.action_type === 'explore_ruins' ? 'ИССЛЕДОВАНИЕ РУИН' : 'РАЗВЕДКА ПОДЗЕМЕЛЬЯ'}
+            </span>
+            <h3>
+              {activeSiteAction.action_type === 'explore_ruins'
+                ? 'Подробный осмотр найденных руин'
+                : 'Разведка входа и подходов'}
+            </h3>
+            <p className="muted">
+              Сектор #{activeSiteAction.sector_id}. Пока это действие идёт, нельзя начинать новую экспедицию или другое исследование.
+            </p>
+          </div>
+          <div className="expedition-timer">
+            <span>Осталось</span>
+            <strong>{formatRemaining(siteActionRemaining)}</strong>
+          </div>
+        </article>
+      )}
+
+      {activeDungeonRun && (
+        <article className="panel dungeon-active-card">
+          <div>
+            <span className="eyebrow">АКТИВНОЕ ПОДЗЕМЕЛЬЕ</span>
+            <h3>Персонаж находится внутри</h3>
+            <p className="muted">
+              Сектор #{activeDungeonRun.sector_id}. Управление прохождением находится в разделе «Приключения».
+            </p>
+          </div>
+          <span className="badge">у входа</span>
+        </article>
+      )}
+
       {waitingExpedition && pendingEvent && (
         <article className="panel expedition-event-card">
           <div>
@@ -374,6 +409,21 @@ export function WorldMap({ characterId }: Props) {
             <p>{pendingEvent.player_prompt || 'Экспедиция столкнулась с ситуацией, требующей решения GM.'}</p>
           </div>
           <span className="badge event-waiting-badge">Ожидает GM</span>
+        </article>
+      )}
+
+      {!activeSiteAction && recentSiteResult && (
+        <article className="panel expedition-result-card site-result-card">
+          <div>
+            <span className="eyebrow">
+              {recentSiteResult.action_type === 'explore_ruins' ? 'РУИНЫ ИССЛЕДОВАНЫ' : 'ВХОД РАЗВЕДАН'}
+            </span>
+            <h3>{recentSiteResult.result_title}</h3>
+            <p>{recentSiteResult.result_text}</p>
+          </div>
+          <span className="badge">
+            {recentSiteResult.action_type === 'explore_ruins' ? 'исследовано' : 'доступен вход'}
+          </span>
         </article>
       )}
 
@@ -491,6 +541,89 @@ export function WorldMap({ characterId }: Props) {
               {selectedSector.player_description ||
                 'Этот сектор уже нанесён на карту, но подробное описание пока не задано.'}
             </p>
+
+            {selectedSector.content_type === 'ruins' && (() => {
+              const progress = siteProgressBySector.get(selectedSector.id)
+              const alreadyExplored = progress?.status === 'explored' || progress?.status === 'cleared'
+              const thisActionActive =
+                activeSiteAction?.sector_id === selectedSector.id &&
+                activeSiteAction.action_type === 'explore_ruins'
+
+              return (
+                <div className="sector-site-actions">
+                  <div className="sector-site-state">
+                    <strong>Руины</strong>
+                    <span>
+                      {alreadyExplored
+                        ? 'Подробно исследованы'
+                        : thisActionActive
+                          ? 'Исследование уже идёт'
+                          : 'Обнаружены, но ещё не исследованы'}
+                    </span>
+                  </div>
+
+                  {!alreadyExplored && !thisActionActive && (
+                    <button
+                      className="primary-button"
+                      type="button"
+                      disabled={busy || anyBlockingActivity}
+                      onClick={() => void startSiteAction('explore_ruins')}
+                    >
+                      Исследовать руины · 4 часа
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
+
+            {selectedSector.content_type === 'dungeon' && (() => {
+              const progress = siteProgressBySector.get(selectedSector.id)
+              const scouted = progress?.status === 'scouted' || progress?.status === 'cleared'
+              const thisActionActive =
+                activeSiteAction?.sector_id === selectedSector.id &&
+                activeSiteAction.action_type === 'scout_dungeon'
+              const thisRunActive =
+                activeDungeonRun?.sector_id === selectedSector.id
+
+              return (
+                <div className="sector-site-actions">
+                  <div className="sector-site-state">
+                    <strong>Подземелье</strong>
+                    <span>
+                      {thisRunActive
+                        ? 'Прохождение уже начато'
+                        : scouted
+                          ? 'Вход разведан — можно начинать прохождение'
+                          : thisActionActive
+                            ? 'Разведка входа уже идёт'
+                            : 'Подземелье обнаружено, но вход ещё не разведан'}
+                    </span>
+                  </div>
+
+                  {!scouted && !thisActionActive && (
+                    <button
+                      className="primary-button"
+                      type="button"
+                      disabled={busy || anyBlockingActivity}
+                      onClick={() => void startSiteAction('scout_dungeon')}
+                    >
+                      Разведать вход · 2 часа
+                    </button>
+                  )}
+
+                  {scouted && !thisRunActive && (
+                    <button
+                      className="primary-button"
+                      type="button"
+                      disabled={busy || anyBlockingActivity}
+                      onClick={() => void enterDungeon()}
+                    >
+                      Войти в подземелье
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
           </>
         ) : (
           <>
@@ -499,8 +632,12 @@ export function WorldMap({ characterId }: Props) {
             <p className="muted">
               {selectedSector.is_explorable
                 ? 'Он граничит с уже известной территорией и доступен для исследования.'
-                : openExpedition
-                  ? 'Сначала нужно завершить текущую экспедицию или событие.'
+                : anyBlockingActivity
+                  ? activeDungeonRun
+                    ? 'Сначала нужно покинуть активное подземелье.'
+                    : activeSiteAction
+                      ? 'Сначала заверши текущее исследование найденного места.'
+                      : 'Сначала нужно завершить текущую экспедицию или событие.'
                   : 'Пока слишком далеко от изученной части карты. Сначала открой соседние сектора.'}
             </p>
 
@@ -508,7 +645,7 @@ export function WorldMap({ characterId }: Props) {
               <button
                 className="primary-button sector-explore-button"
                 type="button"
-                disabled={busy || Boolean(openExpedition)}
+                disabled={busy || anyBlockingActivity}
                 onClick={() => void startExploration()}
               >
                 {busy ? 'Отправляемся…' : 'Исследовать · 12 часов'}
