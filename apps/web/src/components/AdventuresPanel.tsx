@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { PartyPanel } from './PartyPanel'
 import type {
   AutobattleGuardMode,
   AutobattleResult,
@@ -920,6 +921,8 @@ export function AdventuresPanel({
           <span><strong>{dungeons.length}</strong><small>данжей найдено</small></span>
         </div>
       </article>
+
+      <PartyPanel characterId={characterId} />
 
       {message && <p className="gm-notice" aria-live="polite">{message}</p>}
 
