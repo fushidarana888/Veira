@@ -413,6 +413,18 @@ export type CombatEncounter = {
   enemy_on_hit_effect_chance: number
   enemy_on_hit_effect_turns: number
   enemy_on_hit_effect_potency: number
+  enemy_special_name: string
+  enemy_special_damage_multiplier: number
+  enemy_special_every_n: number
+  enemy_special_damage_type: DamageType | null
+  enemy_special_effect_type: CombatStatusEffectType | null
+  enemy_special_effect_chance: number
+  enemy_special_effect_turns: number
+  enemy_special_effect_potency: number
+  enemy_special_telegraph_text: string
+  enemy_special_attack_text: string
+  enemy_special_charging: boolean
+  enemy_special_started_round: number | null
   created_at: string
   ended_at: string | null
 }
@@ -477,6 +489,16 @@ export type EnemyTemplate = {
   on_hit_effect_chance: number
   on_hit_effect_turns: number
   on_hit_effect_potency: number
+  special_name: string
+  special_damage_multiplier: number
+  special_every_n: number
+  special_damage_type: DamageType | null
+  special_effect_type: CombatStatusEffectType | null
+  special_effect_chance: number
+  special_effect_turns: number
+  special_effect_potency: number
+  special_telegraph_text: string
+  special_attack_text: string
   created_at: string
   updated_at: string
 }
