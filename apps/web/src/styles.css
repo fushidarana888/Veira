@@ -6626,3 +6626,68 @@ textarea {
     width: 100%;
   }
 }
+
+
+.party-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.party-status-list.member {
+  margin-top: 1px;
+}
+
+.party-status-list.enemy {
+  margin-top: 2px;
+}
+
+.party-status-chip {
+  border: 1px solid #4a4144;
+  border-radius: 999px;
+  padding: 3px 6px;
+  background: rgba(92, 69, 76, .18);
+  color: #d1b5bb;
+  font-size: 8px;
+  font-weight: 720;
+}
+
+.party-status-chip.burn {
+  border-color: #684332;
+  color: #d7a27d;
+}
+
+.party-status-chip.bleed {
+  border-color: #65393f;
+  color: #d59ca5;
+}
+
+.party-status-chip.poison {
+  border-color: #48593b;
+  color: #aec18e;
+}
+
+.party-status-chip.stun {
+  border-color: #645633;
+  color: #d7c287;
+}
+
+.party-status-chip.chill {
+  border-color: #3c5663;
+  color: #9fc5d4;
+}
+
+.party-status-chip.weaken {
+  border-color: #4e465e;
+  color: #bcaed1;
+}
+
+.party-status-chip.vulnerable {
+  border-color: #654849;
+  color: #d7a7a7;
+}
+
+.stunned-skip-button {
+  border-color: #635632;
+  color: #d5c18c;
+}
