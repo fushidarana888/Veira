@@ -29,6 +29,7 @@ type CombatScroll = {
   quantity: number
   item_definitions: {
     id: string
+    slug: string
     name: string
     required_level: number
     category: 'consumable'
@@ -37,6 +38,7 @@ type CombatScroll = {
     scroll_spell_id: string | null
   } | {
     id: string
+    slug: string
     name: string
     required_level: number
     category: 'consumable'
@@ -94,6 +96,7 @@ function spellKindLabel(spell: CharacterSpell) {
   if (spell.spell_kind === 'cleanse') return 'Очищение'
   if (spell.spell_kind === 'buff') return 'Усиление'
   if (spell.spell_kind === 'taunt') return 'Провокация · только группа'
+  if (spell.spell_kind === 'sacrifice') return 'Последняя жертва · только группа'
   return spell.damage_type ? damageTypeLabels[spell.damage_type] : 'Магия'
 }
 
@@ -191,7 +194,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('character_items')
-        .select('id, quantity, item_definitions(id, name, required_level, category, effects, scroll_mode, scroll_spell_id)')
+        .select('id, quantity, item_definitions(id, slug, name, required_level, category, effects, scroll_mode, scroll_spell_id)')
         .eq('character_id', characterId),
       supabase.rpc('get_character_autobattle_settings', {
         p_character_id: characterId,
@@ -226,13 +229,15 @@ export function AdventuresPanel({
     setEncounters(nextEncounters)
     setSpells(
       ((spellResult.data as CharacterSpell[] | null) ?? [])
-        .filter((spell) => spell.spell_kind !== 'taunt'),
+        .filter((spell) => !['taunt', 'sacrifice'].includes(spell.spell_kind)),
     )
     const combatInventory = (scrollResult.data as CombatScroll[] | null) ?? []
     setCombatScrolls(
       combatInventory.filter((item) => {
         const definition = normalizeCombatScrollDefinition(item.item_definitions)
-        return definition?.scroll_mode === 'cast' && Boolean(definition.scroll_spell_id)
+        return definition?.scroll_mode === 'cast'
+          && Boolean(definition.scroll_spell_id)
+          && definition.slug !== 'combat_scroll_last_sacrifice'
       }),
     )
     setCombatConsumables(
@@ -479,6 +484,8 @@ export function AdventuresPanel({
         setMessage('Этот предмет нельзя применить как боевой свиток.')
       } else if (raw.includes('SPELL_NOT_AVAILABLE')) {
         setMessage('Заклинание этого свитка сейчас недоступно.')
+      } else if (raw.includes('PARTY_ONLY_SCROLL')) {
+        setMessage('Этот свиток можно использовать только в групповом подземелье.')
       } else {
         setMessage(raw)
       }
