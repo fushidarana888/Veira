@@ -4,6 +4,8 @@ import { PartyPanel } from './PartyPanel'
 import { PartyDungeonPanel } from './PartyDungeonPanel'
 import type {
   AutobattleGuardMode,
+  BowDistance,
+  BowProfile,
   AutobattleResult,
   AutobattleSettings,
   AutobattleSpellRule,
@@ -171,6 +173,7 @@ export function AdventuresPanel({
   const [autobattleSettings, setAutobattleSettings] = useState<AutobattleSettings | null>(null)
   const [autobattleSpellRules, setAutobattleSpellRules] = useState<AutobattleSpellRule[]>([])
   const [combatStyleProfiles, setCombatStyleProfiles] = useState<CombatStyleProfile[]>([])
+  const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
   const [autobattleEditorMode, setAutobattleEditorMode] = useState<'normal' | 'boss'>('normal')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -179,13 +182,13 @@ export function AdventuresPanel({
   async function loadAdventures() {
     setLoading(true)
 
-    const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult, autobattleSpellResult, combatStyleResult] = await Promise.all([
+    const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult, autobattleSpellResult, combatStyleResult, bowProfileResult] = await Promise.all([
       supabase.rpc('get_character_adventures_v2', {
         p_character_id: characterId,
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, created_at, ended_at')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, enemy_bloodshed_stacks, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
@@ -205,6 +208,9 @@ export function AdventuresPanel({
       supabase.rpc('get_character_combat_style', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_character_bow_profile', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
@@ -214,7 +220,8 @@ export function AdventuresPanel({
       scrollResult.error ??
       autobattleResult.error ??
       autobattleSpellResult.error ??
-      combatStyleResult.error
+      combatStyleResult.error ??
+      bowProfileResult.error
 
     if (error) {
       setMessage(error.message)
@@ -258,6 +265,7 @@ export function AdventuresPanel({
     setCombatStyleProfiles(
       (combatStyleResult.data as CombatStyleProfile[] | null) ?? [],
     )
+    setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
 
     const latestEncounter = nextEncounters[0] ?? null
     const activeRunId =
@@ -405,7 +413,7 @@ export function AdventuresPanel({
     setBusy(false)
   }
 
-  async function performCombatAction(action: 'physical' | 'magic' | 'guard') {
+  async function performCombatAction(action: 'physical' | 'bow_draw' | 'magic' | 'guard') {
     if (!activeCombat) return
 
     setBusy(true)
@@ -426,6 +434,21 @@ export function AdventuresPanel({
       Promise.resolve(onProgressChanged?.()),
       Promise.resolve(onInventoryChanged?.()),
     ])
+    await loadAdventures()
+    setBusy(false)
+  }
+
+  async function setBowDistance(distance: BowDistance) {
+    if (!activeCombat || !bowProfile?.weapon_family || activeCombat.player_bow_draw_pending) return
+
+    setBusy(true)
+    setMessage('')
+    const { error } = await supabase.rpc('set_solo_bow_distance', {
+      p_encounter_id: activeCombat.id,
+      p_distance: distance,
+    })
+
+    if (error) setMessage(error.message)
     await loadAdventures()
     setBusy(false)
   }
@@ -1592,11 +1615,39 @@ export function AdventuresPanel({
                 </div>
               )}
 
+              {bowProfile?.weapon_family && (
+                <div className="combat-guard-help">
+                  <strong>Дистанция лучника:</strong>{' '}
+                  {([
+                    ['close', 'Ближняя · +10% урон · +3% dodge'],
+                    ['medium', 'Средняя · обычный урон · +9% dodge'],
+                    ['far', 'Дальняя · −10% урон · +15% dodge'],
+                  ] as Array<[BowDistance, string]>).map(([distance, label]) => (
+                    <button
+                      className={activeCombat.player_bow_distance === distance ? 'primary-button' : 'ghost-button'}
+                      type="button"
+                      key={distance}
+                      disabled={busy || activeCombat.player_bow_draw_pending}
+                      onClick={() => void setBowDistance(distance)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  {activeCombat.player_bow_draw_pending && (
+                    <span> · Натяг подготовлен: дистанция зафиксирована.</span>
+                  )}
+                  {activeCombat.enemy_bloodshed_stacks > 0 && (
+                    <span> · Кровопролитие на враге: {activeCombat.enemy_bloodshed_stacks}</span>
+                  )}
+                </div>
+              )}
+
               <div className="combat-actions">
                 <button
                   className="autobattle-button"
                   type="button"
-                  disabled={busy}
+                  disabled={busy || Boolean(bowProfile?.weapon_family)}
+                  title={bowProfile?.weapon_family ? 'Автобой для луков будет настроен отдельно.' : undefined}
                   onClick={() => void runCombatAutobattle()}
                 >
                   {busy ? 'Автобой…' : 'Автобой'}
@@ -1605,26 +1656,47 @@ export function AdventuresPanel({
                 <button
                   className="style-autobattle-button compact"
                   type="button"
-                  disabled={busy || !normalStyleReady}
-                  title={normalStyleReady ? 'Повторяет твой изученный стиль в этом бою.' : 'Стиль ещё изучается на ручных боях.'}
+                  disabled={busy || !normalStyleReady || Boolean(bowProfile?.weapon_family)}
+                  title={bowProfile?.weapon_family
+                    ? 'Автобой для луков будет настроен отдельно.'
+                    : normalStyleReady ? 'Повторяет твой изученный стиль в этом бою.' : 'Стиль ещё изучается на ручных боях.'}
                   onClick={() => void runCombatStyleAutobattle()}
                 >
                   Играть как я
                 </button>
 
-                <button
-                  className="primary-button"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void performCombatAction('physical')}
-                >
-                  Физическая · {damageTypeLabels[activeCombat.player_physical_damage_type]}
-                </button>
+                {bowProfile?.weapon_family ? (
+                  activeCombat.player_bow_draw_pending ? (
+                    <button className="primary-button" type="button" disabled={busy} onClick={() => void performCombatAction('physical')}>
+                      Выпустить стрелу · полный натяг
+                    </button>
+                  ) : (
+                    <>
+                      {bowProfile.weapon_family === 'short_bow' && (
+                        <button className="primary-button" type="button" disabled={busy} onClick={() => void performCombatAction('physical')}>
+                          Быстрый выстрел
+                        </button>
+                      )}
+                      <button className="primary-button" type="button" disabled={busy} onClick={() => void performCombatAction('bow_draw')}>
+                        Полный натяг · пробитие {bowProfile.full_draw_armor_penetration_percent}%
+                      </button>
+                    </>
+                  )
+                ) : (
+                  <button
+                    className="primary-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void performCombatAction('physical')}
+                  >
+                    Физическая · {damageTypeLabels[activeCombat.player_physical_damage_type]}
+                  </button>
+                )}
 
                 <button
                   className="primary-button"
                   type="button"
-                  disabled={busy}
+                  disabled={busy || activeCombat.player_bow_draw_pending}
                   onClick={() => void performCombatAction('magic')}
                 >
                   Магическая · {damageTypeLabels[activeCombat.player_magic_damage_type]}
@@ -1632,7 +1704,7 @@ export function AdventuresPanel({
                 <button
                   className="ghost-button"
                   type="button"
-                  disabled={busy}
+                  disabled={busy || activeCombat.player_bow_draw_pending}
                   title="Снижает урон этого хода. Если удар реально заблокирован, следующая физическая атака получает +25–50% урона."
                   onClick={() => void performCombatAction('guard')}
                 >
@@ -1641,10 +1713,12 @@ export function AdventuresPanel({
                 <button
                   className="ghost-button danger-button"
                   type="button"
-                  disabled={busy || escapeLocked}
-                  title={escapeLocked
-                    ? 'Попытка побега в этом зале уже использована.'
-                    : '80% шанс успешно сбежать. При провале HP снизится до 1, бой продолжится, а повторная попытка в этом зале будет недоступна.'}
+                  disabled={busy || escapeLocked || activeCombat.player_bow_draw_pending}
+                  title={activeCombat.player_bow_draw_pending
+                    ? 'Сначала нужно выпустить подготовленную стрелу.'
+                    : escapeLocked
+                      ? 'Попытка побега в этом зале уже использована.'
+                      : '80% шанс успешно сбежать. При провале HP снизится до 1, бой продолжится, а повторная попытка в этом зале будет недоступна.'}
                   onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
                 >
                   {escapeLocked ? 'Побег недоступен' : 'Побег · 80%'}
@@ -1678,6 +1752,7 @@ export function AdventuresPanel({
                               key={spell.id}
                               disabled={
                                 busy
+                                || activeCombat.player_bow_draw_pending
                                 || activeCombat.player_mana_current < spell.mana_cost
                                 || (spell.spell_kind === 'heal' && activeCombat.player_hp_current >= activeCombat.player_hp_max)
                               }
@@ -1713,7 +1788,7 @@ export function AdventuresPanel({
                               className="spell-action-button scroll"
                               type="button"
                               key={scroll.id}
-                              disabled={busy}
+                              disabled={busy || activeCombat.player_bow_draw_pending}
                               onClick={() => void castScroll(scroll)}
                             >
                               <strong>{definition.name}</strong>
