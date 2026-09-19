@@ -37,6 +37,7 @@ type PartyRun = {
   reward_experience: number
   member_count: number
   escape_attempt_stage: number | null
+  sacrifice_scroll_used: boolean
   started_at: string
 }
 
@@ -69,6 +70,11 @@ type PartyCombatMember = {
   mana_current: number
   mana_max: number
   downed: boolean
+  dead: boolean
+  lost: boolean
+  lost_reason: string | null
+  incoming_damage_reduction_percent: number
+  incoming_damage_reduction_rounds: number
   guard_percent: number
   damage_bonus_percent: number
   damage_bonus_hits: number
@@ -132,6 +138,7 @@ type PartyDungeonState = {
   statuses: PartyStatus[]
   turns: PartyTurn[]
   loot: PartyLoot[]
+  sacrifice_scroll_count: number
 }
 
 type Props = {
@@ -147,6 +154,7 @@ const emptyState: PartyDungeonState = {
   statuses: [],
   turns: [],
   loot: [],
+  sacrifice_scroll_count: 0,
 }
 
 const damageLabels: Record<string, string> = {
@@ -198,15 +206,21 @@ function coopError(raw: string) {
   if (raw.includes('PARTY_DUNGEON_ALREADY_ACTIVE')) return 'У этой группы уже идёт совместный поход.'
   if (raw.includes('PARTY_LEADER_REQUIRED')) return 'Начинать зал и принимать решение о побеге может только лидер группы.'
   if (raw.includes('PARTY_ACTION_ALREADY_USED_THIS_ROUND')) return 'Ты уже сделал действие в этом раунде. Ждём остальных участников.'
-  if (raw.includes('PARTY_MEMBER_DOWNED')) return 'Персонаж выведен из строя до конца этого боя.'
+  if (raw.includes('PARTY_MEMBER_DOWNED')) return 'Персонаж мёртв и не может действовать, пока его не воскресят.'
+  if (raw.includes('PARTY_TARGET_LOST')) return 'Потерянного персонажа нельзя воскресить или выбрать целью поддержки до конца этого боя.'
+  if (raw.includes('SACRIFICE_ALREADY_USED_THIS_RUN')) return '«Последняя жертва» уже была использована в этом бою-походе.'
+  if (raw.includes('SACRIFICE_REQUIRES_OVER_200_HP')) return 'Для «Последней жертвы» нужно больше 200 текущего HP.'
+  if (raw.includes('SACRIFICE_SCROLL_NOT_AVAILABLE')) return 'Боевого свитка «Последняя жертва» больше нет в инвентаре.'
+  if (raw.includes('SACRIFICE_NO_LIVING_ALLIES')) return 'Нет живых союзников, которых этот свиток мог бы спасти.'
+  if (raw.includes('PARTY_NO_ACTIVE_MEMBERS')) return 'В отряде не осталось персонажей, способных продолжать бой.'
   if (raw.includes('PARTY_ESCAPE_ALREADY_ATTEMPTED_THIS_STAGE')) return 'Попытка побега на этом этапе уже использована.'
-  if (raw.includes('PARTY_COMBAT_ALREADY_ACTIVE')) return 'Бой в этом зале уже идёт.'
+  if (raw.includes('PARTY_COMBAT_ALREADY_ACTIVE')) return 'Битва в этом зале уже идёт.'
   if (raw.includes('PARTY_ROOM_COMBAT_ALREADY_EXISTS')) return 'Этот зал уже был разыгран.'
   if (raw.includes('PARTY_DUNGEON_ACTIVE')) return 'Сначала заверши текущий групповой поход.'
   if (raw.includes('NOT_ENOUGH_MANA')) return 'Недостаточно маны для этого заклинания.'
   if (raw.includes('SPELL_NOT_LEARNED')) return 'Это заклинание не изучено персонажем.'
   if (raw.includes('ALREADY_FULL_HEALTH')) return 'У выбранного союзника уже полное здоровье.'
-  if (raw.includes('PARTY_TARGET_DOWNED')) return 'На выведенного союзника сейчас можно применить только лечение.'
+  if (raw.includes('PARTY_TARGET_DOWNED')) return 'На мёртвого союзника сейчас можно применить только лечение-воскрешение.'
   if (raw.includes('PARTY_MEMBER_STUNNED')) return 'Персонаж оглушён. В этом раунде действие будет пропущено.'
   if (raw.includes('PARTY_MEMBER_NOT_STUNNED')) return 'Оглушение уже прошло.'
   if (raw.includes('PARTY_SPELL_NOT_SUPPORTED')) return 'Это заклинание пока не поддерживается в групповом бою.'
@@ -337,7 +351,7 @@ export function PartyDungeonPanel({
     }
 
     await Promise.all([loadState(true), refreshPlayer()])
-    setMessage('Бой начался. Каждый живой участник получает одно действие в раунде.')
+    setMessage('Битва началась. Каждый живой участник получает одно действие в раунде.')
     setBusy(false)
   }
 
@@ -368,7 +382,7 @@ export function PartyDungeonPanel({
       setMessage(
         result.run_status === 'completed'
           ? 'Хранитель повержен. Группа полностью зачистила подземелье.'
-          : 'Зал очищен. Лидер может открыть следующий.',
+          : 'Битва завершена. Зал очищен, лидер может открыть следующий.',
       )
     } else if (result?.status === 'defeat') {
       setMessage('Вся группа выведена из строя. Поход завершён поражением.')
@@ -413,7 +427,7 @@ export function PartyDungeonPanel({
       setMessage(
         result.run_status === 'completed'
           ? 'Заклинание добивает хранителя. Групповой поход завершён победой.'
-          : 'Заклинание завершает бой. Зал очищен.',
+          : 'Заклинание завершает битву. Зал очищен.',
       )
     } else if (result?.status === 'defeat') {
       setMessage('После хода противника вся группа выведена из строя.')
@@ -421,6 +435,42 @@ export function PartyDungeonPanel({
       setMessage('Заклинание применено. Все участники походили, поэтому противник ответил.')
     } else {
       setMessage('Заклинание применено. Ждём ходы остальных участников.')
+    }
+
+    setBusy(false)
+  }
+
+  async function useLastSacrificeScroll() {
+    if (!state.encounter || !state.run || !me) return
+
+    if (!window.confirm(
+      'Использовать «Последнюю жертву»? Ты станешь Потерянным до конца всего похода и не сможешь быть воскрешён. Все остальные ЖИВЫЕ союзники полностью восстановят HP и получат −30% входящего урона на 3 раунда. Свиток исчезнет.',
+    )) return
+
+    setBusy(true)
+    setMessage('Свиток требует последней жертвы…')
+
+    const { data, error } = await supabase.rpc('use_party_sacrifice_scroll', {
+      p_character_id: characterId,
+      p_encounter_id: state.encounter.id,
+    })
+
+    if (error) {
+      setMessage(coopError(error.message))
+      setBusy(false)
+      await loadState(true)
+      return
+    }
+
+    const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
+    await Promise.all([loadState(true), refreshPlayer()])
+
+    if (result?.status === 'defeat') {
+      setMessage('Последняя жертва была принесена, но оставшиеся участники погибли. Бой завершён поражением.')
+    } else if (result?.enemy_acted) {
+      setMessage('Последняя жертва принесена. Союзники исцелены и защищены; противник завершил раунд атакой.')
+    } else {
+      setMessage('Последняя жертва принесена. Ты Потерян до конца похода; живые союзники полностью исцелены и защищены на 3 раунда.')
     }
 
     setBusy(false)
@@ -509,6 +559,7 @@ export function PartyDungeonPanel({
     activeEncounter
     && me
     && !me.downed
+    && !me.lost
     && !me.acted
     && !meStunned
     && !busy,
@@ -517,6 +568,7 @@ export function PartyDungeonPanel({
     activeEncounter
     && me
     && !me.downed
+    && !me.lost
     && !me.acted
     && meStunned
     && !busy,
@@ -553,7 +605,7 @@ export function PartyDungeonPanel({
           <span className="eyebrow">КООПЕРАТИВ · 2–4 ИГРОКА</span>
           <h2>{activeRun ? activeRun.title : 'Групповой поход'}</h2>
           <p className="muted">
-            Каждый участник управляет своим персонажем. За раунд каждый живой герой делает одно действие, затем противник отвечает.
+            Бой — весь поход по подземелью. Битва — отдельный зал. За раунд каждый живой герой делает одно действие, затем противник отвечает.
           </p>
         </div>
         <span className="badge">
@@ -657,7 +709,7 @@ export function PartyDungeonPanel({
                 className={[
                   'party-combat-member',
                   member.character_id === characterId ? 'self' : '',
-                  member.downed ? 'downed' : '',
+                  member.lost ? 'lost' : member.dead ? 'dead' : '',
                 ].filter(Boolean).join(' ')}
                 key={member.character_id}
               >
@@ -670,9 +722,11 @@ export function PartyDungeonPanel({
                     </span>
                   </div>
                   <span className="badge">
-                    {member.downed
-                      ? 'выведен'
-                      : activeEncounter && member.acted
+                    {member.lost
+                      ? 'потерян'
+                      : member.dead
+                        ? 'мёртв'
+                        : activeEncounter && member.acted
                         ? 'походил'
                         : member.is_leader
                           ? 'лидер'
@@ -693,6 +747,16 @@ export function PartyDungeonPanel({
                   </div>
                 </div>
 
+                {member.lost && (
+                  <small className="party-buff-state">
+                    Потерян до конца текущего боя-похода · воскресить нельзя
+                  </small>
+                )}
+                {member.incoming_damage_reduction_rounds > 0 && member.incoming_damage_reduction_percent > 0 && !member.lost && (
+                  <small className="party-buff-state">
+                    Благословение жертвы · −{member.incoming_damage_reduction_percent}% входящего урона · {member.incoming_damage_reduction_rounds} раунд.
+                  </small>
+                )}
                 {member.guard_percent > 0 && (
                   <small className="party-guard-state">Защита −{member.guard_percent}% следующего удара</small>
                 )}
@@ -701,7 +765,7 @@ export function PartyDungeonPanel({
                     Боевой фокус +{member.damage_bonus_percent}% · атак {member.damage_bonus_hits}
                   </small>
                 )}
-                {member.taunt_chance > 0 && !member.downed && (
+                {member.taunt_chance > 0 && !member.downed && !member.lost && (
                   <small className="party-buff-state">
                     Провокация · {member.taunt_chance}% шанс стать целью
                   </small>
@@ -849,6 +913,49 @@ export function PartyDungeonPanel({
                 )}
               </div>
 
+              {state.sacrifice_scroll_count > 0 && (
+                <div className="party-spell-section party-sacrifice-section">
+                  <div className="party-subheading">
+                    <strong>Редкий боевой свиток</strong>
+                    <span>одноразовый · только 1 раз за весь бой</span>
+                  </div>
+                  <div className="party-spell-grid">
+                    <div className="party-spell-card sacrifice">
+                      <div>
+                        <strong>Последняя жертва</strong>
+                        <span>×{state.sacrifice_scroll_count} · требует &gt;200 текущего HP</span>
+                      </div>
+                      <p className="muted">
+                        Ты становишься Потерянным до конца похода. Все остальные живые союзники полностью лечатся и получают −30% входящего урона на 3 раунда. Мёртвых не воскрешает.
+                      </p>
+                      <button
+                        className="danger-button"
+                        type="button"
+                        disabled={
+                          !canAct
+                          || state.run?.sacrifice_scroll_used
+                          || (me?.hp_current ?? 0) <= 200
+                        }
+                        title={
+                          state.run?.sacrifice_scroll_used
+                            ? 'Этот эффект уже использован в текущем бою-походе.'
+                            : (me?.hp_current ?? 0) <= 200
+                              ? 'Нужно больше 200 текущего HP.'
+                              : 'Необратимо исключает твоего персонажа до конца текущего похода.'
+                        }
+                        onClick={() => void useLastSacrificeScroll()}
+                      >
+                        {state.run?.sacrifice_scroll_used
+                          ? 'Уже использовано в этом бою'
+                          : (me?.hp_current ?? 0) <= 200
+                            ? 'Нужно >200 HP'
+                            : 'Принести последнюю жертву'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {spells.length > 0 && (
                 <div className="party-spell-section">
                   <div className="party-subheading">
@@ -865,13 +972,16 @@ export function PartyDungeonPanel({
                       const targetInvalid = Boolean(
                         support
                         && target
-                        && target.downed
-                        && spell.spell_kind !== 'heal',
+                        && (
+                          target.lost
+                          || (target.downed && spell.spell_kind !== 'heal')
+                        ),
                       )
                       const fullHeal = Boolean(
                         spell.spell_kind === 'heal'
                         && target
                         && !target.downed
+                        && !target.lost
                         && target.hp_current >= target.hp_max,
                       )
 
@@ -908,11 +1018,11 @@ export function PartyDungeonPanel({
                                 <option
                                   key={member.character_id}
                                   value={member.character_id}
-                                  disabled={member.downed && spell.spell_kind !== 'heal'}
+                                  disabled={member.lost || (member.downed && spell.spell_kind !== 'heal')}
                                 >
                                   {member.name}
                                   {member.character_id === characterId ? ' · ты' : ''}
-                                  {member.downed ? ' · выведен' : ''}
+                                  {member.lost ? ' · потерян' : member.dead ? ' · мёртв' : ''}
                                 </option>
                               ))}
                             </select>
@@ -940,7 +1050,7 @@ export function PartyDungeonPanel({
               )}
 
               <small className="party-coop-note">
-                Лечение поднимает выведенного союзника, щит и Боевой фокус можно направлять на товарищей. «Провокация» даёт выбранному живому союзнику 90% шанс стать целью врага до его выведения из строя или конца боя. Ожог, кровотечение, яд, оглушение, охлаждение, ослабление и уязвимость работают в групповом бою; «Очищение» снимает негативные эффекты с выбранного участника.
+                Мёртвого союзника можно воскресить лечением; Потерянного — нельзя до конца всего похода. Щит и Боевой фокус можно направлять на товарищей. «Провокация» действует до смерти цели или конца текущей битвы. Ожог, кровотечение, яд, оглушение, охлаждение, ослабление и уязвимость работают в групповой битве; «Очищение» снимает негативные эффекты с выбранного участника.
               </small>
 
               <div className="party-combat-log">
