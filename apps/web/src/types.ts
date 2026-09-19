@@ -21,6 +21,7 @@ export type CharacterProgress = {
   gold: number
   unspent_stat_points: number
   updated_at: string
+  hp_regen_anchor_at?: string
 }
 
 export type RaceDefinition = {
@@ -64,6 +65,20 @@ export type ItemRarity =
   | 'legendary'
   | 'unique'
 
+export type DamageType =
+  | 'slashing'
+  | 'piercing'
+  | 'blunt'
+  | 'fire'
+  | 'water'
+  | 'earth'
+  | 'air'
+  | 'lightning'
+  | 'ice'
+
+export type PhysicalDamageType = Extract<DamageType, 'slashing' | 'piercing' | 'blunt'>
+export type ElementalDamageType = Extract<DamageType, 'fire' | 'water' | 'earth' | 'air' | 'lightning' | 'ice'>
+
 export type ItemEquipGroup =
   | 'weapon'
   | 'offhand'
@@ -103,6 +118,8 @@ export type ItemDefinition = {
   shop_tier: number
   shop_price: number
   shop_enabled: boolean
+  damage_type: DamageType | null
+  damage_resistances: Partial<Record<DamageType, number>>
 }
 
 export type CharacterItem = {
@@ -331,6 +348,7 @@ export type CombatEncounter = {
   round: number
   room_index: number
   is_boss: boolean
+  enemy_template_id: string | null
   enemy_name: string
   enemy_level: number
   enemy_hp_current: number
@@ -338,6 +356,9 @@ export type CombatEncounter = {
   enemy_attack: number
   enemy_defense: number
   enemy_initiative: number
+  enemy_damage_type: DamageType
+  enemy_resistances: Partial<Record<DamageType, number>>
+  player_physical_damage_type: PhysicalDamageType
   player_hp_current: number
   player_hp_max: number
   created_at: string
@@ -369,10 +390,34 @@ export type SettlementShopItem = {
   rarity: ItemRarity
   equip_group: ItemEquipGroup | null
   stat_modifiers: Record<string, number>
+  damage_type: DamageType | null
+  damage_resistances: Partial<Record<DamageType, number>>
   heal_amount: number
   price: number
   required_level: number
   shop_tier: number
   can_afford: boolean
   level_unlocked: boolean
+}
+
+
+export type EnemyTemplate = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  enabled: boolean
+  terrain_type: SectorTerrain | null
+  min_danger: number
+  max_danger: number
+  is_boss: boolean
+  weight: number
+  attack_damage_type: DamageType
+  damage_resistances: Partial<Record<DamageType, number>>
+  hp_multiplier: number
+  attack_multiplier: number
+  defense_multiplier: number
+  initiative_multiplier: number
+  created_at: string
+  updated_at: string
 }
