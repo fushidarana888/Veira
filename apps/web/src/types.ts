@@ -479,6 +479,31 @@ export type SettlementShopItem = {
 }
 
 
+export type EnemyAbility = {
+  id: string
+  enabled: boolean
+  name: string
+  kind: 'attack' | 'heal' | 'guard' | 'enrage' | 'cleanse'
+  priority: number
+  cooldown: number
+  max_uses: number
+  phase: 0 | 1 | 2
+  min_enemy_hp_percent: number
+  max_enemy_hp_percent: number
+  min_player_hp_percent: number
+  max_player_hp_percent: number
+  min_debuffs: number
+  value: number
+  damage_multiplier: number
+  damage_type: DamageType | null
+  effect_type: CombatStatusEffectType | null
+  effect_chance: number
+  effect_turns: number
+  effect_potency: number
+  telegraph_text: string
+  attack_text: string
+}
+
 export type EnemyTemplate = {
   id: string
   slug: string
@@ -517,6 +542,7 @@ export type EnemyTemplate = {
   phase2_attack_bonus_percent: number
   phase2_defense_bonus_percent: number
   phase2_special_every_n: number
+  abilities: EnemyAbility[]
   created_at: string
   updated_at: string
 }
