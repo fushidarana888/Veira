@@ -292,6 +292,9 @@ export type DungeonRun = {
   status: 'active' | 'completed' | 'abandoned'
   current_stage: string
   rooms_cleared: number
+  total_rooms: number
+  reward_gold: number
+  reward_experience: number
   started_at: string
   ended_at: string | null
   created_at: string
@@ -306,6 +309,10 @@ export type CharacterAdventureSite = {
   run_status: 'active' | 'completed' | 'abandoned' | null
   run_stage: string | null
   run_started_at: string | null
+  run_rooms_cleared: number | null
+  run_total_rooms: number | null
+  run_reward_gold: number | null
+  run_reward_experience: number | null
 }
 
 
@@ -316,6 +323,8 @@ export type CombatEncounter = {
   sector_id: number
   status: 'active' | 'victory' | 'defeat' | 'cancelled'
   round: number
+  room_index: number
+  is_boss: boolean
   enemy_name: string
   enemy_level: number
   enemy_hp_current: number
