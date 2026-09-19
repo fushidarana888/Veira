@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
+  AutobattleResult,
+  AutobattleSettings,
+  AutobattleStrategy,
   CharacterAdventureSite,
   CombatEncounter,
   CharacterSpell,
@@ -73,6 +76,7 @@ export function AdventuresPanel({
   const [spells, setSpells] = useState<CharacterSpell[]>([])
   const [combatScrolls, setCombatScrolls] = useState<CombatScroll[]>([])
   const [lootDrops, setLootDrops] = useState<DungeonLootDrop[]>([])
+  const [autobattleSettings, setAutobattleSettings] = useState<AutobattleSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -80,7 +84,7 @@ export function AdventuresPanel({
   async function loadAdventures() {
     setLoading(true)
 
-    const [siteResult, encounterResult, spellResult, scrollResult] = await Promise.all([
+    const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult] = await Promise.all([
       supabase.rpc('get_character_adventures', {
         p_character_id: characterId,
       }),
@@ -97,13 +101,17 @@ export function AdventuresPanel({
         .from('character_items')
         .select('id, quantity, item_definitions(id, name, required_level, scroll_mode, scroll_spell_id)')
         .eq('character_id', characterId),
+      supabase.rpc('get_character_autobattle_settings', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
       siteResult.error ??
       encounterResult.error ??
       spellResult.error ??
-      scrollResult.error
+      scrollResult.error ??
+      autobattleResult.error
 
     if (error) {
       setMessage(error.message)
@@ -122,6 +130,11 @@ export function AdventuresPanel({
         const definition = normalizeCombatScrollDefinition(item.item_definitions)
         return definition?.scroll_mode === 'cast' && Boolean(definition.scroll_spell_id)
       }))
+    )
+    setAutobattleSettings(
+      (Array.isArray(autobattleResult.data)
+        ? autobattleResult.data[0]
+        : autobattleResult.data) as AutobattleSettings | null,
     )
 
     const latestEncounter = nextEncounters[0] ?? null
@@ -357,6 +370,107 @@ export function AdventuresPanel({
     setBusy(false)
   }
 
+  async function saveAutobattleSettings() {
+    if (!autobattleSettings) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('save_character_autobattle_settings', {
+      p_character_id: characterId,
+      p_strategy: autobattleSettings.strategy,
+      p_stop_hp_percent: autobattleSettings.stop_hp_percent,
+      p_mana_reserve_percent: autobattleSettings.mana_reserve_percent,
+      p_use_learned_spells: autobattleSettings.use_learned_spells,
+      p_include_boss: autobattleSettings.include_boss,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    const saved = (Array.isArray(data) ? data[0] : data) as AutobattleSettings | null
+    if (saved) setAutobattleSettings(saved)
+    setMessage('Настройки автобоя сохранены.')
+    setBusy(false)
+  }
+
+  function autobattleMessage(result: AutobattleResult, wholeDungeon: boolean) {
+    if (result.status === 'completed') {
+      return 'Автозачистка завершена: подземелье полностью пройдено.'
+    }
+    if (result.status === 'victory') {
+      return wholeDungeon
+        ? 'Автобой завершил доступные бои.'
+        : 'Автобой выиграл текущий бой.'
+    }
+    if (result.status === 'defeat' || result.status === 'abandoned') {
+      return 'Автобой закончился поражением. Персонаж отступил из подземелья.'
+    }
+    if (result.reason === 'low_hp' || result.reason === 'low_hp_between_rooms') {
+      return 'Автобой остановился по порогу безопасности HP. Можно продолжить вручную или после лечения.'
+    }
+    if (result.reason === 'boss_wait') {
+      return 'Автозачистка дошла до хранителя и остановилась: бой с боссом отключён в настройках.'
+    }
+    if (result.reason === 'action_limit' || result.reason === 'dungeon_action_limit') {
+      return 'Автобой остановлен по защитному лимиту ходов. Управление возвращено игроку.'
+    }
+    return 'Автобой завершён.'
+  }
+
+  async function runCombatAutobattle() {
+    if (!activeCombat) return
+
+    setBusy(true)
+    setMessage('Автобой просчитывает текущий бой…')
+
+    const { data, error } = await supabase.rpc('run_combat_autobattle', {
+      p_encounter_id: activeCombat.id,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    const result = data as AutobattleResult
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      Promise.resolve(onInventoryChanged?.()),
+    ])
+    await loadAdventures()
+    setMessage(autobattleMessage(result, false))
+    setBusy(false)
+  }
+
+  async function runDungeonAutobattle(runId: string) {
+    setBusy(true)
+    setMessage('Автозачистка проходит подземелье…')
+
+    const { data, error } = await supabase.rpc('run_dungeon_autobattle', {
+      p_run_id: runId,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    const result = data as AutobattleResult
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      Promise.resolve(onInventoryChanged?.()),
+    ])
+    await loadAdventures()
+    setMessage(autobattleMessage(result, true))
+    setBusy(false)
+  }
+
   async function leaveDungeon(runId: string) {
     setBusy(true)
     setMessage('')
@@ -474,6 +588,107 @@ export function AdventuresPanel({
             </div>
           )}
 
+          {autobattleSettings && (
+            <details className="autobattle-panel">
+              <summary>
+                <span>
+                  <strong>Автобой</strong>
+                  <small>
+                    {autobattleSettings.strategy === 'aggressive'
+                      ? 'агрессивная тактика'
+                      : autobattleSettings.strategy === 'conservative'
+                        ? 'осторожная тактика'
+                        : 'сбалансированная тактика'}
+                  </small>
+                </span>
+                <b>настроить</b>
+              </summary>
+
+              <div className="autobattle-settings-grid">
+                <label>
+                  <span>Тактика</span>
+                  <select
+                    value={autobattleSettings.strategy}
+                    onChange={(event) => setAutobattleSettings({
+                      ...autobattleSettings,
+                      strategy: event.target.value as AutobattleStrategy,
+                    })}
+                  >
+                    <option value="conservative">Осторожная</option>
+                    <option value="balanced">Сбалансированная</option>
+                    <option value="aggressive">Агрессивная</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Стоп при HP ≤ %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={80}
+                    value={autobattleSettings.stop_hp_percent}
+                    onChange={(event) => setAutobattleSettings({
+                      ...autobattleSettings,
+                      stop_hp_percent: Math.max(0, Math.min(80, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+
+                <label>
+                  <span>Резерв маны %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={autobattleSettings.mana_reserve_percent}
+                    onChange={(event) => setAutobattleSettings({
+                      ...autobattleSettings,
+                      mana_reserve_percent: Math.max(0, Math.min(100, Number(event.target.value))),
+                    })}
+                  />
+                </label>
+              </div>
+
+              <div className="autobattle-checks">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={autobattleSettings.use_learned_spells}
+                    onChange={(event) => setAutobattleSettings({
+                      ...autobattleSettings,
+                      use_learned_spells: event.target.checked,
+                    })}
+                  />
+                  <span>Использовать изученные заклинания</span>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={autobattleSettings.include_boss}
+                    onChange={(event) => setAutobattleSettings({
+                      ...autobattleSettings,
+                      include_boss: event.target.checked,
+                    })}
+                  />
+                  <span>Автоматически сражаться с хранителем</span>
+                </label>
+              </div>
+
+              <div className="autobattle-note">
+                Автобой сам выбирает физическую атаку, врождённую магию или изученное заклинание с учётом сопротивлений врага и запаса маны. Боевые свитки автоматически не расходуются.
+              </div>
+
+              <button
+                className="ghost-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void saveAutobattleSettings()}
+              >
+                Сохранить настройки
+              </button>
+            </details>
+          )}
+
           {!activeCombat ? (
             <>
               <div className="dungeon-run-stage">
@@ -496,6 +711,15 @@ export function AdventuresPanel({
                   onClick={() => void startCombat(activeDungeon.active_run_id!)}
                 >
                   {nextRoomIsBoss ? 'Войти к хранителю' : `Войти в зал ${nextRoom}`}
+                </button>
+
+                <button
+                  className="autobattle-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void runDungeonAutobattle(activeDungeon.active_run_id!)}
+                >
+                  {busy ? 'Автобой…' : 'Автозачистка'}
                 </button>
 
                 <button
@@ -590,6 +814,15 @@ export function AdventuresPanel({
               </div>
 
               <div className="combat-actions">
+                <button
+                  className="autobattle-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void runCombatAutobattle()}
+                >
+                  {busy ? 'Автобой…' : 'Автобой'}
+                </button>
+
                 <button
                   className="primary-button"
                   type="button"
