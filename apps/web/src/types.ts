@@ -83,6 +83,15 @@ export type DamageType =
 export type PhysicalDamageType = Extract<DamageType, 'slashing' | 'piercing' | 'blunt'>
 export type ElementalDamageType = Extract<DamageType, 'fire' | 'water' | 'earth' | 'air' | 'lightning' | 'ice'>
 
+export type CombatStatusEffectType =
+  | 'burn'
+  | 'bleed'
+  | 'poison'
+  | 'chill'
+  | 'stun'
+  | 'weaken'
+  | 'vulnerable'
+
 export type ItemEquipGroup =
   | 'weapon'
   | 'offhand'
@@ -370,6 +379,10 @@ export type CombatEncounter = {
   player_hp_max: number
   player_mana_current: number
   player_mana_max: number
+  enemy_on_hit_effect_type: CombatStatusEffectType | null
+  enemy_on_hit_effect_chance: number
+  enemy_on_hit_effect_turns: number
+  enemy_on_hit_effect_potency: number
   created_at: string
   ended_at: string | null
 }
@@ -430,6 +443,10 @@ export type EnemyTemplate = {
   attack_multiplier: number
   defense_multiplier: number
   initiative_multiplier: number
+  on_hit_effect_type: CombatStatusEffectType | null
+  on_hit_effect_chance: number
+  on_hit_effect_turns: number
+  on_hit_effect_potency: number
   created_at: string
   updated_at: string
 }
@@ -447,6 +464,10 @@ export type SpellDefinition = {
   required_level: number
   power_multiplier: number
   flat_power: number
+  status_effect_type: CombatStatusEffectType | null
+  status_effect_chance: number
+  status_effect_turns: number
+  status_effect_potency: number
   created_at: string
   updated_at: string
 }
@@ -464,4 +485,17 @@ export type CharacterSpell = {
   flat_power: number
   learned_at: string
   source: string
+}
+
+
+export type CombatStatusEffect = {
+  id: string
+  encounter_id: string
+  target: 'player' | 'enemy'
+  effect_type: CombatStatusEffectType
+  potency: number
+  remaining_turns: number
+  source: string
+  created_at: string
+  updated_at: string
 }
