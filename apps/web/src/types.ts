@@ -106,6 +106,7 @@ export type DamageType =
 
 export type PhysicalDamageType = Extract<DamageType, 'slashing' | 'piercing' | 'blunt'>
 export type ElementalDamageType = Extract<DamageType, 'fire' | 'water' | 'earth' | 'air' | 'lightning' | 'ice'>
+export type WeaponScaling = 'strength' | 'agility' | 'hybrid'
 
 export type CombatStatusEffectType =
   | 'burn'
@@ -156,6 +157,8 @@ export type ItemDefinition = {
   shop_price: number
   shop_enabled: boolean
   damage_type: DamageType | null
+  weapon_base_damage: number
+  weapon_scaling: WeaponScaling | null
   damage_resistances: Partial<Record<DamageType, number>>
   damage_bonuses: Partial<Record<DamageType, number>>
   scroll_spell_id: string | null
@@ -470,6 +473,8 @@ export type SettlementShopItem = {
   equip_group: ItemEquipGroup | null
   stat_modifiers: Record<string, number>
   damage_type: DamageType | null
+  weapon_base_damage: number
+  weapon_scaling: WeaponScaling | null
   damage_resistances: Partial<Record<DamageType, number>>
   damage_bonuses: Partial<Record<DamageType, number>>
   scroll_mode: 'learn' | 'cast' | null
