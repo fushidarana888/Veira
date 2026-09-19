@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { SettlementShop } from './SettlementShop'
 import type {
   CharacterMapSector,
   DungeonRun,
@@ -12,6 +13,8 @@ import type {
 
 type Props = {
   characterId: string
+  onProgressChanged?: () => Promise<unknown> | void
+  onInventoryChanged?: () => Promise<unknown> | void
 }
 
 const TOTAL_SECTORS = 300
@@ -59,7 +62,11 @@ function formatRemaining(milliseconds: number) {
     .replace(/^(..)(..)(..)$/, '$1:$2:$3')
 }
 
-export function WorldMap({ characterId }: Props) {
+export function WorldMap({
+  characterId,
+  onProgressChanged,
+  onInventoryChanged,
+}: Props) {
   const [sectors, setSectors] = useState<CharacterMapSector[]>([])
   const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
   const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
@@ -654,6 +661,15 @@ export function WorldMap({ characterId }: Props) {
           </>
         )}
       </article>
+
+      {selectedSector?.is_discovered && selectedSector.content_type === 'settlement' && (
+        <SettlementShop
+          characterId={characterId}
+          sectorId={selectedSector.id}
+          onProgressChanged={onProgressChanged}
+          onInventoryChanged={onInventoryChanged}
+        />
+      )}
     </section>
   )
 }
