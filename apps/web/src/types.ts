@@ -467,6 +467,9 @@ export type CharacterAdventureSite = {
   run_reward_experience: number | null
   run_escape_attempt_stage: number | null
   is_event_boss: boolean
+  run_reward_exhausted: boolean
+  run_reward_attempt_number: number | null
+  run_reward_cycle_ends_at: string | null
 }
 
 
