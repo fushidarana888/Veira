@@ -446,7 +446,7 @@ export function PartyPanel({ characterId }: Props) {
                     <div className="party-candidate-row" key={candidate.character_id}>
                       <div>
                         <strong>{candidate.name}</strong>
-                        <span>@{candidate.display_name} · {candidate.race} · LVL {candidate.level}</span>
+                        <span>@{candidate.display_name} · {candidate.race} · УР. {candidate.level}</span>
                       </div>
                       <button
                         className="primary-button"
