@@ -424,7 +424,7 @@ export function AdventuresPanel({
       return
     }
 
-    await loadAdventures()
+    await loadAdventures(true)
     setAdventureTab('current')
     setMessage('Прохождение начато.')
     setBusy(false)
@@ -456,7 +456,7 @@ export function AdventuresPanel({
       return
     }
 
-    await loadAdventures()
+    await loadAdventures(true)
     setMessage('Следующий зал начат.')
     setBusy(false)
   }
@@ -478,11 +478,8 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.all([
-      Promise.resolve(onProgressChanged?.()),
-      Promise.resolve(onInventoryChanged?.()),
-    ])
-    await loadAdventures()
+    await Promise.resolve(onProgressChanged?.())
+    await loadAdventures(true)
     setBusy(false)
   }
 
@@ -497,7 +494,7 @@ export function AdventuresPanel({
     })
 
     if (error) setMessage(error.message)
-    await loadAdventures()
+    await loadAdventures(true)
     setBusy(false)
   }
 
@@ -529,11 +526,8 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.all([
-      Promise.resolve(onProgressChanged?.()),
-      Promise.resolve(onInventoryChanged?.()),
-    ])
-    await loadAdventures()
+    await Promise.resolve(onProgressChanged?.())
+    await loadAdventures(true)
     setBusy(false)
   }
 
@@ -570,8 +564,9 @@ export function AdventuresPanel({
     await Promise.all([
       Promise.resolve(onProgressChanged?.()),
       Promise.resolve(onInventoryChanged?.()),
+      loadAdventureStatic(),
+      loadAdventures(true),
     ])
-    await loadAdventures()
     setBusy(false)
   }
 
@@ -604,8 +599,9 @@ export function AdventuresPanel({
     await Promise.all([
       Promise.resolve(onProgressChanged?.()),
       Promise.resolve(onInventoryChanged?.()),
+      loadAdventureStatic(),
+      loadAdventures(true),
     ])
-    await loadAdventures()
     setBusy(false)
   }
 
@@ -818,7 +814,7 @@ export function AdventuresPanel({
       Promise.resolve(onProgressChanged?.()),
       Promise.resolve(onInventoryChanged?.()),
     ])
-    await loadAdventures()
+    await loadAdventures(true)
     setMessage(autobattleMessage(result, false))
     setBusy(false)
   }
@@ -842,7 +838,7 @@ export function AdventuresPanel({
       Promise.resolve(onProgressChanged?.()),
       Promise.resolve(onInventoryChanged?.()),
     ])
-    await loadAdventures()
+    await loadAdventures(true)
     setMessage(autobattleMessage(result, true))
     setBusy(false)
   }
@@ -872,7 +868,7 @@ export function AdventuresPanel({
       Promise.resolve(onProgressChanged?.()),
       Promise.resolve(onInventoryChanged?.()),
     ])
-    await loadAdventures()
+    await loadAdventures(true)
     setMessage(
       result.status === 'victory'
         ? 'Veira завершила бой в твоём стиле.'
@@ -904,7 +900,7 @@ export function AdventuresPanel({
       Promise.resolve(onProgressChanged?.()),
       Promise.resolve(onInventoryChanged?.()),
     ])
-    await loadAdventures()
+    await loadAdventures(true)
     setMessage(
       result.status === 'completed'
         ? 'Veira полностью зачистила подземелье, повторяя твой стиль.'
@@ -932,7 +928,7 @@ export function AdventuresPanel({
 
     await Promise.all([
       Promise.resolve(onProgressChanged?.()),
-      loadAdventures(),
+      loadAdventures(true),
     ])
 
     setMessage('Бой с Пепельным Кузнецом прекращён. Вернуться к нему можно до конца ротации.')
@@ -964,7 +960,7 @@ export function AdventuresPanel({
 
     await Promise.all([
       Promise.resolve(onProgressChanged?.()),
-      loadAdventures(),
+      loadAdventures(true),
     ])
 
     setMessage(
@@ -1061,7 +1057,7 @@ export function AdventuresPanel({
           <EventBossesPanel
             characterId={characterId}
             onChanged={async () => {
-              await loadAdventures()
+              await loadAdventures(true)
               setAdventureTab('current')
             }}
           />
