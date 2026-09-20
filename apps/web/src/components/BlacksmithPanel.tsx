@@ -48,11 +48,11 @@ const familyLabels: Partial<Record<WeaponFamily, string>> = {
 }
 
 const statLabels: Record<string, string> = {
-  strength: 'STR',
-  agility: 'AGI',
-  intellect: 'INT',
-  vitality: 'VIT',
-  luck: 'LUCK',
+  strength: 'СИЛ',
+  agility: 'ЛОВ',
+  intellect: 'ИНТ',
+  vitality: 'ЖИВ',
+  luck: 'УД',
 }
 
 const effectLabels: Record<string, string> = {
@@ -63,7 +63,7 @@ const effectLabels: Record<string, string> = {
   physical_damage_bonus: 'Физический урон',
   magic_damage_bonus: 'Магический урон',
   all_damage_bonus: 'Прямой урон',
-  low_hp_damage_reduction: 'Защита при низком HP',
+  low_hp_damage_reduction: 'Защита при низком ОЗ',
   boss_damage_bonus: 'Урон боссам',
 }
 
@@ -431,7 +431,7 @@ export function BlacksmithPanel({
       ) : tab === 'enhance' ? (
         <>
           <div className="settlement-shop-rule">
-            <strong>Каждый +1 = +3% к base damage оружия.</strong>
+            <strong>Каждый +1 = +3% к базовому урону оружия.</strong>
             <span>Максимум +20. Высокие уровни заточки становятся заметно дороже и требуют сильного кузнеца.</span>
           </div>
 
@@ -442,7 +442,7 @@ export function BlacksmithPanel({
                 <strong>Клеймо закалки III ×{temperingMarks}</strong>
                 <small>Поднимает любое выбранное оружие ниже +3 сразу до +3 без золота.</small>
               </div>
-              <span className="badge">weekly</span>
+              <span className="badge">недельный</span>
             </div>
           )}
 
