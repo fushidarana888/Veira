@@ -906,7 +906,7 @@ export function AdventuresPanel({
   }
 
   async function leaveDungeon(runId: string) {
-    if (!window.confirm('Попытаться сбежать из подземелья? Шанс успеха — 80%. При провале HP упадёт до 1, персонаж останется внутри, а повторить побег на этом этапе уже нельзя.')) return
+    if (!window.confirm('Попытаться сбежать из подземелья? Шанс успеха — 80%. При провале ОЗ упадёт до 1, персонаж останется внутри, а повторить побег на этом этапе уже нельзя.')) return
 
     setBusy(true)
     setMessage('Пытаемся выбраться из подземелья…')
@@ -1488,7 +1488,7 @@ export function AdventuresPanel({
                       : `Зал ${nextRoom} из ${totalRooms}`}
                   </strong>
                   <p className="muted">
-                    Здоровье между залами не восстанавливается автоматически. Побег не гарантирован: 80% успеха, а при провале HP падает до 1 и персонаж остаётся внутри.
+                    Здоровье между залами не восстанавливается автоматически. Побег не гарантирован: 80% успеха, а при провале ОЗ падает до 1 и персонаж остаётся внутри.
                   </p>
                 </div>
 
@@ -1527,7 +1527,7 @@ export function AdventuresPanel({
                     disabled={busy || escapeLocked}
                     title={escapeLocked
                       ? 'Попытка побега на этом этапе уже использована. Сначала пройди следующий зал.'
-                      : '80% шанс успешно покинуть подземелье. При провале HP снизится до 1, и повторить попытку на этом этапе нельзя.'}
+                      : '80% шанс успешно покинуть подземелье. При провале ОЗ снизится до 1, и повторить попытку на этом этапе нельзя.'}
                     onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
                   >
                     {escapeLocked ? 'Побег уже использован' : 'Попытаться уйти · 80%'}
@@ -1562,7 +1562,7 @@ export function AdventuresPanel({
                 <div className="combatant-card">
                   <div className="combatant-head">
                     <span>Персонаж</span>
-                    <strong>{activeCombat.player_hp_current} / {activeCombat.player_hp_max} HP</strong>
+                    <strong>{activeCombat.player_hp_current} / {activeCombat.player_hp_max} ОЗ</strong>
                   </div>
                   <div className="combat-hp-meter player"><span style={{ width: playerHpPercent + '%' }} /></div>
                   <div className="combatant-head mana">
@@ -1602,7 +1602,7 @@ export function AdventuresPanel({
                 <div className="combatant-card enemy">
                   <div className="combatant-head">
                     <span>{activeCombat.enemy_name}</span>
-                    <strong>{activeCombat.enemy_hp_current} / {activeCombat.enemy_hp_max} HP</strong>
+                    <strong>{activeCombat.enemy_hp_current} / {activeCombat.enemy_hp_max} ОЗ</strong>
                   </div>
                   <div className="combat-hp-meter enemy"><span style={{ width: enemyHpPercent + '%' }} /></div>
                   <div className="combat-resistance-summary">
@@ -1797,7 +1797,7 @@ export function AdventuresPanel({
                       ? 'Сначала нужно выпустить подготовленную стрелу.'
                       : escapeLocked
                         ? 'Попытка побега в этом зале уже использована.'
-                        : '80% шанс успешно сбежать. При провале HP снизится до 1, бой продолжится, а повторная попытка в этом зале будет недоступна.'}
+                        : '80% шанс успешно сбежать. При провале ОЗ снизится до 1, бой продолжится, а повторная попытка в этом зале будет недоступна.'}
                     onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
                   >
                     {escapeLocked ? 'Побег недоступен' : 'Побег · 80%'}
