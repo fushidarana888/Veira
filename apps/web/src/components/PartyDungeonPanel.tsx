@@ -181,6 +181,10 @@ const damageLabels: Record<string, string> = {
   air: 'воздух',
   lightning: 'молния',
   ice: 'лёд',
+  arcane: 'аркана',
+  star: 'звёзды',
+  gravity: 'гравитация',
+  moon: 'луна',
 }
 
 const terrainLabels: Record<string, string> = {
