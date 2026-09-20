@@ -108,7 +108,7 @@ export type PhysicalDamageType = Extract<DamageType, 'slashing' | 'piercing' | '
 export type ElementalDamageType = Extract<DamageType, 'fire' | 'water' | 'earth' | 'air' | 'lightning' | 'ice'>
 export type WeaponScaling = 'strength' | 'agility' | 'hybrid'
 export type BowWeaponFamily = 'short_bow' | 'long_bow'
-export type WeaponFamily = BowWeaponFamily | 'dagger' | 'rapier' | 'sword' | 'katana' | 'spear' | 'axe' | 'battleaxe' | 'mace' | 'hammer' | 'greatsword' | 'staff' | 'wand'
+export type WeaponFamily = BowWeaponFamily | 'dagger' | 'rapier' | 'sword' | 'blade' | 'katana' | 'spear' | 'axe' | 'battleaxe' | 'mace' | 'hammer' | 'club' | 'greatsword' | 'staff' | 'wand'
 export type BowDistance = 'close' | 'medium' | 'far'
 
 export type BowProfile = {
