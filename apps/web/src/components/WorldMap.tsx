@@ -1213,7 +1213,7 @@ export function WorldMap({
                 disabled={busy || anyBlockingActivity}
                 onClick={() => void startExploration()}
               >
-                {busy ? 'Отправляемся…' : 'Исследовать · 8 часов'}
+                {busy ? 'Отправляемся…' : `Исследовать · ${EXPLORATION_HOURS} часов`}
               </button>
             )}
           </>
