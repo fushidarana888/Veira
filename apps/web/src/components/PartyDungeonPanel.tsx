@@ -39,6 +39,8 @@ type PartyRun = {
   member_count: number
   escape_attempt_stage: number | null
   sacrifice_scroll_used: boolean
+  is_event_boss: boolean
+  event_boss_id: string | null
   started_at: string
 }
 
@@ -586,6 +588,31 @@ export function PartyDungeonPanel({
     setBusy(false)
   }
 
+  async function abandonEventBossParty() {
+    if (!window.confirm('Отступить всей группой от Пепельного Кузнеца? Текущая попытка завершится без награды.')) return
+
+    setBusy(true)
+    setMessage('Группа отступает от недельного босса…')
+
+    const { error } = await supabase.rpc('abandon_event_boss', {
+      p_character_id: characterId,
+      p_mode: 'party',
+    })
+
+    if (error) {
+      setMessage(coopError(error.message))
+      setBusy(false)
+      return
+    }
+
+    await Promise.all([
+      loadState(true),
+      Promise.resolve(onProgressChanged?.()),
+    ])
+    setMessage('Группа отступила. До конца ротации Пепельного Кузнеца можно вызвать снова.')
+    setBusy(false)
+  }
+
   async function attemptEscape() {
     if (!state.run) return
 
@@ -678,10 +705,14 @@ export function PartyDungeonPanel({
     <article className="panel party-dungeon-panel">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">КООПЕРАТИВ · 2–4 ИГРОКА</span>
+          <span className="eyebrow">
+            {activeRun?.is_event_boss ? 'НЕДЕЛЬНЫЙ БОСС · ПАТИ 2–4' : 'КООПЕРАТИВ · 2–4 ИГРОКА'}
+          </span>
           <h2>{activeRun ? activeRun.title : 'Групповой поход'}</h2>
           <p className="muted">
-            Бой — весь поход по подземелью. Битва — отдельный зал. За раунд каждый живой герой делает одно действие, затем противник отвечает.
+            {activeRun?.is_event_boss
+              ? 'Один общий бой. Каждый живой участник делает по одному действию за раунд, затем Пепельный Кузнец отвечает.'
+              : 'Бой — весь поход по подземелью. Битва — отдельный зал. За раунд каждый живой герой делает одно действие, затем противник отвечает.'}
           </p>
         </div>
         <span className="badge">
@@ -766,38 +797,45 @@ export function PartyDungeonPanel({
 
       {activeRun && (
         <>
-          <div className="party-dungeon-progress">
-            <div>
-              <span>Пройдено залов</span>
-              <strong>{activeRun.rooms_cleared} / {activeRun.total_rooms}</strong>
+          {activeRun.is_event_boss ? (
+            <div className="event-active-run-note">
+              <strong>Особая награда считается отдельно для каждого участника.</strong>
+              <span>Клеймо закалки III выдаётся персонажу только за его первую победу текущей недельной ротации. Повторные победы дают небольшое золото и опыт.</span>
             </div>
-            <div className="party-dungeon-progress-meter">
-              <span style={{
-                width: activeRun.total_rooms > 0
-                  ? Math.round(activeRun.rooms_cleared / activeRun.total_rooms * 100) + '%'
-                  : '0%',
-              }} />
+          ) : (
+            <div className="party-dungeon-progress">
+              <div>
+                <span>Пройдено залов</span>
+                <strong>{activeRun.rooms_cleared} / {activeRun.total_rooms}</strong>
+              </div>
+              <div className="party-dungeon-progress-meter">
+                <span style={{
+                  width: activeRun.total_rooms > 0
+                    ? Math.round(activeRun.rooms_cleared / activeRun.total_rooms * 100) + '%'
+                    : '0%',
+                }} />
+              </div>
+              <div className="party-dungeon-reward">
+                <span>
+                  {activeRun.danger_level === 0
+                    ? 'За полную зачистку · стартовая аварийная награда'
+                    : `За полную зачистку · рекомендованный уровень ≤ ${dungeonRecommendedLevel(activeRun.danger_level)}`}
+                </span>
+                <strong>
+                  {me
+                    ? scaledPartyDungeonReward(activeRun.reward_gold, activeRun.danger_level, me.level, 'gold')
+                    : activeRun.reward_gold} золота · {me
+                    ? scaledPartyDungeonReward(activeRun.reward_experience, activeRun.danger_level, me.level, 'xp')
+                    : activeRun.reward_experience} опыта тебе
+                </strong>
+                {activeRun.danger_level === 0 ? (
+                  <small>XP: LVL 1 — 15 · LVL 2 — 11 · LVL 3 — 6 · LVL 4 — 2 · LVL 5+ — 1. Золото всегда 40.</small>
+                ) : (
+                  <small>Если перерасти данж, награда постепенно снижается, но не ниже 5% XP и 35% золота.</small>
+                )}
+              </div>
             </div>
-            <div className="party-dungeon-reward">
-              <span>
-                {activeRun.danger_level === 0
-                  ? 'За полную зачистку · стартовая аварийная награда'
-                  : `За полную зачистку · рекомендованный уровень ≤ ${dungeonRecommendedLevel(activeRun.danger_level)}`}
-              </span>
-              <strong>
-                {me
-                  ? scaledPartyDungeonReward(activeRun.reward_gold, activeRun.danger_level, me.level, 'gold')
-                  : activeRun.reward_gold} золота · {me
-                  ? scaledPartyDungeonReward(activeRun.reward_experience, activeRun.danger_level, me.level, 'xp')
-                  : activeRun.reward_experience} опыта тебе
-              </strong>
-              {activeRun.danger_level === 0 ? (
-                <small>XP: LVL 1 — 15 · LVL 2 — 11 · LVL 3 — 6 · LVL 4 — 2 · LVL 5+ — 1. Золото всегда 40.</small>
-              ) : (
-                <small>Если перерасти данж, награда постепенно снижается, но не ниже 5% XP и 35% золота.</small>
-              )}
-            </div>
-          </div>
+          )}
 
           <div className="party-combat-members">
             {state.members.map((member) => (
@@ -927,7 +965,7 @@ export function PartyDungeonPanel({
                 <div className="party-enemy-head">
                   <div>
                     <span className="eyebrow">
-                      {activeEncounter.is_boss ? 'ХРАНИТЕЛЬ' : 'ПРОТИВНИК'} · РАУНД {activeEncounter.round}
+                      {activeRun.is_event_boss ? 'НЕДЕЛЬНЫЙ БОСС' : activeEncounter.is_boss ? 'ХРАНИТЕЛЬ' : 'ПРОТИВНИК'} · РАУНД {activeEncounter.round}
                     </span>
                     <h3>{activeEncounter.enemy_name}</h3>
                     <p className="muted">
@@ -1042,14 +1080,25 @@ export function PartyDungeonPanel({
                 )}
 
                 {isLeader && (
-                  <button
-                    className="ghost-button danger-button"
-                    type="button"
-                    disabled={busy || escapeLocked}
-                    onClick={() => void attemptEscape()}
-                  >
-                    {escapeLocked ? 'Побег недоступен' : 'Групповой побег · 80%'}
-                  </button>
+                  activeRun.is_event_boss ? (
+                    <button
+                      className="ghost-button danger-button"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void abandonEventBossParty()}
+                    >
+                      Отступить всей группой
+                    </button>
+                  ) : (
+                    <button
+                      className="ghost-button danger-button"
+                      type="button"
+                      disabled={busy || escapeLocked}
+                      onClick={() => void attemptEscape()}
+                    >
+                      {escapeLocked ? 'Побег недоступен' : 'Групповой побег · 80%'}
+                    </button>
+                  )
                 )}
               </div>
 
