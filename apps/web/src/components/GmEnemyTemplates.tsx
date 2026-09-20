@@ -432,7 +432,7 @@ export function GmEnemyTemplates() {
               />
             </label>
             <label>
-              <span>Slug</span>
+              <span>Служебный код</span>
               <input
                 value={draft.slug}
                 onChange={(event) => setDraft({ ...draft, slug: event.target.value })}
@@ -1126,7 +1126,7 @@ export function GmEnemyTemplates() {
             <div>
               <strong>Вторая фаза</strong>
               <span>
-                Срабатывает один раз при указанном проценте HP. Можно усилить атаку/защиту и ускорить особую способность.
+                Срабатывает один раз при указанном проценте ОЗ. Можно усилить атаку/защиту и ускорить особую способность.
               </span>
             </div>
 
