@@ -7924,3 +7924,96 @@ textarea {
     flex-direction: column;
   }
 }
+
+
+/* Organized inventory and adventure folders */
+.inventory-filter-tabs,
+.adventure-folder-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+
+.inventory-filter-tabs button,
+.adventure-folder-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.inventory-filter-tabs button:hover,
+.adventure-folder-tabs button:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.inventory-filter-tabs button.active,
+.adventure-folder-tabs button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.inventory-filter-tabs button b,
+.adventure-folder-tabs button b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.adventure-folder-content {
+  display: grid;
+  gap: 16px;
+}
+
+.adventure-empty-folder {
+  min-height: 180px;
+  display: grid;
+  align-content: center;
+}
+
+.resource-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.resource-item-actions > button {
+  flex: 1 1 180px;
+}
+
+@media (max-width: 700px) {
+  .inventory-filter-tabs,
+  .adventure-folder-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventory-filter-tabs button,
+  .adventure-folder-tabs button {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .resource-item-actions {
+    display: grid;
+  }
+}
