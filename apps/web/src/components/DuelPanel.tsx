@@ -127,7 +127,7 @@ const statusLabels: Record<CombatStatusEffectType, string> = {
 
 function duelError(raw: string) {
   if (raw.includes('CHALLENGER_BUSY')) return 'Сначала заверши активное подземелье, бой с противником или другую дуэль.'
-  if (raw.includes('OPPONENT_BUSY')) return 'Этот персонаж сейчас в подземелье, PvE-бою или другой дуэли.'
+  if (raw.includes('OPPONENT_BUSY')) return 'Этот персонаж сейчас в подземелье, бою с противником или другой дуэли.'
   if (raw.includes('PLAYER_BUSY')) return 'Один из участников занят тяжёлым боем или другой дуэлью. Обнови список и попробуй позже.'
   if (raw.includes('DUEL_ALREADY_PENDING')) return 'Между вами уже есть необработанный вызов.'
   if (raw.includes('TOO_MANY_PENDING_DUELS')) return 'Слишком много исходящих вызовов. Отмени часть из них.'
@@ -409,7 +409,7 @@ export function DuelPanel({ characterId }: Props) {
         </div>
 
         <p className="duel-safe-note">
-          PvP изолирован от приключений: бой начинается с полного дуэльного HP/MP, не меняет реальное здоровье
+          Дуэль изолирована от приключений: бой начинается с полных дуэльных ОЗ/ОМ, не меняет реальное здоровье
           и ману, не расходует предметы и не выдаёт золото, опыт или лут.
         </p>
 
@@ -515,7 +515,7 @@ export function DuelPanel({ characterId }: Props) {
                     onClick={() => void act('spell', spell.id)}
                   >
                     <span>{spell.name}</span>
-                    <small>{spellKindLabel(spell.spell_kind)} · {spell.mana_cost} MP</small>
+                    <small>{spellKindLabel(spell.spell_kind)} · {spell.mana_cost} ОМ</small>
                   </button>
                 ))}
               </div>
