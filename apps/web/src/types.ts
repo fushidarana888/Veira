@@ -677,6 +677,7 @@ export type EnemyTemplate = {
   min_danger: number
   max_danger: number
   is_boss: boolean
+  is_strong_enemy: boolean
   weight: number
   attack_damage_type: DamageType
   damage_resistances: Partial<Record<DamageType, number>>
