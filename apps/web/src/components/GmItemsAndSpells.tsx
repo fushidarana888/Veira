@@ -6,7 +6,6 @@ import { GmLootEditor } from './GmLootEditor'
 import type {
   CombatStatusEffectType,
   DamageType,
-  ElementalDamageType,
   MagicDamageType,
   ItemCategory,
   ItemDefinition,
