@@ -18,7 +18,6 @@ type Religion = {
   is_current: boolean
   faith_points: number
   religion_level: number
-  favor: number
   current_level_points: number
   next_level_points: number
   daily_earned: number
@@ -45,7 +44,6 @@ type ReligionOath = {
   target_count: number
   progress_count: number
   faith_reward: number
-  favor_reward: number
   status: 'available' | 'active' | 'completed' | 'failed' | 'abandoned'
   active_assignment_id: string | null
   cooldown_remaining_seconds: number
@@ -114,7 +112,7 @@ export function ReligionPanel({
     setLoading(true)
 
     const [catalogResult, relicResult] = await Promise.all([
-      supabase.rpc('get_religion_catalog', { p_character_id: characterId }),
+      supabase.rpc('get_religion_catalog_v2', { p_character_id: characterId }),
       supabase.rpc('get_character_religious_items', { p_character_id: characterId }),
     ])
 
@@ -145,7 +143,7 @@ export function ReligionPanel({
           })
         : Promise.resolve({ data: [], error: null }),
       current
-        ? supabase.rpc('get_character_religion_oaths', { p_character_id: characterId })
+        ? supabase.rpc('get_character_religion_oaths_v2', { p_character_id: characterId })
         : Promise.resolve({ data: [], error: null }),
     ])
 
@@ -266,7 +264,7 @@ export function ReligionPanel({
 
   async function abandonOath(oath: ReligionOath) {
     if (!oath.active_assignment_id) return
-    if (!window.confirm(`Нарушить «${oath.name}»? Вера и благосклонность уменьшатся.`)) return
+    if (!window.confirm(`Нарушить «${oath.name}»? Вера уменьшится.`)) return
 
     setBusy(true)
     setMessage('')
@@ -350,10 +348,6 @@ export function ReligionPanel({
             <div>
               <small>Вера</small>
               <strong>{currentReligion.faith_points}/2200</strong>
-            </div>
-            <div>
-              <small>Благосклонность</small>
-              <strong>{currentReligion.favor > 0 ? '+' : ''}{currentReligion.favor}</strong>
             </div>
             <div>
               <small>Обычная вера сегодня</small>
@@ -489,7 +483,7 @@ export function ReligionPanel({
           <p className="muted">
             Одновременно можно держать только одну клятву. Обычными действиями можно получить до 60 веры в сутки,
             а выполненными клятвами — ещё до 100 веры за скользящие 7 дней. При идеальном фарме 10 уровень занимает примерно месяц.
-            Нарушение или смена религии уменьшает веру и благосклонность.
+            Нарушение или смена религии уменьшает веру.
           </p>
 
           <div className="religion-oath-grid">
@@ -499,7 +493,7 @@ export function ReligionPanel({
                 <article className={`religion-oath ${oath.status === 'active' ? 'active' : ''}`} key={oath.oath_id}>
                   <div>
                     <strong>{oath.name}</strong>
-                    <span>+{oath.faith_reward} веры · +{oath.favor_reward} благосклонности</span>
+                    <span>+{oath.faith_reward} веры</span>
                   </div>
                   <p>{oath.description}</p>
 
@@ -543,7 +537,7 @@ export function ReligionPanel({
             </div>
           </div>
           <p className="muted">
-            Можно уничтожить неэкипированный предмет Rare или выше. Чем выше редкость, тем больше вера и благосклонность.
+            Можно уничтожить неэкипированный предмет Rare или выше. Чем выше редкость, тем весомее жертва и тем больше веры.
           </p>
           {sacrificeItems.length > 0 ? (
             <div className="sacrifice-controls">
