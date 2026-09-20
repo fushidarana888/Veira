@@ -652,7 +652,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     for (const entry of equipment) {
       const item = itemById.get(entry.character_item_id)
       const definition = item ? normalizeDefinition(item.item_definitions) : null
-      if (!definition) continue
+      if (!item || !definition) continue
 
       const religiousPenalty = religionItemStatModifiers(item)
       maxHpPercent += Number(definition.stat_modifiers?.max_hp_percent ?? 0)
