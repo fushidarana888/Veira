@@ -399,7 +399,7 @@ export function AdventuresPanel({
 
   const activeDungeon = useMemo(
     () => sites.find(
-      (site) => (site.content_type === 'dungeon' || site.content_type === 'event_boss')
+      (site) => (site.content_type === 'dungeon' || site.content_type === 'event_boss' || site.content_type === 'hunting')
         && site.run_status === 'active',
     ) ?? (activeDeathSpirit ? ({
       sector_id: activeDeathSpirit.sector_id,
@@ -1007,10 +1007,10 @@ export function AdventuresPanel({
   }
 
   async function abandonEventBossSolo() {
-    if (!window.confirm('Отступить от Пепельного Кузнеца? Бой завершится без награды, но событие можно будет начать заново.')) return
+    if (!window.confirm('Отступить от временной угрозы? Текущая попытка завершится без награды.')) return
 
     setBusy(true)
-    setMessage('Отступаем от недельного босса…')
+    setMessage('Отступаем от временной угрозы…')
 
     const { error } = await supabase.rpc('abandon_event_boss', {
       p_character_id: characterId,
@@ -1028,7 +1028,32 @@ export function AdventuresPanel({
       loadAdventures(true),
     ])
 
-    setMessage('Бой с Пепельным Кузнецом прекращён. Вернуться к нему можно до конца ротации.')
+    setMessage('Текущая попытка события прекращена. Если событие ещё активно, к нему можно вернуться позже.')
+    setBusy(false)
+  }
+
+  async function abandonHuntingCombat() {
+    if (!window.confirm('Отступить от сильного монстра и завершить эту охоту? Давление региона не сбросится.')) return
+
+    setBusy(true)
+    setMessage('Отступаем с охоты…')
+
+    const { error } = await supabase.rpc('abandon_hunting_combat', {
+      p_character_id: characterId,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      loadAdventures(true),
+    ])
+
+    setMessage('Охота прекращена. Давление региона сохранено.')
     setBusy(false)
   }
 
@@ -1089,6 +1114,7 @@ export function AdventuresPanel({
     : 0
 
   const activeEventBoss = Boolean(activeDungeon?.is_event_boss)
+  const activeHunting = activeDungeon?.content_type === 'hunting'
   const clearedRooms = activeDungeon?.run_rooms_cleared ?? 0
   const escapeLocked = Boolean(
     activeDungeon
@@ -1186,10 +1212,26 @@ export function AdventuresPanel({
         <article className="panel active-dungeon-panel">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">{activeDeathSpirit ? 'ДУХ ПОГИБШЕГО' : activeEventBoss ? 'НЕДЕЛЬНЫЙ БОСС' : 'АКТИВНОЕ ПРОХОЖДЕНИЕ'}</span>
+              <span className="eyebrow">
+                {activeDeathSpirit
+                  ? 'ДУХ ПОГИБШЕГО'
+                  : activeHunting
+                    ? 'ОХОТА'
+                    : activeEventBoss
+                      ? 'ВРЕМЕННАЯ УГРОЗА'
+                      : 'АКТИВНОЕ ПРОХОЖДЕНИЕ'}
+              </span>
               <h2>{activeDungeon.title}</h2>
             </div>
-            <span className="badge">{activeDeathSpirit ? 'бой за снаряжение' : activeEventBoss ? 'особая угроза' : `сектор #${activeDungeon.sector_id}`}</span>
+            <span className="badge">
+              {activeDeathSpirit
+                ? 'бой за снаряжение'
+                : activeHunting
+                  ? 'сильный монстр'
+                  : activeEventBoss
+                    ? 'событие'
+                    : `сектор #${activeDungeon.sector_id}`}
+            </span>
           </div>
 
           {activeDeathSpirit ? (
@@ -1197,10 +1239,15 @@ export function AdventuresPanel({
               <strong>Это дух погибшего персонажа.</strong>
               <span>Если это твой дух, он использует 60% силы исходного персонажа и победа вернёт потерянную вещь. Чужой дух использует 160% силы исходного персонажа, а его трофей перейдёт победителю.</span>
             </div>
+          ) : activeHunting ? (
+            <div className="event-active-run-note hunting-battle-note">
+              <strong>Охота потревожила сильного монстра.</strong>
+              <span>Это один бой без залов. Можно победить его или гарантированно отступить; давление охоты в регионе в любом случае не сбросится.</span>
+            </div>
           ) : activeEventBoss ? (
             <div className="event-active-run-note">
-              <strong>Пепельный Кузнец не связан с картой и не имеет залов.</strong>
-              <span>Победи босса в одном бою. Клеймо закалки III выдаётся только за первую победу этой недельной ротации.</span>
+              <strong>Это временная угроза без обычных залов.</strong>
+              <span>Победи противника в одном бою. Правила награды и повторного участия зависят от конкретного мирового события.</span>
             </div>
           ) : (
             <div className="dungeon-progress-block">
@@ -1713,21 +1760,29 @@ export function AdventuresPanel({
               <div className="combat-heading">
                 <div>
                   <span className="eyebrow">
-                    {activeEventBoss
-                      ? `ВРЕМЕННАЯ УГРОЗА · РАУНД ${activeCombat.round + 1}`
-                      : activeCombat.is_boss
-                        ? `ХРАНИТЕЛЬ · РАУНД ${activeCombat.round + 1}`
-                        : `ЗАЛ ${activeCombat.room_index} · РАУНД ${activeCombat.round + 1}`}
+                    {activeHunting
+                      ? `ОХОТА · РАУНД ${activeCombat.round + 1}`
+                      : activeEventBoss
+                        ? `ВРЕМЕННАЯ УГРОЗА · РАУНД ${activeCombat.round + 1}`
+                        : activeCombat.is_boss
+                          ? `ХРАНИТЕЛЬ · РАУНД ${activeCombat.round + 1}`
+                          : `ЗАЛ ${activeCombat.room_index} · РАУНД ${activeCombat.round + 1}`}
                   </span>
                   <h3>{activeCombat.enemy_name}</h3>
                   <span className="muted">
                     Уровень {activeCombat.enemy_level}
-                    {activeEventBoss ? ' · временная угроза' : activeCombat.is_boss ? ' · финальный противник' : ''}
+                    {activeHunting
+                      ? ' · сильный монстр охоты'
+                      : activeEventBoss
+                        ? ' · временная угроза'
+                        : activeCombat.is_boss
+                          ? ' · финальный противник'
+                          : ''}
                     {' · '}атака: {damageTypeLabels[activeCombat.enemy_damage_type]}
                   </span>
                 </div>
                 <span className="badge">
-                  {activeEventBoss ? 'событие' : `${activeCombat.room_index} / ${totalRooms}`}
+                  {activeHunting ? 'охота' : activeEventBoss ? 'событие' : `${activeCombat.room_index} / ${totalRooms}`}
                 </span>
               </div>
 
@@ -1969,7 +2024,17 @@ export function AdventuresPanel({
                 >
                   Защита
                 </button>
-                {activeEventBoss ? (
+                {activeHunting ? (
+                  <button
+                    className="ghost-button danger-button"
+                    type="button"
+                    disabled={busy || activeCombat.player_bow_draw_pending}
+                    title={activeCombat.player_bow_draw_pending ? 'Сначала нужно выпустить подготовленную стрелу.' : 'Отступление гарантированно завершит охоту, но давление региона останется.'}
+                    onClick={() => void abandonHuntingCombat()}
+                  >
+                    Отступить с охоты
+                  </button>
+                ) : activeEventBoss ? (
                   <button
                     className="ghost-button danger-button"
                     type="button"
