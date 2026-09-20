@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { SettlementShop } from './SettlementShop'
 import type {
@@ -20,6 +20,19 @@ type Props = {
 
 const TOTAL_SECTORS = 300
 const EXPLORATION_HOURS = 6
+const MAP_BASE_WIDTH = 1100
+const MAP_MIN_ZOOM = 0.35
+const MAP_MAX_ZOOM = 1.75
+const MAP_ZOOM_STEP = 0.15
+
+function initialMapZoom() {
+  if (typeof window === 'undefined') return 1
+  return window.matchMedia('(max-width: 760px)').matches ? 0.6 : 1
+}
+
+function clampMapZoom(value: number) {
+  return Math.min(MAP_MAX_ZOOM, Math.max(MAP_MIN_ZOOM, Math.round(value * 100) / 100))
+}
 
 const ORIGINAL_MAP_URL = supabase.storage
   .from('veira-assets')
@@ -176,6 +189,9 @@ export function WorldMap({
   const [now, setNow] = useState(() => Date.now())
   const [mapSrc, setMapSrc] = useState(ORIGINAL_MAP_URL)
   const [showGameplayOverlay, setShowGameplayOverlay] = useState(true)
+  const [mapZoom, setMapZoom] = useState(initialMapZoom)
+  const mapFrameRef = useRef<HTMLDivElement | null>(null)
+  const mapCenteredRef = useRef(false)
 
   async function loadMapData() {
     setLoading(true)
@@ -255,6 +271,8 @@ export function WorldMap({
   }
 
   useEffect(() => {
+    mapCenteredRef.current = false
+    setMapZoom(initialMapZoom())
     void loadMapData()
   }, [characterId])
 
@@ -272,6 +290,79 @@ export function WorldMap({
     () => sectors.filter((sector) => sector.is_discovered).length,
     [sectors],
   )
+
+  const discoveredMapCenter = useMemo(() => {
+    const discovered = sectors.filter((sector) => sector.is_discovered)
+    const visible = discovered.length > 0
+      ? discovered
+      : sectors.filter((sector) => sector.is_explorable)
+
+    if (visible.length === 0) {
+      return { x: 0.5, y: 0.5 }
+    }
+
+    const col = visible.reduce((sum, sector) => sum + sector.grid_col, 0) / visible.length
+    const row = visible.reduce((sum, sector) => sum + sector.grid_row, 0) / visible.length
+
+    return {
+      x: Math.min(1, Math.max(0, (col - 0.5) / 20)),
+      y: Math.min(1, Math.max(0, (row - 0.5) / 15)),
+    }
+  }, [sectors])
+
+  function centerMapOnDiscovered(behavior: ScrollBehavior = 'smooth') {
+    const frame = mapFrameRef.current
+    if (!frame) return
+
+    const left = discoveredMapCenter.x * frame.scrollWidth - frame.clientWidth / 2
+    const top = discoveredMapCenter.y * frame.scrollHeight - frame.clientHeight / 2
+
+    frame.scrollTo({
+      left: Math.max(0, left),
+      top: Math.max(0, top),
+      behavior,
+    })
+  }
+
+  function changeMapZoom(delta: number) {
+    const frame = mapFrameRef.current
+    const nextZoom = clampMapZoom(mapZoom + delta)
+    if (nextZoom === mapZoom) return
+
+    const centerX = frame && frame.scrollWidth > 0
+      ? (frame.scrollLeft + frame.clientWidth / 2) / frame.scrollWidth
+      : discoveredMapCenter.x
+    const centerY = frame && frame.scrollHeight > 0
+      ? (frame.scrollTop + frame.clientHeight / 2) / frame.scrollHeight
+      : discoveredMapCenter.y
+
+    setMapZoom(nextZoom)
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const nextFrame = mapFrameRef.current
+        if (!nextFrame) return
+
+        nextFrame.scrollTo({
+          left: Math.max(0, centerX * nextFrame.scrollWidth - nextFrame.clientWidth / 2),
+          top: Math.max(0, centerY * nextFrame.scrollHeight - nextFrame.clientHeight / 2),
+          behavior: 'auto',
+        })
+      })
+    })
+  }
+
+  useEffect(() => {
+    if (loading || sectors.length === 0 || mapCenteredRef.current) return
+
+    mapCenteredRef.current = true
+    const frame = mapFrameRef.current
+    if (!frame) return
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => centerMapOnDiscovered('auto'))
+    })
+  }, [loading, sectors, mapZoom, discoveredMapCenter.x, discoveredMapCenter.y])
 
   const activeExpedition =
     expeditions.find((entry) => entry.status === 'active') ?? null
@@ -639,21 +730,52 @@ export function WorldMap({
       )}
 
       <div className="world-map-tools">
-        <div className="world-map-mode" role="group" aria-label="Режим отображения карты">
-          <button
-            type="button"
-            className={showGameplayOverlay ? 'active' : ''}
-            onClick={() => setShowGameplayOverlay(true)}
-          >
-            Игровой слой
-          </button>
-          <button
-            type="button"
-            className={!showGameplayOverlay ? 'active' : ''}
-            onClick={() => setShowGameplayOverlay(false)}
-          >
-            Чистая карта
-          </button>
+        <div className="world-map-control-row">
+          <div className="world-map-mode" role="group" aria-label="Режим отображения карты">
+            <button
+              type="button"
+              className={showGameplayOverlay ? 'active' : ''}
+              onClick={() => setShowGameplayOverlay(true)}
+            >
+              Игровой слой
+            </button>
+            <button
+              type="button"
+              className={!showGameplayOverlay ? 'active' : ''}
+              onClick={() => setShowGameplayOverlay(false)}
+            >
+              Чистая карта
+            </button>
+          </div>
+
+          <div className="world-map-zoom" role="group" aria-label="Масштаб карты">
+            <button
+              type="button"
+              aria-label="Уменьшить карту"
+              title="Уменьшить"
+              disabled={mapZoom <= MAP_MIN_ZOOM}
+              onClick={() => changeMapZoom(-MAP_ZOOM_STEP)}
+            >
+              −
+            </button>
+            <span>{Math.round(mapZoom * 100)}%</span>
+            <button
+              type="button"
+              aria-label="Приблизить карту"
+              title="Приблизить"
+              disabled={mapZoom >= MAP_MAX_ZOOM}
+              onClick={() => changeMapZoom(MAP_ZOOM_STEP)}
+            >
+              +
+            </button>
+            <button
+              className="map-center-button"
+              type="button"
+              onClick={() => centerMapOnDiscovered()}
+            >
+              К открытым
+            </button>
+          </div>
         </div>
 
         {showGameplayOverlay && (
@@ -673,8 +795,15 @@ export function WorldMap({
         )}
       </div>
 
-      <div className="eilar-map-frame">
-        <div className="eilar-map-stage">
+      <div
+        ref={mapFrameRef}
+        className="eilar-map-frame"
+        aria-label="Область просмотра карты. Карту можно перемещать прокруткой и менять её масштаб кнопками."
+      >
+        <div
+          className="eilar-map-stage"
+          style={{ width: `max(100%, ${Math.round(MAP_BASE_WIDTH * mapZoom)}px)` }}
+        >
           <img
             src={mapSrc}
             alt="Карта Эйлара"
