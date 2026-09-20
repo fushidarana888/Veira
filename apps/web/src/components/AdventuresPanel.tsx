@@ -419,6 +419,67 @@ export function AdventuresPanel({
     ? sites.find((site) => site.active_run_id === latestCombat.dungeon_run_id) ?? null
     : null
 
+  function applyCombatSnapshot(next: CombatEncounter) {
+    setEncounters((current) => [
+      next,
+      ...current.filter((entry) => entry.id !== next.id),
+    ].slice(0, 6))
+  }
+
+  function consumeLocalCombatItem(itemId: string) {
+    const decrement = (current: CombatScroll[]) => current
+      .map((entry) => entry.id === itemId
+        ? { ...entry, quantity: Math.max(0, entry.quantity - 1) }
+        : entry)
+      .filter((entry) => entry.quantity > 0)
+
+    setCombatScrolls(decrement)
+    setCombatConsumables(decrement)
+  }
+
+  async function refreshCombatDetails(encounterId: string) {
+    const [turnResult, statusResult] = await Promise.all([
+      supabase
+        .from('combat_turns')
+        .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
+        .eq('encounter_id', encounterId)
+        .order('id', { ascending: false })
+        .limit(18),
+      supabase
+        .from('combat_status_effects')
+        .select('id, encounter_id, target, effect_type, potency, remaining_turns, source, created_at, updated_at')
+        .eq('encounter_id', encounterId)
+        .order('created_at', { ascending: true }),
+    ])
+
+    if (!turnResult.error) {
+      setTurns((turnResult.data as CombatTurn[] | null) ?? [])
+    }
+    if (!statusResult.error) {
+      setStatusEffects((statusResult.data as CombatStatusEffect[] | null) ?? [])
+    }
+  }
+
+  function finishInstantCombatUpdate(
+    next: CombatEncounter,
+    inventoryChanged = false,
+  ) {
+    applyCombatSnapshot(next)
+    setBusy(false)
+
+    void refreshCombatDetails(next.id)
+    void Promise.resolve(onProgressChanged?.())
+
+    if (inventoryChanged || next.status === 'victory') {
+      void Promise.resolve(onInventoryChanged?.())
+    }
+
+    if (next.status !== 'active') {
+      void loadAdventures(true)
+      void loadCombatToolkit()
+    }
+  }
+
   async function startDungeon(site: CharacterAdventureSite) {
     setBusy(true)
     setMessage('')
@@ -493,7 +554,7 @@ export function AdventuresPanel({
     setBusy(true)
     setMessage('')
 
-    const { error } = await supabase.rpc('perform_combat_action', {
+    const { data, error } = await supabase.rpc('perform_combat_action', {
       p_encounter_id: activeCombat.id,
       p_action: action,
     })
@@ -504,11 +565,7 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.all([
-      Promise.resolve(onProgressChanged?.()),
-      loadAdventures(true),
-    ])
-    setBusy(false)
+    finishInstantCombatUpdate(data as CombatEncounter)
   }
 
   async function setBowDistance(distance: BowDistance) {
@@ -521,8 +578,16 @@ export function AdventuresPanel({
       p_distance: distance,
     })
 
-    if (error) setMessage(error.message)
-    await loadAdventures(true)
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    applyCombatSnapshot({
+      ...activeCombat,
+      player_bow_distance: distance,
+    })
     setBusy(false)
   }
 
@@ -532,7 +597,7 @@ export function AdventuresPanel({
     setBusy(true)
     setMessage('')
 
-    const { error } = await supabase.rpc('cast_character_spell', {
+    const { data, error } = await supabase.rpc('cast_character_spell', {
       p_encounter_id: activeCombat.id,
       p_spell_id: spell.id,
     })
@@ -554,11 +619,7 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.all([
-      Promise.resolve(onProgressChanged?.()),
-      loadAdventures(true),
-    ])
-    setBusy(false)
+    finishInstantCombatUpdate(data as CombatEncounter)
   }
 
   async function castScroll(scroll: CombatScroll) {
@@ -567,7 +628,7 @@ export function AdventuresPanel({
     setBusy(true)
     setMessage('')
 
-    const { error } = await supabase.rpc('cast_spell_scroll', {
+    const { data, error } = await supabase.rpc('cast_spell_scroll', {
       p_encounter_id: activeCombat.id,
       p_character_item_id: scroll.id,
     })
@@ -591,13 +652,8 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.all([
-      Promise.resolve(onProgressChanged?.()),
-      Promise.resolve(onInventoryChanged?.()),
-      loadAdventureStatic(),
-      loadAdventures(true),
-    ])
-    setBusy(false)
+    consumeLocalCombatItem(scroll.id)
+    finishInstantCombatUpdate(data as CombatEncounter, true)
   }
 
   async function useCombatConsumable(item: CombatScroll) {
@@ -606,7 +662,7 @@ export function AdventuresPanel({
     setBusy(true)
     setMessage('')
 
-    const { error } = await supabase.rpc('use_combat_consumable', {
+    const { data, error } = await supabase.rpc('use_combat_consumable', {
       p_encounter_id: activeCombat.id,
       p_character_item_id: item.id,
     })
@@ -626,13 +682,8 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.all([
-      Promise.resolve(onProgressChanged?.()),
-      Promise.resolve(onInventoryChanged?.()),
-      loadAdventureStatic(),
-      loadAdventures(true),
-    ])
-    setBusy(false)
+    consumeLocalCombatItem(item.id)
+    finishInstantCombatUpdate(data as CombatEncounter, true)
   }
 
   async function saveAutobattleSettings() {
