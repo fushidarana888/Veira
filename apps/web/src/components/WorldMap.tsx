@@ -19,6 +19,18 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
 }
 
+type WorldMapCacheEntry = {
+  sectors: CharacterMapSector[]
+  expeditions: SectorExpedition[]
+  events: ExpeditionEventInstance[]
+  results: ExpeditionResult[]
+  siteActions: SectorSiteAction[]
+  siteProgress: SectorSiteProgress[]
+  dungeonRuns: DungeonRun[]
+}
+
+const worldMapCache = new Map<string, WorldMapCacheEntry>()
+
 const TOTAL_SECTORS = 300
 const EXPLORATION_HOURS = 6
 const MAP_BASE_WIDTH = 1100
@@ -265,15 +277,16 @@ export function WorldMap({
   onProgressChanged,
   onInventoryChanged,
 }: Props) {
-  const [sectors, setSectors] = useState<CharacterMapSector[]>([])
-  const [expeditions, setExpeditions] = useState<SectorExpedition[]>([])
-  const [events, setEvents] = useState<ExpeditionEventInstance[]>([])
-  const [results, setResults] = useState<ExpeditionResult[]>([])
-  const [siteActions, setSiteActions] = useState<SectorSiteAction[]>([])
-  const [siteProgress, setSiteProgress] = useState<SectorSiteProgress[]>([])
-  const [dungeonRuns, setDungeonRuns] = useState<DungeonRun[]>([])
+  const cachedMap = worldMapCache.get(characterId)
+  const [sectors, setSectors] = useState<CharacterMapSector[]>(() => cachedMap?.sectors ?? [])
+  const [expeditions, setExpeditions] = useState<SectorExpedition[]>(() => cachedMap?.expeditions ?? [])
+  const [events, setEvents] = useState<ExpeditionEventInstance[]>(() => cachedMap?.events ?? [])
+  const [results, setResults] = useState<ExpeditionResult[]>(() => cachedMap?.results ?? [])
+  const [siteActions, setSiteActions] = useState<SectorSiteAction[]>(() => cachedMap?.siteActions ?? [])
+  const [siteProgress, setSiteProgress] = useState<SectorSiteProgress[]>(() => cachedMap?.siteProgress ?? [])
+  const [dungeonRuns, setDungeonRuns] = useState<DungeonRun[]>(() => cachedMap?.dungeonRuns ?? [])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !cachedMap)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [mapSrc, setMapSrc] = useState(ORIGINAL_MAP_URL)
@@ -351,20 +364,31 @@ export function WorldMap({
       return
     }
 
-    setSectors((mapResult.data as CharacterMapSector[] | null) ?? [])
-    setExpeditions((expeditionResult.data as SectorExpedition[] | null) ?? [])
-    setEvents((eventResult.data as ExpeditionEventInstance[] | null) ?? [])
-    setResults((resultResult.data as ExpeditionResult[] | null) ?? [])
-    setSiteActions((siteActionResult.data as SectorSiteAction[] | null) ?? [])
-    setSiteProgress((siteProgressResult.data as SectorSiteProgress[] | null) ?? [])
-    setDungeonRuns((dungeonRunResult.data as DungeonRun[] | null) ?? [])
+    const nextCache: WorldMapCacheEntry = {
+      sectors: (mapResult.data as CharacterMapSector[] | null) ?? [],
+      expeditions: (expeditionResult.data as SectorExpedition[] | null) ?? [],
+      events: (eventResult.data as ExpeditionEventInstance[] | null) ?? [],
+      results: (resultResult.data as ExpeditionResult[] | null) ?? [],
+      siteActions: (siteActionResult.data as SectorSiteAction[] | null) ?? [],
+      siteProgress: (siteProgressResult.data as SectorSiteProgress[] | null) ?? [],
+      dungeonRuns: (dungeonRunResult.data as DungeonRun[] | null) ?? [],
+    }
+
+    worldMapCache.set(characterId, nextCache)
+    setSectors(nextCache.sectors)
+    setExpeditions(nextCache.expeditions)
+    setEvents(nextCache.events)
+    setResults(nextCache.results)
+    setSiteActions(nextCache.siteActions)
+    setSiteProgress(nextCache.siteProgress)
+    setDungeonRuns(nextCache.dungeonRuns)
     if (!silent) setLoading(false)
   }
 
   useEffect(() => {
     mapCenteredRef.current = false
     setMapZoom(initialMapZoom())
-    void loadMapData()
+    void loadMapData(Boolean(worldMapCache.get(characterId)))
   }, [characterId])
 
   useSmartRefresh(
