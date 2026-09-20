@@ -6719,3 +6719,202 @@ textarea {
   border-color: #635632;
   color: #d5c18c;
 }
+
+
+/* Settlement services and blacksmith */
+.settlement-service-tabs {
+  display: inline-flex;
+  justify-self: start;
+  gap: 5px;
+  border: 1px solid #34312c;
+  border-radius: 12px;
+  background: #0d1217;
+  padding: 4px;
+}
+
+.settlement-service-tabs button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #9da5ae;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.settlement-service-tabs button:hover {
+  color: #e2e5e8;
+  background: rgba(255, 255, 255, .035);
+}
+
+.settlement-service-tabs button.active {
+  background: rgba(184, 137, 75, .18);
+  color: #e7c895;
+  box-shadow: inset 0 0 0 1px rgba(199, 155, 94, .22);
+}
+
+.blacksmith-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.blacksmith-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  border: 1px solid #3c3327;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(137, 87, 43, .13), rgba(94, 64, 39, .04)),
+    #10151b;
+  padding: 13px;
+}
+
+.blacksmith-intro h4 {
+  margin: 4px 0 5px;
+  font-size: 15px;
+}
+
+.blacksmith-intro p {
+  max-width: 690px;
+  margin: 0;
+  color: #9da5ae;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.blacksmith-intro p strong {
+  color: #e1bf84;
+}
+
+.blacksmith-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.blacksmith-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid #303842;
+  border-radius: 14px;
+  background: #10151b;
+  padding: 12px;
+}
+
+.blacksmith-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.blacksmith-title-row h5 {
+  margin: 4px 0 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.blacksmith-tags,
+.blacksmith-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.blacksmith-equipped,
+.blacksmith-stats span,
+.blacksmith-level {
+  border: 1px solid #363e48;
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #aeb6bf;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.blacksmith-equipped {
+  border-color: #43543f;
+  background: rgba(64, 94, 61, .16);
+  color: #acd0a7;
+}
+
+.blacksmith-level {
+  flex: 0 0 auto;
+  border-color: #73562f;
+  background: rgba(155, 105, 49, .17);
+  color: #e5bf82;
+  font-size: 11px;
+}
+
+.blacksmith-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid #292f37;
+  border-bottom: 1px solid #292f37;
+  padding: 8px 0;
+  color: #9fa8b1;
+  font-size: 10px;
+}
+
+.blacksmith-preview strong {
+  color: #dfc18e;
+}
+
+.blacksmith-footer {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  color: #9ea7b0;
+  font-size: 10px;
+}
+
+.blacksmith-footer > span strong {
+  color: #e1c18c;
+}
+
+.blacksmith-footer .primary-button {
+  min-height: 38px;
+  font-size: 11px;
+}
+
+.blacksmith-locked {
+  color: #c99586;
+}
+
+.blacksmith-maxed {
+  color: #b9c99d;
+  font-weight: 750;
+}
+
+.blacksmith-empty {
+  border: 1px dashed #343c46;
+  border-radius: 13px;
+  padding: 18px;
+  color: #929ca6;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .blacksmith-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .blacksmith-intro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settlement-service-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-self: stretch;
+  }
+}
