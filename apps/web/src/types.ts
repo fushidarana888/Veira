@@ -108,6 +108,7 @@ export type PhysicalDamageType = Extract<DamageType, 'slashing' | 'piercing' | '
 export type ElementalDamageType = Extract<DamageType, 'fire' | 'water' | 'earth' | 'air' | 'lightning' | 'ice'>
 export type WeaponScaling = 'strength' | 'agility' | 'hybrid'
 export type BowWeaponFamily = 'short_bow' | 'long_bow'
+export type WeaponFamily = BowWeaponFamily | 'dagger'
 export type BowDistance = 'close' | 'medium' | 'far'
 
 export type BowProfile = {
@@ -169,9 +170,10 @@ export type ItemDefinition = {
   damage_type: DamageType | null
   weapon_base_damage: number
   weapon_scaling: WeaponScaling | null
-  weapon_family: BowWeaponFamily | null
+  weapon_family: WeaponFamily | null
   bow_full_draw_armor_penetration_percent: number
   bloodshed_chance_percent: number
+  echo_strike_chance_percent: number
   arrow_element_type: ElementalDamageType | null
   arrow_element_percent: number
   shop_sector_id: number | null
@@ -494,7 +496,7 @@ export type SettlementShopItem = {
   damage_type: DamageType | null
   weapon_base_damage: number
   weapon_scaling: WeaponScaling | null
-  weapon_family: BowWeaponFamily | null
+  weapon_family: WeaponFamily | null
   bow_full_draw_armor_penetration_percent: number
   bloodshed_chance_percent: number
   damage_resistances: Partial<Record<DamageType, number>>
