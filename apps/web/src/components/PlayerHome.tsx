@@ -9,6 +9,7 @@ const CraftingPanel = lazy(() => import('./CraftingPanel').then((module) => ({ d
 const GuidePanel = lazy(() => import('./GuidePanel').then((module) => ({ default: module.GuidePanel })))
 const CommunitiesPanel = lazy(() => import('./CommunitiesPanel').then((module) => ({ default: module.CommunitiesPanel })))
 const MagicPanel = lazy(() => import('./MagicPanel').then((module) => ({ default: module.MagicPanel })))
+const ReligionPanel = lazy(() => import('./ReligionPanel').then((module) => ({ default: module.ReligionPanel })))
 const WorldMap = lazy(() => import('./WorldMap').then((module) => ({ default: module.WorldMap })))
 import type {
   Character,
@@ -32,7 +33,7 @@ type Props = {
 }
 
 type Tab = 'world' | 'character' | 'adventures' | 'battles' | 'more'
-type CharacterTab = 'overview' | 'inventory' | 'equipment' | 'magic' | 'crafting'
+type CharacterTab = 'overview' | 'religion' | 'inventory' | 'equipment' | 'magic' | 'crafting'
 
 type ItemHistoryEvent = {
   event_id: number
@@ -228,11 +229,31 @@ function affixStatModifiers(item: CharacterItem): Record<string, number> {
     : {}
 }
 
+function religionItemStatModifiers(item: CharacterItem): Record<string, number> {
+  const value = item.metadata?.religion_stat_modifiers
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, number>
+    : {}
+}
+
+function religionCombatStatModifiers(value: Record<string, unknown>): Partial<Record<StatKey, number>> {
+  const result: Partial<Record<StatKey, number>> = {}
+  for (const stat of ['strength', 'agility', 'intellect', 'vitality', 'luck'] as StatKey[]) {
+    const raw = value[stat]
+    if (typeof raw === 'number' && raw !== 0) result[stat] = raw
+  }
+  return result
+}
+
 function combinedResistances(item: CharacterItem, definition: ItemDefinition) {
   const result: Partial<Record<DamageType, number>> = { ...(definition.damage_resistances ?? {}) }
-  const extra = item.metadata?.affix_damage_resistances
+  const extras = [
+    item.metadata?.affix_damage_resistances,
+    item.metadata?.religion_damage_resistances,
+  ]
 
-  if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+  for (const extra of extras) {
+    if (!extra || typeof extra !== 'object' || Array.isArray(extra)) continue
     for (const [key, raw] of Object.entries(extra)) {
       if (typeof raw !== 'number') continue
       const type = key as DamageType
@@ -273,6 +294,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   const [progress, setProgress] = useState<CharacterProgress | null>(
     () => normalizeProgress(character.character_progress),
   )
+  const [religionCombatModifiers, setReligionCombatModifiers] = useState<Record<string, unknown>>({})
 
   useEffect(() => {
     setProgress(normalizeProgress(character.character_progress))
@@ -298,6 +320,23 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     const race = (Array.isArray(data) ? data[0] : data) as RaceDefinition | null
     setRaceDefinition(race)
     return race
+  }
+
+  async function loadReligionModifiers() {
+    const { data, error } = await supabase.rpc('get_religion_catalog', {
+      p_character_id: character.id,
+    })
+
+    if (error) {
+      setProgressMessage(error.message)
+      return null
+    }
+
+    const catalog = (data as Array<{ is_current: boolean; combat_modifiers: Record<string, unknown> }> | null) ?? []
+    const current = catalog.find((entry) => entry.is_current)
+    const modifiers = current?.combat_modifiers ?? {}
+    setReligionCombatModifiers(modifiers)
+    return modifiers
   }
 
   async function loadProgress() {
@@ -487,7 +526,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     void loadEquippedState()
 
     const cancelIdle = scheduleIdle(() => {
-      void loadRace()
+      void Promise.all([loadRace(), loadReligionModifiers()])
     })
 
     return cancelIdle
@@ -534,6 +573,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   async function refreshVisiblePlayerData() {
     await Promise.all([
       loadProgress(),
+      loadReligionModifiers(),
       tab === 'character' && (characterTab === 'inventory' || characterTab === 'equipment')
         ? loadInventory()
         : loadEquippedState(),
@@ -578,6 +618,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
 
     const modifiers = [
       raceDefinition?.stat_modifiers ?? {},
+      religionCombatStatModifiers(religionCombatModifiers),
       ...equipment
         .map((entry) => itemById.get(entry.character_item_id))
         .filter((item): item is CharacterItem => Boolean(item))
@@ -587,6 +628,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           return [
             definition.stat_modifiers ?? {},
             affixStatModifiers(item),
+            religionItemStatModifiers(item),
           ]
         }),
     ]
@@ -601,7 +643,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       },
       modifiers,
     )
-  }, [equipment, itemById, progress, raceDefinition])
+  }, [equipment, itemById, progress, raceDefinition, religionCombatModifiers])
 
   const equipmentPercentModifiers = useMemo(() => {
     let maxHpPercent = 0
@@ -612,8 +654,11 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       const definition = item ? normalizeDefinition(item.item_definitions) : null
       if (!definition) continue
 
+      const religiousPenalty = religionItemStatModifiers(item)
       maxHpPercent += Number(definition.stat_modifiers?.max_hp_percent ?? 0)
+        + Number(religiousPenalty.max_hp_percent ?? 0)
       defensePercent += Number(definition.stat_modifiers?.defense_percent ?? 0)
+        + Number(religiousPenalty.defense_percent ?? 0)
     }
 
     return {
@@ -628,7 +673,11 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     const weaponDefinition = weaponItem ? normalizeDefinition(weaponItem.item_definitions) : null
 
     return {
-      baseDamage: Math.max(0, Number(weaponDefinition?.weapon_base_damage ?? 0)),
+      baseDamage: Math.max(
+        0,
+        Number(weaponDefinition?.weapon_base_damage ?? 0)
+          + Number(weaponItem?.metadata?.religion_weapon_base_damage_penalty ?? 0),
+      ),
       scaling: weaponDefinition?.weapon_scaling ?? 'strength',
       enhancementLevel: Math.min(20, Math.max(0, Number(weaponItem?.enhancement_level ?? 0))),
     }
@@ -1095,6 +1144,13 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
             </button>
             <button
               type="button"
+              className={characterTab === 'religion' ? 'active' : ''}
+              onClick={() => setCharacterTab('religion')}
+            >
+              Вера
+            </button>
+            <button
+              type="button"
               className={characterTab === 'inventory' ? 'active' : ''}
               onClick={() => setCharacterTab('inventory')}
             >
@@ -1319,6 +1375,16 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                 <p className="bio-text">{characterBio || 'Биография пока не заполнена.'}</p>
               </section>
             </>
+          )}
+
+          {characterTab === 'religion' && (
+            <Suspense fallback={<LazyPanelFallback title="Загружаем религии…" />}>
+              <ReligionPanel
+                characterId={character.id}
+                onReligionChanged={loadReligionModifiers}
+                onInventoryChanged={refreshInventoryState}
+              />
+            </Suspense>
           )}
 
           {characterTab === 'inventory' && (
