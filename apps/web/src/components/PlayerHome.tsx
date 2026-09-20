@@ -733,7 +733,15 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   )
   const effectiveMagicDefense = Math.max(
     0,
-    Math.round(derivedCombatStats.magicDefense * (100 + equipmentPercentModifiers.defensePercent) / 100),
+    Math.round(
+      derivedCombatStats.magicDefense
+        * (
+          100
+          + equipmentPercentModifiers.defensePercent
+          + Number(religionCombatModifiers.magic_defense_percent ?? 0)
+        )
+        / 100,
+    ),
   )
 
   async function equipItem(item: CharacterItem) {
