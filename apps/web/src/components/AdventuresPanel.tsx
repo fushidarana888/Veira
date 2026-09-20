@@ -185,24 +185,40 @@ export function AdventuresPanel({
   const [autobattleSpellRules, setAutobattleSpellRules] = useState<AutobattleSpellRule[]>([])
   const [combatStyleProfiles, setCombatStyleProfiles] = useState<CombatStyleProfile[]>([])
   const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
+  const [combatToolkitLoaded, setCombatToolkitLoaded] = useState(false)
   const [adventureTab, setAdventureTab] = useState<AdventureTab>('locations')
   const [autobattleEditorMode, setAutobattleEditorMode] = useState<'normal' | 'boss'>('normal')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
-  async function loadAdventureStatic() {
+  async function loadPreparedSpells() {
+    const spellResult = await supabase.rpc('get_character_spells', {
+      p_character_id: characterId,
+    })
+
+    if (spellResult.error) {
+      setMessage(spellResult.error.message)
+      return
+    }
+
+    const allCharacterSpells = (spellResult.data as CharacterSpell[] | null) ?? []
+    const nextPreparedSpells = allCharacterSpells
+      .filter((spell) => spell.combat_slot !== null && spell.spell_kind !== 'sacrifice')
+      .sort((a, b) => (a.combat_slot ?? 99) - (b.combat_slot ?? 99))
+
+    setPreparedSpells(nextPreparedSpells)
+    setSpells(nextPreparedSpells.filter((spell) => spell.spell_kind !== 'taunt'))
+  }
+
+  async function loadCombatToolkit() {
     const [
-      spellResult,
       scrollResult,
       autobattleResult,
       autobattleSpellResult,
       combatStyleResult,
       bowProfileResult,
     ] = await Promise.all([
-      supabase.rpc('get_character_spells', {
-        p_character_id: characterId,
-      }),
       supabase
         .from('character_items')
         .select('id, quantity, item_definitions(id, slug, name, required_level, category, effects, scroll_mode, scroll_spell_id)')
@@ -222,7 +238,6 @@ export function AdventuresPanel({
     ])
 
     const error =
-      spellResult.error ??
       scrollResult.error ??
       autobattleResult.error ??
       autobattleSpellResult.error ??
@@ -233,14 +248,6 @@ export function AdventuresPanel({
       setMessage(error.message)
       return
     }
-
-    const allCharacterSpells = (spellResult.data as CharacterSpell[] | null) ?? []
-    const nextPreparedSpells = allCharacterSpells
-      .filter((spell) => spell.combat_slot !== null && spell.spell_kind !== 'sacrifice')
-      .sort((a, b) => (a.combat_slot ?? 99) - (b.combat_slot ?? 99))
-
-    setPreparedSpells(nextPreparedSpells)
-    setSpells(nextPreparedSpells.filter((spell) => spell.spell_kind !== 'taunt'))
 
     const combatInventory = (scrollResult.data as CombatScroll[] | null) ?? []
     setCombatScrolls(
@@ -271,6 +278,14 @@ export function AdventuresPanel({
       (combatStyleResult.data as CombatStyleProfile[] | null) ?? [],
     )
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
+    setCombatToolkitLoaded(true)
+  }
+
+  async function loadAdventureStatic() {
+    await Promise.all([
+      loadPreparedSpells(),
+      loadCombatToolkit(),
+    ])
   }
 
   async function loadAdventures(silent = false) {
@@ -352,11 +367,22 @@ export function AdventuresPanel({
 
   useEffect(() => {
     setLoading(true)
+    setCombatToolkitLoaded(false)
     void Promise.all([
-      loadAdventureStatic(),
+      loadPreparedSpells(),
+      mode === 'battles' ? loadCombatToolkit() : Promise.resolve(),
       loadAdventures(true),
     ]).finally(() => setLoading(false))
-  }, [characterId])
+  }, [characterId, mode])
+
+  useEffect(() => {
+    if (
+      !combatToolkitLoaded
+      && (mode === 'battles' || adventureTab === 'current')
+    ) {
+      void loadCombatToolkit()
+    }
+  }, [mode, adventureTab, combatToolkitLoaded, characterId])
 
   useSmartRefresh(
     () => loadAdventures(true),
