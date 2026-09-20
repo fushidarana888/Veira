@@ -51,12 +51,14 @@ const weaponFamilyLabels: Record<WeaponFamily, string> = {
   dagger: 'Кинжал',
   rapier: 'Рапира',
   sword: 'Меч',
+  blade: 'Клинок',
   katana: 'Катана',
   spear: 'Копьё',
   axe: 'Топор',
   battleaxe: 'Секира',
   mace: 'Булава',
   hammer: 'Молот',
+  club: 'Дубина',
   greatsword: 'Двуручный меч',
   staff: 'Боевой посох',
   wand: 'Магический жезл',
@@ -65,12 +67,14 @@ const weaponFamilyLabels: Record<WeaponFamily, string> = {
 const weaponFamilyMechanicLabels: Partial<Record<WeaponFamily, string>> = {
   dagger: '×0.80 урона после Physical Defense',
   rapier: 'Игнорирует 10% Physical Defense',
+  blade: 'Разброс физического урона всегда +4',
   katana: 'Нарастающий ритм: +8% за подряд идущую физическую атаку по той же цели, максимум +40%',
   spear: 'Учитывает 120% Physical Defense · повышенный базовый урон',
   axe: 'До +20% урона против целей с большим Max HP',
   battleaxe: 'До +20% урона против целей с большим Max HP',
   mace: 'Оглушение: 8% соло/PvP · 5% пати',
   hammer: 'Оглушение: 8% соло/PvP · 5% пати',
+  club: 'Blunt: уязвимость ×1.5 · учитывает только 50% сопротивления',
 }
 
 const statLabels: Record<string, string> = {
