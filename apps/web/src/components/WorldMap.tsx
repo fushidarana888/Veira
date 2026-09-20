@@ -594,9 +594,9 @@ export function WorldMap({
           <div>
             <span className="eyebrow">СОБЫТИЕ ЭКСПЕДИЦИИ</span>
             <h3>{pendingEvent.title}</h3>
-            <p>{pendingEvent.player_prompt || 'Экспедиция столкнулась с ситуацией, требующей решения GM.'}</p>
+            <p>{pendingEvent.player_prompt || 'Экспедиция столкнулась с ситуацией, требующей решения ГМ.'}</p>
           </div>
-          <span className="badge event-waiting-badge">Ожидает GM</span>
+          <span className="badge event-waiting-badge">Ожидает ГМ</span>
         </article>
       )}
 
@@ -778,7 +778,7 @@ export function WorldMap({
             <div className="sector-tags">
               <span>{terrainLabels[selectedSector.terrain_type ?? 'unassigned'] ?? 'Не определено'}</span>
               <span>{contentLabels[selectedSector.content_type ?? 'unassigned'] ?? 'Не определено'}</span>
-              {selectedSector.requires_gm && <span>GM-сцена</span>}
+              {selectedSector.requires_gm && <span>ГМ-сцена</span>}
             </div>
 
             <p className="sector-description">
