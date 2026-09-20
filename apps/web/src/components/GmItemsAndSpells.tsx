@@ -137,9 +137,9 @@ function itemSlugFromName(value: string) {
 }
 
 const weaponScalingLabels: Record<WeaponScaling, string> = {
-  strength: 'Силовое · STR ×3 + AGI ×0.5',
-  agility: 'Ловкостное · AGI ×3 + STR ×0.5',
-  hybrid: 'Гибридное · STR ×1.75 + AGI ×1.75',
+  strength: 'Силовое · СИЛ ×3 + ЛОВ ×0,5',
+  agility: 'Ловкостное · ЛОВ ×3 + СИЛ ×0,5',
+  hybrid: 'Гибридное · СИЛ ×1,75 + ЛОВ ×1,75',
 }
 
 const statKeys = ['strength', 'agility', 'intellect', 'vitality', 'luck'] as const
@@ -851,11 +851,11 @@ export function GmItemsAndSpells() {
               <div className="gm-editor-box">
                 <div>
                   <strong>Процентные модификаторы</strong>
-                  <small>Меняют итоговый максимум HP и обе защиты персонажа</small>
+                  <small>Меняют итоговый максимум ОЗ и обе защиты персонажа</small>
                 </div>
                 <div className="gm-form-grid two">
                   <label>
-                    <span>Максимальное HP %</span>
+                    <span>Максимум ОЗ · %</span>
                     <input
                       type="number"
                       min={-80}
@@ -1052,7 +1052,7 @@ export function GmItemsAndSpells() {
                 </div>
                 <div className="gm-form-grid two">
                   <label>
-                    <span>Лечение HP</span>
+                    <span>Лечение ОЗ</span>
                     <input
                       type="number"
                       min={0}
@@ -1139,7 +1139,7 @@ export function GmItemsAndSpells() {
                       <option value="">Нет</option>
                       <option value="lifesteal">Вампиризм · % от прямого урона</option>
                       <option value="mana_on_hit">Мана при попадании · фикс.</option>
-                      <option value="damage_vs_wounded">Добивание · % урона при HP ≤30%</option>
+                      <option value="damage_vs_wounded">Добивание · % урона при ОЗ ≤30%</option>
                       <option value="guard_boost">Усиление защиты · процентные пункты</option>
                       <option value="taunt">Провокация · шанс стать целью в группе</option>
                     </select>
@@ -1177,7 +1177,7 @@ export function GmItemsAndSpells() {
                       disabled={!itemDraft.unique_effect_type && !hasFirstPhysicalStrike(itemDraft.stat_modifiers)}
                       value={itemDraft.unique_property_description}
                       onChange={(e) => setItemDraft({ ...itemDraft, unique_property_description: e.target.value })}
-                      placeholder="Восстанавливает часть нанесённого урона как HP"
+                      placeholder="Восстанавливает часть нанесённого урона как ОЗ"
                     />
                   </label>
                 </div>
@@ -1477,7 +1477,7 @@ export function GmItemsAndSpells() {
                       : spellDraft.spell_kind === 'taunt'
                         ? 'Провокация работает только в групповой битве: выбранный живой союзник становится целью врага с указанным шансом до своей смерти или конца текущей битвы.'
                         : spellDraft.spell_kind === 'sacrifice'
-                          ? '«Последняя жертва» существует только в одноразовом боевом свитке: >200 HP, использующий становится Потерянным до конца всего похода; живые союзники полностью лечатся и получают −30% входящего урона на 3 раунда. Мёртвых не воскрешает.'
+                          ? '«Последняя жертва» существует только в одноразовом боевом свитке: >200 ОЗ, использующий становится Потерянным до конца всего похода; живые союзники полностью лечатся и получают −30% входящего урона на 3 раунда. Мёртвых не воскрешает.'
                           : 'Базовая магическая атака остаётся стихией расы. Это заклинание использует собственную стихию и расходует ману.'}
             </p>
 
