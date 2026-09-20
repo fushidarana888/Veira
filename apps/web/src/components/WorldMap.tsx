@@ -68,6 +68,53 @@ type WorldStrongEnemy = {
   character_busy: boolean
 }
 
+type HuntingState = {
+  region_key: string | null
+  pressure: number
+  locked_until: string | null
+  active: boolean
+  next_pressure: number
+  next_monster_chance: number
+}
+
+type HuntResult = {
+  result: 'resource' | 'nothing' | 'monster'
+  pressure: number
+  monster_chance: number
+  region_key: string
+  locked_until: string
+  item_name?: string
+  quantity?: number
+  enemy_name?: string
+  run_id?: string
+  encounter_id?: string
+}
+
+type SectorIncursion = {
+  event_id: string
+  name: string
+  description: string
+  sector_id: number
+  grid_col: number
+  grid_row: number
+  ends_at: string
+  enemy_level: number
+  enemy_hp: number
+  enemy_attack: number
+  enemy_defense: number
+  clear_count: number
+  clear_target: number
+  contributed: boolean
+  party_id: string | null
+  party_member_count: number
+  is_party_leader: boolean
+  solo_run_id: string | null
+  solo_run_status: 'active' | 'completed' | 'abandoned' | null
+  party_run_id: string | null
+  party_run_status: 'active' | 'completed' | 'abandoned' | null
+  character_busy: boolean
+}
+
 type DeathSpiritMapEntry = {
   spirit_id: string
   owner_character_id: string
@@ -92,6 +139,8 @@ type WorldMapCacheEntry = {
   dungeonRuns: DungeonRun[]
   deathSpirits: DeathSpiritMapEntry[]
   strongEnemies: WorldStrongEnemy[]
+  huntingState: HuntingState | null
+  incursions: SectorIncursion[]
 }
 
 const worldMapCache = new Map<string, WorldMapCacheEntry>()
@@ -243,6 +292,7 @@ const MapSectorButton = memo(function MapSectorButton({
   showGameplayOverlay,
   deathSpiritCount,
   strongEnemyCount,
+  incursionCount,
   onSelect,
 }: {
   sector: CharacterMapSector
@@ -252,6 +302,7 @@ const MapSectorButton = memo(function MapSectorButton({
   showGameplayOverlay: boolean
   deathSpiritCount: number
   strongEnemyCount: number
+  incursionCount: number
   onSelect: (sectorId: number) => void
 }) {
   const contentType =
@@ -272,6 +323,7 @@ const MapSectorButton = memo(function MapSectorButton({
     selected ? 'selected' : '',
     deathSpiritCount > 0 ? 'has-death-spirit' : '',
     strongEnemyCount > 0 ? 'has-strong-enemy' : '',
+    incursionCount > 0 ? 'has-sector-incursion' : '',
   ].filter(Boolean).join(' ')
 
   return (
@@ -304,6 +356,15 @@ const MapSectorButton = memo(function MapSectorButton({
           aria-label={strongEnemyCount > 1 ? `Сильные враги: ${strongEnemyCount}` : 'Сильный враг'}
         >
           ⚔
+        </span>
+      )}
+      {showGameplayOverlay && incursionCount > 0 && (
+        <span
+          className="sector-incursion-mark"
+          title={incursionCount > 1 ? `Захваченные события: ${incursionCount}` : 'Захваченный сектор'}
+          aria-label={incursionCount > 1 ? `Захваченные события: ${incursionCount}` : 'Захваченный сектор'}
+        >
+          !
         </span>
       )}
       {showGameplayOverlay && deathSpiritCount > 0 && (
@@ -377,6 +438,8 @@ export function WorldMap({
   const [dungeonRuns, setDungeonRuns] = useState<DungeonRun[]>(() => cachedMap?.dungeonRuns ?? [])
   const [deathSpirits, setDeathSpirits] = useState<DeathSpiritMapEntry[]>(() => cachedMap?.deathSpirits ?? [])
   const [strongEnemies, setStrongEnemies] = useState<WorldStrongEnemy[]>(() => cachedMap?.strongEnemies ?? [])
+  const [huntingState, setHuntingState] = useState<HuntingState | null>(() => cachedMap?.huntingState ?? null)
+  const [incursions, setIncursions] = useState<SectorIncursion[]>(() => cachedMap?.incursions ?? [])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(() => !cachedMap)
   const [busy, setBusy] = useState(false)
@@ -403,6 +466,8 @@ export function WorldMap({
       dungeonRunResult,
       deathSpiritResult,
       strongEnemyResult,
+      huntingStateResult,
+      incursionResult,
     ] = await Promise.all([
       supabase.rpc('get_character_map_state', {
         p_character_id: characterId,
@@ -447,6 +512,12 @@ export function WorldMap({
       supabase.rpc('get_visible_world_strong_enemies', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_character_hunting_state', {
+        p_character_id: characterId,
+      }),
+      supabase.rpc('get_visible_sector_incursions', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
@@ -458,7 +529,9 @@ export function WorldMap({
       siteProgressResult.error ??
       dungeonRunResult.error ??
       deathSpiritResult.error ??
-      strongEnemyResult.error
+      strongEnemyResult.error ??
+      huntingStateResult.error ??
+      incursionResult.error
 
     if (error) {
       if (!silent) setMessage(error.message)
@@ -476,6 +549,8 @@ export function WorldMap({
       dungeonRuns: (dungeonRunResult.data as DungeonRun[] | null) ?? [],
       deathSpirits: (deathSpiritResult.data as DeathSpiritMapEntry[] | null) ?? [],
       strongEnemies: (strongEnemyResult.data as WorldStrongEnemy[] | null) ?? [],
+      huntingState: ((huntingStateResult.data as HuntingState[] | null) ?? [])[0] ?? null,
+      incursions: (incursionResult.data as SectorIncursion[] | null) ?? [],
     }
 
     worldMapCache.set(characterId, nextCache)
@@ -488,6 +563,8 @@ export function WorldMap({
     setDungeonRuns(nextCache.dungeonRuns)
     setDeathSpirits(nextCache.deathSpirits)
     setStrongEnemies(nextCache.strongEnemies)
+    setHuntingState(nextCache.huntingState)
+    setIncursions(nextCache.incursions)
     if (!silent) setLoading(false)
   }
 
@@ -530,6 +607,25 @@ export function WorldMap({
     return () => window.clearTimeout(timeout)
   }, [strongEnemies])
 
+  useEffect(() => {
+    if (!huntingState?.active || !huntingState.locked_until) return
+    const delay = Math.max(0, new Date(huntingState.locked_until).getTime() - Date.now() + 500)
+    const timeout = window.setTimeout(() => {
+      void loadMapData(true)
+    }, delay)
+    return () => window.clearTimeout(timeout)
+  }, [huntingState?.active, huntingState?.locked_until])
+
+  useEffect(() => {
+    if (incursions.length === 0) return
+    const nextExpiry = Math.min(...incursions.map((entry) => new Date(entry.ends_at).getTime()))
+    const delay = Math.max(0, nextExpiry - Date.now() + 500)
+    const timeout = window.setTimeout(() => {
+      void loadMapData(true)
+    }, delay)
+    return () => window.clearTimeout(timeout)
+  }, [incursions])
+
   const sectorById = useMemo(
     () => new Map(sectors.map((sector) => [sector.id, sector])),
     [sectors],
@@ -554,6 +650,16 @@ export function WorldMap({
     }
     return grouped
   }, [strongEnemies])
+
+  const incursionsBySector = useMemo(() => {
+    const grouped = new Map<number, SectorIncursion[]>()
+    for (const incursion of incursions) {
+      const entries = grouped.get(incursion.sector_id) ?? []
+      entries.push(incursion)
+      grouped.set(incursion.sector_id, entries)
+    }
+    return grouped
+  }, [incursions])
 
   const discoveredCount = useMemo(
     () => sectors.filter((sector) => sector.is_discovered).length,
@@ -671,6 +777,10 @@ export function WorldMap({
 
   const selectedStrongEnemies = selectedSector
     ? strongEnemiesBySector.get(selectedSector.id) ?? []
+    : []
+
+  const selectedIncursions = selectedSector
+    ? incursionsBySector.get(selectedSector.id) ?? []
     : []
 
   const selectSector = useCallback((sectorId: number) => {
@@ -819,6 +929,114 @@ export function WorldMap({
 
     await loadMapData()
     setBusy(false)
+  }
+
+  async function startHunt() {
+    if (!selectedSector?.is_discovered || selectedSector.content_type !== 'wilderness') return
+
+    setBusy(true)
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('start_hunt', {
+      p_character_id: characterId,
+      p_sector_id: selectedSector.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('HUNT_REGION_LOCKED')) {
+        setMessage('Серия охоты уже привязана к другому региону. Дождись, пока 12-часовой след охоты остынет.')
+      } else if (raw.includes('SECTOR_CAPTURED')) {
+        setMessage('Сектор захвачен сильными противниками. Сначала его нужно зачистить.')
+      } else if (raw.includes('CHARACTER_BUSY')) {
+        setMessage('Персонаж занят другим боем, походом или исследованием.')
+      } else if (raw.includes('HUNT_NOT_AVAILABLE_AT_SEA')) {
+        setMessage('В морском секторе обычная охота недоступна.')
+      } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
+        setMessage('Перед охотой восстанови хотя бы часть ОЗ.')
+      } else {
+        setMessage(raw)
+      }
+      setBusy(false)
+      return
+    }
+
+    const result = data as HuntResult
+
+    await loadMapData(true)
+
+    if (result.result === 'resource') {
+      await Promise.resolve(onInventoryChanged?.())
+      setMessage(
+        `Охота удалась: получено ${result.item_name ?? 'ресурс'} ×${result.quantity ?? 1}. Давление региона: ${result.pressure}/6.`,
+      )
+      setBusy(false)
+      return
+    }
+
+    if (result.result === 'nothing') {
+      setMessage(
+        `Добыча ушла. Ничего не получено. Давление региона: ${result.pressure}/6; шанс сильного монстра на следующей охоте продолжает расти.`,
+      )
+      setBusy(false)
+      return
+    }
+
+    await Promise.resolve(onProgressChanged?.())
+    setBusy(false)
+    onOpenBattles?.()
+  }
+
+  async function startSectorIncursion(incursion: SectorIncursion, mode: 'solo' | 'party') {
+    const runActive = mode === 'solo'
+      ? incursion.solo_run_status === 'active'
+      : incursion.party_run_status === 'active'
+
+    if (runActive) {
+      onOpenBattles?.()
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('start_event_boss', {
+      p_character_id: characterId,
+      p_event_id: incursion.event_id,
+      p_mode: mode,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('EVENT_BOSS_CHARACTER_LIMIT_REACHED')) {
+        setMessage('Твой личный вклад в зачистку этого сектора уже засчитан.')
+      } else if (raw.includes('SECTOR_INCURSION_PARTY_NO_NEW_CONTRIBUTORS')) {
+        setMessage('У всех участников этой пати вклад уже засчитан. Нужен хотя бы один новый персонаж.')
+      } else if (raw.includes('PARTY_NOT_FOUND')) {
+        setMessage('Для групповой зачистки сначала создай пати.')
+      } else if (raw.includes('PARTY_LEADER_REQUIRED')) {
+        setMessage('Групповую зачистку запускает лидер пати.')
+      } else if (raw.includes('PARTY_NEEDS_TWO_MEMBERS')) {
+        setMessage('Для групповой зачистки нужно минимум 2 персонажа.')
+      } else if (raw.includes('PARTY_MEMBER_SECTOR_NOT_DISCOVERED')) {
+        setMessage('У одного из участников пати этот сектор ещё не открыт.')
+      } else if (raw.includes('EVENT_BOSS_NOT_ACTIVE')) {
+        setMessage('Сектор уже освобождён или событие закончилось.')
+      } else if (raw.includes('CHARACTER_BUSY') || raw.includes('PARTY_MEMBER_BUSY')) {
+        setMessage('Один из участников сейчас занят другим тяжёлым действием.')
+      } else {
+        setMessage(raw)
+      }
+      setBusy(false)
+      return
+    }
+
+    await Promise.all([
+      loadMapData(true),
+      Promise.resolve(onProgressChanged?.()),
+    ])
+    setBusy(false)
+    onOpenBattles?.()
   }
 
   async function startWorldStrongEnemy(enemy: WorldStrongEnemy) {
@@ -1146,6 +1364,10 @@ export function WorldMap({
               <span className="map-legend-icon strong-enemy">⚔</span>
               Сильный враг
             </span>
+            <span className="map-legend-item sector-incursion">
+              <span className="map-legend-icon sector-incursion">!</span>
+              Захваченный сектор
+            </span>
           </div>
         )}
       </div>
@@ -1185,6 +1407,7 @@ export function WorldMap({
                 showGameplayOverlay={showGameplayOverlay}
                 deathSpiritCount={deathSpiritsBySector.get(sector.id)?.length ?? 0}
                 strongEnemyCount={strongEnemiesBySector.get(sector.id)?.length ?? 0}
+                incursionCount={incursionsBySector.get(sector.id)?.length ?? 0}
                 onSelect={selectSector}
               />
             ))}
@@ -1223,6 +1446,187 @@ export function WorldMap({
               {selectedSector.player_description ||
                 'Этот сектор уже нанесён на карту, но подробное описание пока не задано.'}
             </p>
+
+            {selectedIncursions.length > 0 && (
+              <div className="sector-incursion-list">
+                {selectedIncursions.map((incursion) => {
+                  const soloActive = incursion.solo_run_status === 'active'
+                  const partyActive = incursion.party_run_status === 'active'
+                  const canPartyStart = Boolean(
+                    incursion.party_id
+                    && incursion.is_party_leader
+                    && incursion.party_member_count >= 2
+                    && incursion.party_member_count <= 4,
+                  )
+
+                  return (
+                    <div className="sector-incursion-card" key={incursion.event_id}>
+                      <div className="sector-incursion-head">
+                        <div>
+                          <span className="eyebrow">ЗАХВАЧЕННЫЙ СЕКТОР</span>
+                          <strong>{incursion.name}</strong>
+                          <small>Исчезнет через <Countdown endsAt={incursion.ends_at} /></small>
+                        </div>
+                        <span className="badge">
+                          {incursion.clear_count} / {incursion.clear_target}
+                        </span>
+                      </div>
+
+                      <p>{incursion.description}</p>
+
+                      <div className="sector-incursion-progress" aria-label="Прогресс глобальной зачистки">
+                        <span
+                          style={{
+                            width: Math.min(100, Math.round((incursion.clear_count / Math.max(1, incursion.clear_target)) * 100)) + '%',
+                          }}
+                        />
+                      </div>
+
+                      <div className="world-strong-enemy-stats">
+                        <span><small>Уровень</small><b>{incursion.enemy_level}</b></span>
+                        <span><small>ОЗ</small><b>{incursion.enemy_hp}</b></span>
+                        <span><small>Атака</small><b>{incursion.enemy_attack}</b></span>
+                        <span><small>Защита</small><b>{incursion.enemy_defense}</b></span>
+                      </div>
+
+                      <div className="sector-incursion-note">
+                        <strong>{incursion.contributed ? 'Твой вклад уже засчитан' : 'Твой вклад ещё доступен'}</strong>
+                        <span>
+                          Каждый персонаж увеличивает глобальный счётчик максимум один раз.
+                          Повторно помогать пати можно, но второй вклад не появится.
+                        </span>
+                      </div>
+
+                      <div className="sector-incursion-actions">
+                        <button
+                          className="primary-button"
+                          type="button"
+                          disabled={
+                            busy
+                            || (!soloActive && (incursion.contributed || incursion.character_busy))
+                          }
+                          onClick={() => void startSectorIncursion(incursion, 'solo')}
+                        >
+                          {soloActive
+                            ? 'Продолжить соло-бой'
+                            : incursion.contributed
+                              ? 'Вклад уже засчитан'
+                              : incursion.character_busy
+                                ? 'Персонаж занят'
+                                : 'Зачистить соло'}
+                        </button>
+
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          disabled={
+                            busy
+                            || (!partyActive && (!canPartyStart || incursion.character_busy))
+                          }
+                          onClick={() => void startSectorIncursion(incursion, 'party')}
+                        >
+                          {partyActive
+                            ? 'Продолжить бой пати'
+                            : !incursion.party_id
+                              ? 'Сначала создай пати'
+                              : !incursion.is_party_leader
+                                ? 'Запускает лидер'
+                                : incursion.party_member_count < 2
+                                  ? 'Нужно 2+'
+                                  : incursion.character_busy
+                                    ? 'Персонаж занят'
+                                    : `Зачистить пати · ${incursion.party_member_count}/4`}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {selectedSector.content_type === 'wilderness' && selectedSector.terrain_type !== 'sea' && (() => {
+              const captured = selectedIncursions.length > 0
+              const lockedElsewhere = Boolean(
+                huntingState?.active
+                && huntingState.region_key
+                && huntingState.region_key !== selectedSector.terrain_type,
+              )
+              const sameRegion = Boolean(
+                huntingState?.active
+                && huntingState.region_key === selectedSector.terrain_type,
+              )
+              const nextPressure = sameRegion ? huntingState?.next_pressure ?? 1 : 1
+              const nextMonsterChance = sameRegion ? huntingState?.next_monster_chance ?? 0 : 0
+              const resourceChance = nextPressure >= 6 ? 0 : 20
+
+              return (
+                <div className="hunting-card">
+                  <div className="hunting-card-head">
+                    <div>
+                      <span className="eyebrow">ОХОТА</span>
+                      <strong>{terrainLabels[selectedSector.terrain_type ?? 'unassigned'] ?? selectedSector.terrain_type}</strong>
+                    </div>
+                    <span className={'badge ' + (nextPressure >= 6 ? 'danger' : '')}>
+                      давление {sameRegion ? huntingState?.pressure ?? 0 : 0}/6
+                    </span>
+                  </div>
+
+                  <p>
+                    Обычная охота даёт региональный ресурс с шансом <b>20%</b>.
+                    Чем чаще охотишься в одной серии, тем выше шанс потревожить сильного монстра.
+                  </p>
+
+                  <div className="hunting-pressure-grid">
+                    <span><small>Следующая охота</small><b>{nextPressure}/6</b></span>
+                    <span><small>Ресурс</small><b>{resourceChance}%</b></span>
+                    <span><small>Сильный монстр</small><b>{nextMonsterChance}%</b></span>
+                  </div>
+
+                  {huntingState?.active && huntingState.locked_until && (
+                    <div className={'hunting-region-lock ' + (lockedElsewhere ? 'blocked' : '')}>
+                      <strong>
+                        Серия привязана: {terrainLabels[huntingState.region_key ?? 'unassigned'] ?? huntingState.region_key}
+                      </strong>
+                      <span>
+                        Сменить регион можно через <Countdown endsAt={huntingState.locked_until} />.
+                        Каждая новая охота в этой серии снова продлевает след на 12 часов.
+                      </span>
+                    </div>
+                  )}
+
+                  {nextPressure >= 6 && !lockedElsewhere && (
+                    <div className="hunting-danger-note">
+                      <strong>Регион перегрет охотой</strong>
+                      <span>На 6/6 ресурсы больше не выпадают: каждая охота приводит только к сильному монстру, пока серия не остынет.</span>
+                    </div>
+                  )}
+
+                  {captured && (
+                    <div className="hunting-danger-note">
+                      <strong>Охота заблокирована</strong>
+                      <span>Этот сектор сейчас захвачен. Сначала освободи его через событие выше.</span>
+                    </div>
+                  )}
+
+                  <button
+                    className="primary-button"
+                    type="button"
+                    disabled={busy || anyBlockingActivity || captured || lockedElsewhere}
+                    onClick={() => void startHunt()}
+                  >
+                    {captured
+                      ? 'Сектор захвачен'
+                      : lockedElsewhere
+                        ? 'Привязан другой регион'
+                        : anyBlockingActivity
+                          ? 'Персонаж занят'
+                          : nextPressure >= 6
+                            ? 'Охотиться · гарантирован сильный монстр'
+                            : 'Охотиться'}
+                  </button>
+                </div>
+              )
+            })()}
 
             {selectedStrongEnemies.length > 0 && (
               <div className="world-strong-enemy-list">
