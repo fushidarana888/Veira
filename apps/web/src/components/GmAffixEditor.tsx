@@ -19,6 +19,7 @@ const statLabels: Record<(typeof statKeys)[number], string> = {
 const damageTypes: DamageType[] = [
   'slashing', 'piercing', 'blunt',
   'fire', 'water', 'earth', 'air', 'lightning', 'ice',
+  'arcane', 'star', 'gravity', 'moon',
 ]
 
 const damageLabels: Record<DamageType, string> = {
@@ -31,6 +32,10 @@ const damageLabels: Record<DamageType, string> = {
   air: 'Воздух',
   lightning: 'Молния',
   ice: 'Лёд',
+  arcane: 'Аркана',
+  star: 'Звёзды',
+  gravity: 'Гравитация',
+  moon: 'Луна',
 }
 
 const groups: ItemEquipGroup[] = [
