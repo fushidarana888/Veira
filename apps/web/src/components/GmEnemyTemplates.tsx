@@ -12,6 +12,10 @@ const damageTypes: DamageType[] = [
   'air',
   'lightning',
   'ice',
+  'arcane',
+  'star',
+  'gravity',
+  'moon',
 ]
 
 const statusEffectOptions: Array<{ value: CombatStatusEffectType; label: string }> = [
@@ -34,6 +38,10 @@ const damageLabels: Record<DamageType, string> = {
   air: 'Воздушный',
   lightning: 'Электрический',
   ice: 'Ледяной',
+  arcane: 'Арканный',
+  star: 'Звёздный',
+  gravity: 'Гравитационный',
+  moon: 'Лунный',
 }
 
 const terrains: Array<{ value: SectorTerrain; label: string }> = [
