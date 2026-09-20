@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { GmItemsAndSpells } from './GmItemsAndSpells'
 import { GmRaceEditor } from './GmRaceEditor'
+import { GmSettlementQuests } from './GmSettlementQuests'
 import { GmWorldEditor } from './GmWorldEditor'
 import type { Character, CharacterProgress, ItemDefinition, Profile } from '../types'
 
