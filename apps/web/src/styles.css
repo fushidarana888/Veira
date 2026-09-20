@@ -7942,9 +7942,9 @@ textarea {
   gap: 8px;
   min-height: 38px;
   padding: 8px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--panel-soft);
+  background: rgba(17, 20, 26, .68);
   color: var(--muted);
   cursor: pointer;
   font: inherit;
@@ -7954,14 +7954,14 @@ textarea {
 .inventory-filter-tabs button:hover,
 .adventure-folder-tabs button:hover {
   transform: translateY(-1px);
-  border-color: var(--line-strong);
+  border-color: var(--accent);
   color: var(--text);
 }
 
 .inventory-filter-tabs button.active,
 .adventure-folder-tabs button.active {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: rgba(182, 155, 114, .12);
   color: var(--text);
 }
 
