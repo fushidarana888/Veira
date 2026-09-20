@@ -9303,3 +9303,172 @@ textarea {
     width: 100%;
   }
 }
+
+
+/* World strong enemies */
+.fog-sector.has-strong-enemy {
+  outline: 1px solid rgba(255, 128, 112, 0.58);
+  outline-offset: -2px;
+}
+
+.sector-strong-enemy-mark {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 7;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid rgba(255, 180, 166, 0.78);
+  border-radius: 999px;
+  background: rgba(52, 20, 20, 0.92);
+  color: #fff0ec;
+  font-size: 11px;
+  line-height: 1;
+  box-shadow: 0 0 14px rgba(255, 92, 72, 0.42);
+  pointer-events: none;
+}
+
+.map-legend-item.strong-enemy .map-legend-icon {
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+}
+
+.world-strong-enemy-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.world-strong-enemy-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 130, 110, 0.28);
+  border-radius: 16px;
+  background: rgba(45, 20, 22, 0.5);
+}
+
+.world-strong-enemy-card.defeated {
+  border-color: rgba(170, 190, 170, 0.24);
+  background: rgba(26, 34, 28, 0.46);
+  opacity: 0.82;
+}
+
+.world-strong-enemy-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.world-strong-enemy-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.world-strong-enemy-head strong {
+  font-size: 1.15rem;
+}
+
+.world-strong-enemy-head small,
+.world-strong-enemy-card p,
+.world-strong-enemy-reward small {
+  margin: 0;
+  color: var(--muted);
+}
+
+.world-strong-enemy-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.world-strong-enemy-stats span {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 11px;
+  background: rgba(0,0,0,0.14);
+}
+
+.world-strong-enemy-stats small {
+  color: var(--muted);
+}
+
+.world-strong-enemy-mechanics {
+  display: grid;
+  gap: 8px;
+}
+
+.world-strong-enemy-mechanics > div {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border-left: 2px solid rgba(255, 121, 100, 0.62);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.15);
+}
+
+.world-strong-enemy-mechanics span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.world-strong-enemy-reward {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid rgba(235, 220, 160, 0.2);
+  border-radius: 12px;
+  background: rgba(80, 67, 28, 0.18);
+}
+
+.wolf-wound-state {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(224, 104, 104, 0.28);
+  border-radius: 10px;
+  background: rgba(80, 28, 32, 0.22);
+}
+
+.wolf-wound-state.danger {
+  border-color: rgba(255, 93, 83, 0.62);
+  background: rgba(110, 24, 28, 0.34);
+}
+
+.wolf-wound-state span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 760px) {
+  .sector-strong-enemy-mark {
+    top: 2px;
+    left: 2px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+    box-shadow: none;
+  }
+
+  .world-strong-enemy-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .world-strong-enemy-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .world-strong-enemy-card .primary-button {
+    width: 100%;
+  }
+}
