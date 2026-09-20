@@ -296,7 +296,7 @@ export function AdventuresPanel({
     if (!silent) setLoading(true)
 
     const [siteResult, encounterResult] = await Promise.all([
-      supabase.rpc('get_character_adventures_v3', {
+      supabase.rpc('get_character_adventures_v4', {
         p_character_id: characterId,
       }),
       supabase
@@ -420,6 +420,9 @@ export function AdventuresPanel({
       run_reward_experience: 0,
       run_escape_attempt_stage: null,
       is_event_boss: false,
+      run_reward_exhausted: false,
+      run_reward_attempt_number: null,
+      run_reward_cycle_ends_at: null,
     } as CharacterAdventureSite) : null),
     [sites, activeDeathSpirit],
   )
@@ -513,8 +516,6 @@ export function AdventuresPanel({
       const raw = error.message
       if (raw.includes('PVP_DUEL_ACTIVE')) {
         setMessage('Сначала заверши активную дуэль.')
-      } else if (raw.includes('DUNGEON_EXHAUSTED_UNTIL')) {
-        setMessage('Этот данж полностью истощён после 30 попыток. Соло-вход закрыт на 20 часов с момента 30-й попытки; в пати зайти можно, но без личных наград.')
       } else if (raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
         setMessage('У персонажа уже есть активное прохождение подземелья.')
       } else if (raw.includes('DUNGEON_NOT_SCOUTED')) {
@@ -2273,12 +2274,12 @@ export function AdventuresPanel({
       {mode === 'adventures' && adventureTab === 'locations' && (
         <div className="adventure-folder-content">
           <article className="panel dungeon-fatigue-rule">
-            <span className="eyebrow">ИСТОЩЕНИЕ ПОДЗЕМЕЛЬЯ</span>
-            <h3>Одно место нельзя бесконечно фармить с полной наградой</h3>
+            <span className="eyebrow">ЦИКЛ НАГРАД ПОДЗЕМЕЛЬЯ</span>
+            <h3>Вход безлимитный, награды — первые 25 попыток</h3>
             <p className="muted">
-              Повторные зачистки одного и того же подземелья постепенно снижают опыт и золото; другие данжи считаются отдельно.
-              После 30-й попытки соло-вход в этот конкретный данж закрывается на 20 часов. В пати вход остаётся доступен,
-              но истощённый персонаж не получает оттуда опыт, золото и предметы. После окончания истощения цикл попыток и штрафов начинается заново.
+              Для каждого подземелья отдельно запускается 18-часовой цикл с первого входа. Первые 25 попыток в этом цикле
+              используют обычную шкалу снижения опыта и золота. Начиная с 26-й попытки вход остаётся доступен без ограничений,
+              но персонаж получает 0 опыта, 0 золота и 0 личного лута. После окончания 18 часов следующий вход начинает новый цикл с 1-й попытки.
             </p>
             <div className="dungeon-fatigue-scale">
               <span><b>1-я</b><small>100% XP · 100% золота</small></span>
