@@ -453,7 +453,8 @@ export type CharacterAdventureSite = {
 
 export type CombatEncounter = {
   id: string
-  dungeon_run_id: string
+  dungeon_run_id: string | null
+  death_spirit_id: string | null
   character_id: string
   sector_id: number
   status: 'active' | 'victory' | 'defeat' | 'cancelled'
