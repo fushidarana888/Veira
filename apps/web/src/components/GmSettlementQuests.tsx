@@ -106,7 +106,7 @@ function emptyDraft(settlementId = 0): Draft {
     targetItemId: '',
     rewardGold: 25,
     rewardExperience: 20,
-    rewardReputation: 5,
+    rewardReputation: 45,
     minLevel: 1,
     repeatable: true,
     cooldownHours: 12,
@@ -243,7 +243,7 @@ export function GmSettlementQuests() {
       p_target_item_definition_id: draft.objectiveType === 'deliver_item' ? draft.targetItemId : null,
       p_reward_gold: Math.max(0, Math.floor(draft.rewardGold)),
       p_reward_experience: Math.max(0, Math.floor(draft.rewardExperience)),
-      p_reward_reputation: Math.max(0, Math.min(15, Math.floor(draft.rewardReputation))),
+      p_reward_reputation: Math.max(0, Math.min(90, Math.floor(draft.rewardReputation))),
       p_min_level: Math.max(1, Math.floor(draft.minLevel)),
       p_repeatable: draft.repeatable,
       p_cooldown_hours: Math.max(0, Math.floor(draft.cooldownHours)),
@@ -319,14 +319,14 @@ export function GmSettlementQuests() {
         <div className="section-heading">
           <div>
             <span className="eyebrow">РЕПУТАЦИЯ ПОСЕЛЕНИЙ</span>
-            <h2>Долгая городская прогрессия</h2>
+            <h2>Городская прогрессия</h2>
           </div>
           <span className="badge">10 уровней · 2700 максимум</span>
         </div>
 
         <p className="muted">
-          По умолчанию поручение даёт 5 репутации, а в одном городе за сутки можно получить максимум 15.
-          Даже при идеальном ежедневном фарме 10 уровень занимает минимум 180 дней.
+          По умолчанию повторяемое поручение даёт 45 репутации и имеет кулдаун 12 часов, а суточный лимит города — 90.
+          При идеальном фарме дважды в день 10 уровень занимает примерно 30 дней.
         </p>
 
         <div className="gm-reputation-config-list">
@@ -520,7 +520,7 @@ export function GmSettlementQuests() {
             <input
               type="number"
               min={0}
-              max={15}
+              max={90}
               value={draft.rewardReputation}
               onChange={(event) => setDraft((current) => ({ ...current, rewardReputation: Number(event.target.value) }))}
             />
