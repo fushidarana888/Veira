@@ -115,6 +115,15 @@ type SectorIncursion = {
   character_busy: boolean
 }
 
+type ExplorationSpeedState = {
+  speed_percent: number
+  religion_percent: number
+  accessory_percent: number
+  sector_seconds: number
+  ruins_seconds: number
+  dungeon_scout_seconds: number
+}
+
 type DeathSpiritMapEntry = {
   spirit_id: string
   owner_character_id: string
@@ -141,12 +150,22 @@ type WorldMapCacheEntry = {
   strongEnemies: WorldStrongEnemy[]
   huntingState: HuntingState | null
   incursions: SectorIncursion[]
+  explorationSpeed: ExplorationSpeedState
 }
 
 const worldMapCache = new Map<string, WorldMapCacheEntry>()
 
 const TOTAL_SECTORS = 300
-const EXPLORATION_HOURS = 4
+const BASE_EXPLORATION_SECONDS = 4 * 60 * 60
+
+function formatDuration(seconds: number) {
+  const totalMinutes = Math.max(1, Math.ceil(seconds / 60))
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours === 0) return `${minutes} мин`
+  if (minutes === 0) return `${hours} ч`
+  return `${hours} ч ${minutes} мин`
+}
 const MAP_BASE_WIDTH = 1100
 const MAP_MIN_ZOOM = 0.35
 const MAP_MAX_ZOOM = 1.75
@@ -440,6 +459,16 @@ export function WorldMap({
   const [strongEnemies, setStrongEnemies] = useState<WorldStrongEnemy[]>(() => cachedMap?.strongEnemies ?? [])
   const [huntingState, setHuntingState] = useState<HuntingState | null>(() => cachedMap?.huntingState ?? null)
   const [incursions, setIncursions] = useState<SectorIncursion[]>(() => cachedMap?.incursions ?? [])
+  const [explorationSpeed, setExplorationSpeed] = useState<ExplorationSpeedState>(
+    () => cachedMap?.explorationSpeed ?? {
+      speed_percent: 0,
+      religion_percent: 0,
+      accessory_percent: 0,
+      sector_seconds: BASE_EXPLORATION_SECONDS,
+      ruins_seconds: 2 * 60 * 60,
+      dungeon_scout_seconds: 60 * 60,
+    },
+  )
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(() => !cachedMap)
   const [busy, setBusy] = useState(false)
@@ -458,6 +487,7 @@ export function WorldMap({
 
     const [
       mapResult,
+      explorationSpeedResult,
       expeditionResult,
       eventResult,
       resultResult,
@@ -470,6 +500,9 @@ export function WorldMap({
       incursionResult,
     ] = await Promise.all([
       supabase.rpc('get_character_map_state', {
+        p_character_id: characterId,
+      }),
+      supabase.rpc('get_character_exploration_speed', {
         p_character_id: characterId,
       }),
       supabase
@@ -522,6 +555,7 @@ export function WorldMap({
 
     const error =
       mapResult.error ??
+      explorationSpeedResult.error ??
       expeditionResult.error ??
       eventResult.error ??
       resultResult.error ??
@@ -551,6 +585,14 @@ export function WorldMap({
       strongEnemies: (strongEnemyResult.data as WorldStrongEnemy[] | null) ?? [],
       huntingState: ((huntingStateResult.data as HuntingState[] | null) ?? [])[0] ?? null,
       incursions: (incursionResult.data as SectorIncursion[] | null) ?? [],
+      explorationSpeed: ((explorationSpeedResult.data as ExplorationSpeedState[] | null) ?? [])[0] ?? {
+        speed_percent: 0,
+        religion_percent: 0,
+        accessory_percent: 0,
+        sector_seconds: BASE_EXPLORATION_SECONDS,
+        ruins_seconds: 2 * 60 * 60,
+        dungeon_scout_seconds: 60 * 60,
+      },
     }
 
     worldMapCache.set(characterId, nextCache)
@@ -565,6 +607,7 @@ export function WorldMap({
     setStrongEnemies(nextCache.strongEnemies)
     setHuntingState(nextCache.huntingState)
     setIncursions(nextCache.incursions)
+    setExplorationSpeed(nextCache.explorationSpeed)
     if (!silent) setLoading(false)
   }
 
@@ -1170,7 +1213,10 @@ export function WorldMap({
           <span className="eyebrow">ЭЙЛАР · ЛИЧНАЯ КАРТА</span>
           <h2>Исследование мира</h2>
           <p className="muted">
-            Карта разделена на {TOTAL_SECTORS} секторов. Неизведанный соседний сектор открывается за {EXPLORATION_HOURS} часов реального времени. Исследование пассивное: параллельно можно дуэлиться, крафтить и заниматься социальными или учебными активностями.
+            Карта разделена на {TOTAL_SECTORS} секторов. Базовое время открытия соседнего сектора — 4 часа.
+            Сейчас твоя скорость исследования {explorationSpeed.speed_percent > 0 ? `+${explorationSpeed.speed_percent}%` : 'без бонуса'}:
+            сектор — {formatDuration(explorationSpeed.sector_seconds)}, руины — {formatDuration(explorationSpeed.ruins_seconds)},
+            разведка подземелья — {formatDuration(explorationSpeed.dungeon_scout_seconds)}. Исследование пассивное: параллельно можно дуэлиться, крафтить и заниматься социальными или учебными активностями.
           </p>
         </div>
 
@@ -1767,7 +1813,7 @@ export function WorldMap({
                       disabled={busy || anyBlockingActivity}
                       onClick={() => void startSiteAction('explore_ruins')}
                     >
-                      Исследовать руины · 2 часа
+                      Исследовать руины · {formatDuration(explorationSpeed.ruins_seconds)}
                     </button>
                   )}
                 </div>
@@ -1805,7 +1851,7 @@ export function WorldMap({
                       disabled={busy || anyBlockingActivity}
                       onClick={() => void startSiteAction('scout_dungeon')}
                     >
-                      Разведать вход · 1 час
+                      Разведать вход · {formatDuration(explorationSpeed.dungeon_scout_seconds)}
                     </button>
                   )}
 
@@ -1846,7 +1892,7 @@ export function WorldMap({
                 disabled={busy || anyBlockingActivity}
                 onClick={() => void startExploration()}
               >
-                {busy ? 'Отправляемся…' : `Исследовать · ${EXPLORATION_HOURS} часов`}
+                {busy ? 'Отправляемся…' : `Исследовать · ${formatDuration(explorationSpeed.sector_seconds)}`}
               </button>
             )}
           </>
