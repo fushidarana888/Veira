@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSmartRefresh } from '../lib/smartRefresh'
 import { SettlementShop } from './SettlementShop'
 import type {
   CharacterMapSector,
@@ -170,6 +171,24 @@ function formatRemaining(milliseconds: number) {
     .replace(/^(..)(..)(..)$/, '$1:$2:$3')
 }
 
+function Countdown({ endsAt }: { endsAt: string }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === 'visible') setNow(Date.now())
+    }
+    const timer = window.setInterval(tick, 1000)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [])
+
+  return <>{formatRemaining(new Date(endsAt).getTime() - now)}</>
+}
+
 export function WorldMap({
   characterId,
   onProgressChanged,
@@ -186,16 +205,17 @@ export function WorldMap({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [now, setNow] = useState(() => Date.now())
   const [mapSrc, setMapSrc] = useState(ORIGINAL_MAP_URL)
   const [showGameplayOverlay, setShowGameplayOverlay] = useState(true)
   const [mapZoom, setMapZoom] = useState(initialMapZoom)
   const mapFrameRef = useRef<HTMLDivElement | null>(null)
   const mapCenteredRef = useRef(false)
 
-  async function loadMapData() {
-    setLoading(true)
-    setMessage('')
+  async function loadMapData(silent = false) {
+    if (!silent) {
+      setLoading(true)
+      setMessage('')
+    }
 
     const [
       mapResult,
@@ -255,8 +275,8 @@ export function WorldMap({
       dungeonRunResult.error
 
     if (error) {
-      setMessage(error.message)
-      setLoading(false)
+      if (!silent) setMessage(error.message)
+      if (!silent) setLoading(false)
       return
     }
 
@@ -267,7 +287,7 @@ export function WorldMap({
     setSiteActions((siteActionResult.data as SectorSiteAction[] | null) ?? [])
     setSiteProgress((siteProgressResult.data as SectorSiteProgress[] | null) ?? [])
     setDungeonRuns((dungeonRunResult.data as DungeonRun[] | null) ?? [])
-    setLoading(false)
+    if (!silent) setLoading(false)
   }
 
   useEffect(() => {
@@ -276,10 +296,10 @@ export function WorldMap({
     void loadMapData()
   }, [characterId])
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(timer)
-  }, [])
+  useSmartRefresh(
+    () => loadMapData(true),
+    { enabled: sectors.length > 0, minGapMs: 1500 },
+  )
 
   const sectorById = useMemo(
     () => new Map(sectors.map((sector) => [sector.id, sector])),
@@ -401,14 +421,13 @@ export function WorldMap({
     if (!activeTimedAction) return
 
     const endsAt = new Date(activeTimedAction.ends_at).getTime()
-    if (now < endsAt) return
-
+    const delay = Math.max(0, endsAt - Date.now() + 800)
     const timeout = window.setTimeout(() => {
-      void loadMapData()
-    }, 700)
+      void loadMapData(true)
+    }, delay)
 
     return () => window.clearTimeout(timeout)
-  }, [activeExpedition, activeSiteAction, now])
+  }, [activeExpedition?.id, activeExpedition?.ends_at, activeSiteAction?.id, activeSiteAction?.ends_at])
 
   async function cancelExploration(expeditionId: string) {
     if (!window.confirm('Отменить текущую экспедицию? Прогресс этого исследования будет потерян.')) return
@@ -586,14 +605,6 @@ export function WorldMap({
     )
   }
 
-  const remaining = activeExpedition
-    ? new Date(activeExpedition.ends_at).getTime() - now
-    : 0
-
-  const siteActionRemaining = activeSiteAction
-    ? new Date(activeSiteAction.ends_at).getTime() - now
-    : 0
-
   return (
     <section className="world-section">
       <article className="panel world-header-card">
@@ -624,7 +635,7 @@ export function WorldMap({
           </div>
           <div className="expedition-timer">
             <span>Осталось</span>
-            <strong>{formatRemaining(remaining)}</strong>
+            <strong><Countdown endsAt={activeExpedition.ends_at} /></strong>
             <button
               className="ghost-button danger-button expedition-cancel-button"
               type="button"
@@ -654,7 +665,7 @@ export function WorldMap({
           </div>
           <div className="expedition-timer">
             <span>Осталось</span>
-            <strong>{formatRemaining(siteActionRemaining)}</strong>
+            <strong><Countdown endsAt={activeSiteAction.ends_at} /></strong>
             <button
               className="ghost-button danger-button expedition-cancel-button"
               type="button"
