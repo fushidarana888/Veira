@@ -9690,7 +9690,9 @@ textarea {
 }
 
 .guild-header-panel,
-.guild-entry-panel {
+.guild-entry-panel,
+.communities-header-panel,
+.communities-entry-panel {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -9698,7 +9700,9 @@ textarea {
 }
 
 .guild-header-panel > div,
-.guild-entry-panel > div {
+.guild-entry-panel > div,
+.communities-header-panel > div,
+.communities-entry-panel > div {
   min-width: 0;
 }
 
@@ -9979,5 +9983,36 @@ textarea {
   .item-history-event-head {
     display: grid;
     gap: 2px;
+  }
+}
+
+
+/* Communities */
+.communities-section {
+  display: grid;
+  gap: 14px;
+}
+
+.communities-subnav {
+  margin-top: -2px;
+}
+
+.guild-section.embedded {
+  gap: 14px;
+}
+
+.guild-loading-panel.embedded {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .communities-header-panel,
+  .communities-entry-panel {
+    flex-direction: column;
+  }
+
+  .communities-header-panel > button,
+  .communities-entry-panel > button {
+    width: 100%;
   }
 }
