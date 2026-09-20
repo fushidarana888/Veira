@@ -75,6 +75,7 @@ const weaponFamilyMechanicLabels: Partial<Record<WeaponFamily, string>> = {
   mace: 'Оглушение: 8% соло/PvP · 5% пати',
   hammer: 'Оглушение: 8% соло/PvP · 5% пати',
   club: 'Blunt: уязвимость ×1.5 · учитывает только 50% сопротивления',
+  greatsword: 'Каждый успешный некритический физический удар: +5 п.п. Crit Chance · крит сбрасывает накопление · общий кап 60%',
 }
 
 const statLabels: Record<string, string> = {
