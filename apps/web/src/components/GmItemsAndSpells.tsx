@@ -935,6 +935,7 @@ export function GmItemsAndSpells() {
                       <option value="short_bow">Короткий лук</option>
                       <option value="long_bow">Длинный лук</option>
                       <option value="dagger">Кинжал</option>
+                      <option value="rapier">Рапира</option>
                     </select>
                   </label>
                   <label>
