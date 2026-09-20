@@ -19,6 +19,20 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
 }
 
+type DeathSpiritMapEntry = {
+  spirit_id: string
+  owner_character_id: string
+  owner_name: string
+  sector_id: number
+  grid_col: number
+  grid_row: number
+  is_own: boolean
+  has_trophy: boolean
+  trophy_name: string | null
+  created_at: string
+  expires_at: string
+}
+
 type WorldMapCacheEntry = {
   sectors: CharacterMapSector[]
   expeditions: SectorExpedition[]
@@ -27,6 +41,7 @@ type WorldMapCacheEntry = {
   siteActions: SectorSiteAction[]
   siteProgress: SectorSiteProgress[]
   dungeonRuns: DungeonRun[]
+  deathSpirits: DeathSpiritMapEntry[]
 }
 
 const worldMapCache = new Map<string, WorldMapCacheEntry>()
@@ -176,6 +191,7 @@ const MapSectorButton = memo(function MapSectorButton({
   awaitingEvent,
   selected,
   showGameplayOverlay,
+  deathSpiritCount,
   onSelect,
 }: {
   sector: CharacterMapSector
@@ -183,6 +199,7 @@ const MapSectorButton = memo(function MapSectorButton({
   awaitingEvent: boolean
   selected: boolean
   showGameplayOverlay: boolean
+  deathSpiritCount: number
   onSelect: (sectorId: number) => void
 }) {
   const contentType =
@@ -201,6 +218,7 @@ const MapSectorButton = memo(function MapSectorButton({
     active ? 'active-expedition' : '',
     awaitingEvent && active ? 'awaiting-event' : '',
     selected ? 'selected' : '',
+    deathSpiritCount > 0 ? 'has-death-spirit' : '',
   ].filter(Boolean).join(' ')
 
   return (
@@ -224,6 +242,15 @@ const MapSectorButton = memo(function MapSectorButton({
       {active && (
         <span className="sector-expedition-mark">
           {awaitingEvent ? '!' : '⌛'}
+        </span>
+      )}
+      {showGameplayOverlay && deathSpiritCount > 0 && (
+        <span
+          className="sector-death-spirit-mark"
+          title={deathSpiritCount > 1 ? `Духи погибших: ${deathSpiritCount}` : 'Дух погибшего'}
+          aria-label={deathSpiritCount > 1 ? `Духи погибших: ${deathSpiritCount}` : 'Дух погибшего'}
+        >
+          ☠
         </span>
       )}
       {showGameplayOverlay && contentType && (
@@ -285,6 +312,7 @@ export function WorldMap({
   const [siteActions, setSiteActions] = useState<SectorSiteAction[]>(() => cachedMap?.siteActions ?? [])
   const [siteProgress, setSiteProgress] = useState<SectorSiteProgress[]>(() => cachedMap?.siteProgress ?? [])
   const [dungeonRuns, setDungeonRuns] = useState<DungeonRun[]>(() => cachedMap?.dungeonRuns ?? [])
+  const [deathSpirits, setDeathSpirits] = useState<DeathSpiritMapEntry[]>(() => cachedMap?.deathSpirits ?? [])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(() => !cachedMap)
   const [busy, setBusy] = useState(false)
@@ -309,6 +337,7 @@ export function WorldMap({
       siteActionResult,
       siteProgressResult,
       dungeonRunResult,
+      deathSpiritResult,
     ] = await Promise.all([
       supabase.rpc('get_character_map_state', {
         p_character_id: characterId,
@@ -347,6 +376,9 @@ export function WorldMap({
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
+      supabase.rpc('get_visible_death_spirits', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
@@ -356,7 +388,8 @@ export function WorldMap({
       resultResult.error ??
       siteActionResult.error ??
       siteProgressResult.error ??
-      dungeonRunResult.error
+      dungeonRunResult.error ??
+      deathSpiritResult.error
 
     if (error) {
       if (!silent) setMessage(error.message)
@@ -372,6 +405,7 @@ export function WorldMap({
       siteActions: (siteActionResult.data as SectorSiteAction[] | null) ?? [],
       siteProgress: (siteProgressResult.data as SectorSiteProgress[] | null) ?? [],
       dungeonRuns: (dungeonRunResult.data as DungeonRun[] | null) ?? [],
+      deathSpirits: (deathSpiritResult.data as DeathSpiritMapEntry[] | null) ?? [],
     }
 
     worldMapCache.set(characterId, nextCache)
@@ -382,6 +416,7 @@ export function WorldMap({
     setSiteActions(nextCache.siteActions)
     setSiteProgress(nextCache.siteProgress)
     setDungeonRuns(nextCache.dungeonRuns)
+    setDeathSpirits(nextCache.deathSpirits)
     if (!silent) setLoading(false)
   }
 
@@ -400,6 +435,16 @@ export function WorldMap({
     () => new Map(sectors.map((sector) => [sector.id, sector])),
     [sectors],
   )
+
+  const deathSpiritsBySector = useMemo(() => {
+    const grouped = new Map<number, DeathSpiritMapEntry[]>()
+    for (const spirit of deathSpirits) {
+      const entries = grouped.get(spirit.sector_id) ?? []
+      entries.push(spirit)
+      grouped.set(spirit.sector_id, entries)
+    }
+    return grouped
+  }, [deathSpirits])
 
   const discoveredCount = useMemo(
     () => sectors.filter((sector) => sector.is_discovered).length,
@@ -510,6 +555,10 @@ export function WorldMap({
   const selectedSector = selectedSectorId
     ? sectorById.get(selectedSectorId) ?? null
     : null
+
+  const selectedDeathSpirits = selectedSector
+    ? deathSpiritsBySector.get(selectedSector.id) ?? []
+    : []
 
   const selectSector = useCallback((sectorId: number) => {
     setSelectedSectorId(sectorId)
@@ -656,6 +705,39 @@ export function WorldMap({
     }
 
     await loadMapData()
+    setBusy(false)
+  }
+
+  async function startDeathSpiritCombat(spirit: DeathSpiritMapEntry) {
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('start_death_spirit_combat', {
+      p_character_id: characterId,
+      p_spirit_id: spirit.spirit_id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('SPIRIT_ALREADY_CHALLENGED')) {
+        setMessage('С этим духом уже сражается другой персонаж.')
+      } else if (raw.includes('DEATH_SPIRIT_NOT_ACTIVE')) {
+        setMessage('Этот дух уже исчез или был побеждён.')
+      } else if (raw.includes('COMBAT_ALREADY_ACTIVE')) {
+        setMessage('У персонажа уже идёт другой бой.')
+      } else if (raw.includes('DUNGEON_RUN_ALREADY_ACTIVE') || raw.includes('PARTY_DUNGEON_ACTIVE')) {
+        setMessage('Сначала заверши текущее прохождение подземелья.')
+      } else if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else {
+        setMessage(raw)
+      }
+      setBusy(false)
+      return
+    }
+
+    await loadMapData(true)
+    setMessage('Бой с духом начат. Продолжай его в разделе «Бои».')
     setBusy(false)
   }
 
@@ -938,6 +1020,7 @@ export function WorldMap({
                 awaitingEvent={Boolean(waitingExpedition)}
                 selected={selectedSectorId === sector.id}
                 showGameplayOverlay={showGameplayOverlay}
+                deathSpiritCount={deathSpiritsBySector.get(sector.id)?.length ?? 0}
                 onSelect={selectSector}
               />
             ))}
@@ -976,6 +1059,39 @@ export function WorldMap({
               {selectedSector.player_description ||
                 'Этот сектор уже нанесён на карту, но подробное описание пока не задано.'}
             </p>
+
+            {selectedDeathSpirits.length > 0 && (
+              <div className="death-spirit-sector-list">
+                {selectedDeathSpirits.map((spirit) => (
+                  <div className={`death-spirit-sector-card ${spirit.is_own ? 'own' : 'foreign'}`} key={spirit.spirit_id}>
+                    <div>
+                      <span className="eyebrow">{spirit.is_own ? 'ТВОЙ ДУХ' : 'ЧУЖОЙ ДУХ'}</span>
+                      <strong>Дух {spirit.owner_name}</strong>
+                      <small>
+                        Исчезнет через <Countdown endsAt={spirit.expires_at} />
+                      </small>
+                      <p>
+                        {spirit.is_own
+                          ? spirit.has_trophy
+                            ? `Удерживает: ${spirit.trophy_name ?? 'потерянное снаряжение'}. В бою дух ослаблен на 30%.`
+                            : 'У духа нет удерживаемого снаряжения. В бою он ослаблен на 30%.'
+                          : spirit.has_trophy
+                            ? 'Удерживает неизвестный трофей. Для чужого персонажа дух усилен на 30%.'
+                            : 'Трофея нет. Для чужого персонажа дух усилен на 30%.'}
+                      </p>
+                    </div>
+                    <button
+                      className="primary-button death-spirit-fight-button"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void startDeathSpiritCombat(spirit)}
+                    >
+                      {spirit.is_own ? 'Вернуть снаряжение' : 'Сразиться за трофей'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {selectedSector.content_type === 'ruins' && (() => {
               const progress = siteProgressBySector.get(selectedSector.id)
