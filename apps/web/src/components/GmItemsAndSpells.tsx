@@ -1233,7 +1233,7 @@ export function GmItemsAndSpells() {
 
             <div className="gm-form-grid two">
               <label><span>Название</span><input value={spellDraft.name} onChange={(e) => setSpellDraft({ ...spellDraft, name: e.target.value })} /></label>
-              <label><span>Slug</span><input value={spellDraft.slug} onChange={(e) => setSpellDraft({ ...spellDraft, slug: e.target.value })} /></label>
+              <label><span>Служебный код</span><input value={spellDraft.slug} onChange={(e) => setSpellDraft({ ...spellDraft, slug: e.target.value })} /></label>
             </div>
 
             <label><span>Описание</span><textarea rows={4} value={spellDraft.description} onChange={(e) => setSpellDraft({ ...spellDraft, description: e.target.value })} /></label>
