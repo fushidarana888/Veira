@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AdventuresPanel = lazy(() => import('./AdventuresPanel').then((module) => ({ default: module.AdventuresPanel })))
+const PartyPanel = lazy(() => import('./PartyPanel').then((module) => ({ default: module.PartyPanel })))
 const PartyDungeonPanel = lazy(() => import('./PartyDungeonPanel').then((module) => ({ default: module.PartyDungeonPanel })))
 const DuelPanel = lazy(() => import('./DuelPanel').then((module) => ({ default: module.DuelPanel })))
 
@@ -12,7 +13,7 @@ type Props = {
 }
 
 type BattleKind = 'solo' | 'party' | 'pvp'
-type BattleTab = 'current' | 'history' | 'duels'
+type BattleTab = 'current' | 'group' | 'history' | 'duels'
 
 type BattleOverview = {
   active_kind: BattleKind | null
@@ -236,7 +237,7 @@ export function BattleCenterPanel({
           <span className="eyebrow">БОЕВОЙ ЦЕНТР</span>
           <h2>Бои</h2>
           <p className="muted">
-            Текущая битва, подробная история прохождений и дуэли теперь собраны в одном месте.
+            Текущая битва, группа, кооперативные походы, история прохождений и дуэли теперь собраны в одном месте.
           </p>
         </div>
         <div className={'battle-live-indicator ' + (overview.active_kind ? 'active' : '')}>
@@ -249,6 +250,10 @@ export function BattleCenterPanel({
         <button className={tab === 'current' ? 'active' : ''} type="button" onClick={() => setTab('current')}>
           Сейчас
           {overview.active_kind && <b>1</b>}
+        </button>
+        <button className={tab === 'group' ? 'active' : ''} type="button" onClick={() => setTab('group')}>
+          Группа
+          {overview.party_active && <b>LIVE</b>}
         </button>
         <button className={tab === 'history' ? 'active' : ''} type="button" onClick={() => setTab('history')}>
           История
@@ -270,7 +275,7 @@ export function BattleCenterPanel({
               <span className="eyebrow">СЕЙЧАС</span>
               <h3>Активного боя нет</h3>
               <p className="muted">
-                Войти в подземелье или собрать групповой поход можно через «Приключения». Когда начинается битва, она появляется здесь.
+                Соло-поход начинается через «Приключения». Группу и кооперативный поход можно собрать во вкладке «Группа» прямо здесь.
               </p>
             </article>
           ) : (
@@ -295,6 +300,21 @@ export function BattleCenterPanel({
             </Suspense>
           )}
         </>
+      )}
+
+      {tab === 'group' && (
+        <Suspense fallback={<LoadingBattle />}>
+          <div className="battle-group-section">
+            <PartyPanel characterId={characterId} />
+            <PartyDungeonPanel
+              characterId={characterId}
+              mode="management"
+              onOpenBattles={() => setTab('current')}
+              onProgressChanged={onProgressChanged}
+              onInventoryChanged={onInventoryChanged}
+            />
+          </div>
+        </Suspense>
       )}
 
       {tab === 'history' && (
