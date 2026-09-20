@@ -1,9 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { AuthScreen } from './components/AuthScreen'
 import { supabase } from './lib/supabase'
 import type { Character, Profile } from './types'
 
+const AuthScreen = lazy(() => import('./components/AuthScreen').then((module) => ({ default: module.AuthScreen })))
 const CharacterSetup = lazy(() => import('./components/CharacterSetup').then((module) => ({ default: module.CharacterSetup })))
 const GmHome = lazy(() => import('./components/GmHome').then((module) => ({ default: module.GmHome })))
 const PlayerHome = lazy(() => import('./components/PlayerHome').then((module) => ({ default: module.PlayerHome })))
@@ -37,44 +37,13 @@ export function App() {
 
     setState((current) => ({ ...current, user, loading: true, error: '' }))
 
-    const { data: profileData, error: profileError } = await supabase
+    const profilePromise = supabase
       .from('profiles')
       .select('user_id, display_name, avatar_url, account_type, email_verified, email_verified_at')
       .eq('user_id', user.id)
       .single()
 
-    if (profileError || !profileData) {
-      setState({
-        user,
-        profile: null,
-        character: null,
-        loading: false,
-        error: profileError?.message ?? 'Профиль аккаунта не найден.',
-      })
-      return
-    }
-
-    let profile = profileData as Profile
-
-    // Проверка OTP нужна только пока почта ещё не отмечена подтверждённой.
-    // У уже подтверждённых аккаунтов это убирает один сетевой запрос при каждом входе.
-    if (!profile.email_verified) {
-      const { data: markedVerified } = await supabase.rpc('mark_email_verified_from_otp')
-      if (markedVerified) {
-        profile = {
-          ...profile,
-          email_verified: true,
-          email_verified_at: profile.email_verified_at ?? new Date().toISOString(),
-        }
-      }
-    }
-
-    if (profile.account_type === 'gm') {
-      setState({ user, profile, character: null, loading: false, error: '' })
-      return
-    }
-
-    const { data: characterData, error: characterError } = await supabase
+    const characterPromise = supabase
       .from('characters')
       .select(`
         id,
@@ -109,6 +78,47 @@ export function App() {
       .limit(1)
       .maybeSingle()
 
+    const [
+      { data: profileData, error: profileError },
+      { data: characterData, error: characterError },
+    ] = await Promise.all([profilePromise, characterPromise])
+
+    if (profileError || !profileData) {
+      setState({
+        user,
+        profile: null,
+        character: null,
+        loading: false,
+        error: profileError?.message ?? 'Профиль аккаунта не найден.',
+      })
+      return
+    }
+
+    const profile = profileData as Profile
+
+    // Подтверждение OTP не должно задерживать вход в игру.
+    if (!profile.email_verified) {
+      void supabase.rpc('mark_email_verified_from_otp').then(({ data: markedVerified }) => {
+        if (!markedVerified) return
+        setState((current) => current.user?.id === user.id && current.profile
+          ? {
+              ...current,
+              profile: {
+                ...current.profile,
+                email_verified: true,
+                email_verified_at: current.profile.email_verified_at ?? new Date().toISOString(),
+              },
+            }
+          : current)
+      })
+    }
+
+    if (profile.account_type === 'gm') {
+      loadedUserIdRef.current = user.id
+      setState({ user, profile, character: null, loading: false, error: '' })
+      return
+    }
+
     if (characterError) {
       setState({
         user,
@@ -133,8 +143,8 @@ export function App() {
   useEffect(() => {
     let active = true
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (active) void loadAccount(data.user)
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) void loadAccount(data.session?.user ?? null)
     })
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -188,7 +198,13 @@ export function App() {
     )
   }
 
-  if (!state.user) return <AuthScreen />
+  if (!state.user) {
+    return (
+      <Suspense fallback={<AppSectionLoading />}>
+        <AuthScreen />
+      </Suspense>
+    )
+  }
 
   if (state.error) {
     return (
