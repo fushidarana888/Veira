@@ -28,6 +28,19 @@ type Props = {
 type Tab = 'world' | 'character' | 'adventures' | 'community' | 'more'
 type CharacterTab = 'overview' | 'inventory' | 'equipment' | 'magic' | 'crafting'
 
+type CharacterCustomizationState = {
+  character_id: string
+  current_race_id: string
+  current_race_name: string
+  bio: string
+  free_race_changes: number
+  free_bio_changes: number
+  race_change_cost: number
+  bio_change_cost: number
+  gold: number
+  busy_for_race_change: boolean
+}
+
 const equipmentLabels: Record<EquipmentSlot, string> = {
   weapon: 'Оружие',
   offhand: 'Вторая рука',
@@ -185,6 +198,14 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   const [progressMessage, setProgressMessage] = useState('')
   const [securityBusy, setSecurityBusy] = useState(false)
   const [securityMessage, setSecurityMessage] = useState('')
+  const [customizationState, setCustomizationState] = useState<CharacterCustomizationState | null>(null)
+  const [customizationRaces, setCustomizationRaces] = useState<RaceDefinition[]>([])
+  const [selectedCustomizationRaceId, setSelectedCustomizationRaceId] = useState(character.race_id)
+  const [customizationBio, setCustomizationBio] = useState(character.bio)
+  const [characterBio, setCharacterBio] = useState(character.bio)
+  const [characterRaceName, setCharacterRaceName] = useState(character.race)
+  const [customizationBusy, setCustomizationBusy] = useState<'race' | 'bio' | null>(null)
+  const [customizationMessage, setCustomizationMessage] = useState('')
   const [progress, setProgress] = useState<CharacterProgress | null>(
     () => normalizeProgress(character.character_progress),
   )
@@ -192,6 +213,13 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   useEffect(() => {
     setProgress(normalizeProgress(character.character_progress))
   }, [character.character_progress])
+
+  useEffect(() => {
+    setCharacterBio(character.bio)
+    setCustomizationBio(character.bio)
+    setCharacterRaceName(character.race)
+    setSelectedCustomizationRaceId(character.race_id)
+  }, [character.bio, character.race, character.race_id])
 
   async function loadRace() {
     const { data, error } = await supabase.rpc('get_character_race_state', {
@@ -540,6 +568,158 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     await loadInventory()
   }
 
+  function customizationError(raw: string) {
+    if (raw.includes('NOT_ENOUGH_GOLD')) return 'Не хватает золота.'
+    if (raw.includes('RACE_UNCHANGED')) return 'Это уже текущая раса персонажа.'
+    if (raw.includes('BIOGRAPHY_UNCHANGED')) return 'Новая биография совпадает с текущей.'
+    if (raw.includes('BIOGRAPHY_REQUIRED')) return 'Биография не может быть пустой.'
+    if (raw.includes('BIOGRAPHY_TOO_LONG')) return 'Биография не может быть длиннее 4000 символов.'
+    if (raw.includes('RACE_REQUIRES_GM_ACCESS')) return 'Эта раса доступна только после разрешения GM.'
+    if (raw.includes('RACE_NOT_PLAYABLE')) return 'Эта раса сейчас недоступна игрокам.'
+    if (raw.includes('CHARACTER_BUSY')) return 'Нельзя менять расу во время боя, экспедиции или другого активного действия.'
+    return raw
+  }
+
+  async function loadCustomization() {
+    const [stateResult, racesResult] = await Promise.all([
+      supabase.rpc('get_character_customization_state', {
+        p_character_id: character.id,
+      }),
+      supabase.rpc('get_character_creation_races'),
+    ])
+
+    if (stateResult.error || racesResult.error) {
+      setCustomizationMessage(
+        customizationError(stateResult.error?.message ?? racesResult.error?.message ?? 'Не удалось загрузить настройки персонажа.'),
+      )
+      return
+    }
+
+    const nextState = stateResult.data as CharacterCustomizationState
+    const nextRaces = (racesResult.data as RaceDefinition[] | null) ?? []
+
+    setCustomizationState(nextState)
+    setCustomizationRaces(nextRaces)
+    setSelectedCustomizationRaceId((current) =>
+      nextRaces.some((race) => race.id === current)
+        ? current
+        : nextState.current_race_id,
+    )
+    setCustomizationBio(nextState.bio)
+  }
+
+  useEffect(() => {
+    if (tab === 'more') void loadCustomization()
+  }, [tab, character.id])
+
+  async function changeRace() {
+    if (!customizationState || selectedCustomizationRaceId === customizationState.current_race_id) return
+
+    const selectedRace = customizationRaces.find((race) => race.id === selectedCustomizationRaceId)
+    if (!selectedRace) return
+
+    const free = customizationState.free_race_changes > 0
+    const costText = free
+      ? `бесплатную смену расы? После неё останется ${customizationState.free_race_changes - 1} бесплатн.`
+      : `смену расы за ${customizationState.race_change_cost} золота?`
+
+    if (!window.confirm(`Сменить расу на «${selectedRace.name}» и использовать ${costText}`)) return
+
+    setCustomizationBusy('race')
+    setCustomizationMessage('')
+
+    const { data, error } = await supabase.rpc('change_character_race', {
+      p_character_id: character.id,
+      p_race_id: selectedCustomizationRaceId,
+    })
+
+    if (error) {
+      setCustomizationMessage(customizationError(error.message))
+      setCustomizationBusy(null)
+      return
+    }
+
+    const result = data as {
+      race_name: string
+      used_free: boolean
+      gold_spent: number
+      free_race_changes: number
+      gold: number
+    }
+
+    setCharacterRaceName(result.race_name)
+    await Promise.all([
+      loadRace(),
+      loadProgress(),
+      loadCustomization(),
+    ])
+
+    setCustomizationMessage(
+      result.used_free
+        ? `Раса изменена на «${result.race_name}». Бесплатных смен осталось: ${result.free_race_changes}.`
+        : `Раса изменена на «${result.race_name}». Списано ${result.gold_spent} золота.`,
+    )
+    setCustomizationBusy(null)
+  }
+
+  async function changeBio() {
+    if (!customizationState) return
+
+    const nextBio = customizationBio.trim()
+    if (!nextBio) {
+      setCustomizationMessage('Биография не может быть пустой.')
+      return
+    }
+
+    if (nextBio === characterBio.trim()) {
+      setCustomizationMessage('Новая биография совпадает с текущей.')
+      return
+    }
+
+    const free = customizationState.free_bio_changes > 0
+    const costText = free
+      ? `бесплатное изменение? После него останется ${customizationState.free_bio_changes - 1} бесплатн.`
+      : `изменение за ${customizationState.bio_change_cost} золота?`
+
+    if (!window.confirm(`Сохранить новую биографию и использовать ${costText}`)) return
+
+    setCustomizationBusy('bio')
+    setCustomizationMessage('')
+
+    const { data, error } = await supabase.rpc('change_character_bio', {
+      p_character_id: character.id,
+      p_bio: nextBio,
+    })
+
+    if (error) {
+      setCustomizationMessage(customizationError(error.message))
+      setCustomizationBusy(null)
+      return
+    }
+
+    const result = data as {
+      bio: string
+      used_free: boolean
+      gold_spent: number
+      free_bio_changes: number
+      gold: number
+    }
+
+    setCharacterBio(result.bio)
+    setCustomizationBio(result.bio)
+    await Promise.all([
+      loadProgress(),
+      loadCustomization(),
+    ])
+
+    setCustomizationMessage(
+      result.used_free
+        ? `Биография обновлена. Бесплатных изменений осталось: ${result.free_bio_changes}.`
+        : `Биография обновлена. Списано ${result.gold_spent} золота.`,
+    )
+    setCustomizationBusy(null)
+  }
+
   async function sendEmailVerification() {
     if (!userEmail || profile.email_verified) return
 
@@ -596,7 +776,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
             {character.name.slice(0, 1).toUpperCase()}
           </div>
           <div>
-            <span className="eyebrow">{character.race}</span>
+            <span className="eyebrow">{characterRaceName}</span>
             <h1>{character.name}</h1>
             <p className="muted">@{profile.display_name}</p>
           </div>
@@ -820,7 +1000,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
 
               <section className="panel">
                 <span className="eyebrow">БИОГРАФИЯ</span>
-                <p className="bio-text">{character.bio || 'Биография пока не заполнена.'}</p>
+                <p className="bio-text">{characterBio || 'Биография пока не заполнена.'}</p>
               </section>
             </>
           )}
@@ -927,6 +1107,137 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
             {securityMessage && (
               <p className="form-message" aria-live="polite">{securityMessage}</p>
             )}
+          </section>
+
+          <section className="panel character-customization-panel">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">ПЕРСОНАЖ</span>
+                <h2>Изменить персонажа</h2>
+                <p className="muted">
+                  У каждого персонажа есть по 2 бесплатных изменения расы и биографии. После этого используются монеты.
+                </p>
+              </div>
+              <span className="badge">
+                {customizationState ? `${customizationState.gold.toLocaleString('ru-RU')} золота` : 'загрузка…'}
+              </span>
+            </div>
+
+            {customizationMessage && (
+              <p className="form-message" aria-live="polite">{customizationMessage}</p>
+            )}
+
+            <div className="character-customization-grid">
+              <article className="character-customization-card">
+                <div className="character-customization-card-head">
+                  <div>
+                    <span className="eyebrow">РАСА</span>
+                    <strong>{customizationState?.current_race_name ?? characterRaceName}</strong>
+                  </div>
+                  <span className={'customization-free-count ' + ((customizationState?.free_race_changes ?? 0) > 0 ? 'ready' : '')}>
+                    Бесплатно: {customizationState?.free_race_changes ?? '…'}
+                  </span>
+                </div>
+
+                <p>
+                  Первые две смены бесплатны. Затем каждая смена стоит <b>150 золота</b>.
+                  Во время боя, экспедиции или другого активного действия расу менять нельзя.
+                </p>
+
+                <label>
+                  <span>Новая раса</span>
+                  <select
+                    value={selectedCustomizationRaceId}
+                    disabled={customizationBusy !== null || !customizationState}
+                    onChange={(event) => setSelectedCustomizationRaceId(event.target.value)}
+                  >
+                    {customizationRaces.map((race) => (
+                      <option
+                        key={race.id}
+                        value={race.id}
+                        disabled={race.is_available === false}
+                      >
+                        {race.name}{race.is_available === false ? ' · нужен доступ GM' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {customizationRaces.find((race) => race.id === selectedCustomizationRaceId) && (
+                  <small className="character-customization-preview">
+                    {customizationRaces.find((race) => race.id === selectedCustomizationRaceId)?.description}
+                  </small>
+                )}
+
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={
+                    customizationBusy !== null
+                    || !customizationState
+                    || customizationState.busy_for_race_change
+                    || selectedCustomizationRaceId === customizationState.current_race_id
+                    || customizationRaces.find((race) => race.id === selectedCustomizationRaceId)?.is_available === false
+                  }
+                  onClick={() => void changeRace()}
+                >
+                  {customizationBusy === 'race'
+                    ? 'Меняем…'
+                    : customizationState?.free_race_changes
+                      ? `Сменить бесплатно · осталось ${customizationState.free_race_changes}`
+                      : 'Сменить расу · 150 золота'}
+                </button>
+              </article>
+
+              <article className="character-customization-card">
+                <div className="character-customization-card-head">
+                  <div>
+                    <span className="eyebrow">БИОГРАФИЯ</span>
+                    <strong>Переписать историю</strong>
+                  </div>
+                  <span className={'customization-free-count ' + ((customizationState?.free_bio_changes ?? 0) > 0 ? 'ready' : '')}>
+                    Бесплатно: {customizationState?.free_bio_changes ?? '…'}
+                  </span>
+                </div>
+
+                <p>
+                  Первые два изменения бесплатны. Затем каждое сохранение новой биографии стоит <b>50 золота</b>.
+                </p>
+
+                <label>
+                  <span>Новая биография</span>
+                  <textarea
+                    value={customizationBio}
+                    maxLength={4000}
+                    rows={8}
+                    disabled={customizationBusy !== null || !customizationState}
+                    onChange={(event) => setCustomizationBio(event.target.value)}
+                  />
+                </label>
+
+                <small className="character-customization-preview">
+                  {customizationBio.length} / 4000 символов
+                </small>
+
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={
+                    customizationBusy !== null
+                    || !customizationState
+                    || !customizationBio.trim()
+                    || customizationBio.trim() === characterBio.trim()
+                  }
+                  onClick={() => void changeBio()}
+                >
+                  {customizationBusy === 'bio'
+                    ? 'Сохраняем…'
+                    : customizationState?.free_bio_changes
+                      ? `Изменить бесплатно · осталось ${customizationState.free_bio_changes}`
+                      : 'Изменить биографию · 50 золота'}
+                </button>
+              </article>
+            </div>
           </section>
 
           <Placeholder title="Ещё" text="Здесь позже появятся достижения, журнал и остальные настройки Veira." />
