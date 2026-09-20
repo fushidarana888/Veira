@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSmartRefresh } from '../lib/smartRefresh'
 import { EventBossesPanel } from './EventBossesPanel'
 import type {
   AutobattleGuardMode,
@@ -190,19 +191,15 @@ export function AdventuresPanel({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
-  async function loadAdventures() {
-    setLoading(true)
-
-    const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult, autobattleSpellResult, combatStyleResult, bowProfileResult] = await Promise.all([
-      supabase.rpc('get_character_adventures_v3', {
-        p_character_id: characterId,
-      }),
-      supabase
-        .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, enemy_bloodshed_stacks, created_at, ended_at')
-        .eq('character_id', characterId)
-        .order('created_at', { ascending: false })
-        .limit(20),
+  async function loadAdventureStatic() {
+    const [
+      spellResult,
+      scrollResult,
+      autobattleResult,
+      autobattleSpellResult,
+      combatStyleResult,
+      bowProfileResult,
+    ] = await Promise.all([
       supabase.rpc('get_character_spells', {
         p_character_id: characterId,
       }),
@@ -225,8 +222,6 @@ export function AdventuresPanel({
     ])
 
     const error =
-      siteResult.error ??
-      encounterResult.error ??
       spellResult.error ??
       scrollResult.error ??
       autobattleResult.error ??
@@ -236,24 +231,17 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(error.message)
-      setLoading(false)
       return
     }
 
-    const nextSites = (siteResult.data as CharacterAdventureSite[] | null) ?? []
-    const nextEncounters = (encounterResult.data as CombatEncounter[] | null) ?? []
-
-    setSites(nextSites)
-    setEncounters(nextEncounters)
     const allCharacterSpells = (spellResult.data as CharacterSpell[] | null) ?? []
     const nextPreparedSpells = allCharacterSpells
       .filter((spell) => spell.combat_slot !== null && spell.spell_kind !== 'sacrifice')
       .sort((a, b) => (a.combat_slot ?? 99) - (b.combat_slot ?? 99))
+
     setPreparedSpells(nextPreparedSpells)
-    setSpells(
-      nextPreparedSpells
-        .filter((spell) => spell.spell_kind !== 'taunt'),
-    )
+    setSpells(nextPreparedSpells.filter((spell) => spell.spell_kind !== 'taunt'))
+
     const combatInventory = (scrollResult.data as CombatScroll[] | null) ?? []
     setCombatScrolls(
       combatInventory.filter((item) => {
@@ -270,6 +258,7 @@ export function AdventuresPanel({
         return definition?.scroll_mode == null && (resources.heal > 0 || resources.mana > 0)
       }),
     )
+
     setAutobattleSettings(
       (Array.isArray(autobattleResult.data)
         ? autobattleResult.data[0]
@@ -282,6 +271,34 @@ export function AdventuresPanel({
       (combatStyleResult.data as CombatStyleProfile[] | null) ?? [],
     )
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
+  }
+
+  async function loadAdventures(silent = false) {
+    if (!silent) setLoading(true)
+
+    const [siteResult, encounterResult] = await Promise.all([
+      supabase.rpc('get_character_adventures_v3', {
+        p_character_id: characterId,
+      }),
+      supabase
+        .from('combat_encounters')
+        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, enemy_bloodshed_stacks, created_at, ended_at')
+        .eq('character_id', characterId)
+        .order('created_at', { ascending: false })
+        .limit(6),
+    ])
+
+    const error = siteResult.error ?? encounterResult.error
+    if (error) {
+      if (!silent) setMessage(error.message)
+      if (!silent) setLoading(false)
+      return
+    }
+
+    const nextSites = (siteResult.data as CharacterAdventureSite[] | null) ?? []
+    const nextEncounters = (encounterResult.data as CombatEncounter[] | null) ?? []
+    setSites(nextSites)
+    setEncounters(nextEncounters)
 
     const latestEncounter = nextEncounters[0] ?? null
     const activeRunId =
@@ -289,57 +306,66 @@ export function AdventuresPanel({
       null
     const lootRunId = latestEncounter?.dungeon_run_id ?? activeRunId
 
-    if (lootRunId) {
-      const { data: lootData, error: lootError } = await supabase.rpc('get_dungeon_run_loot', {
-        p_run_id: lootRunId,
-      })
+    const detailRequests: Promise<unknown>[] = []
 
-      if (lootError) {
-        setMessage(lootError.message)
-      } else {
-        setLootDrops((lootData as DungeonLootDrop[] | null) ?? [])
-      }
+    if (lootRunId) {
+      detailRequests.push(
+        supabase.rpc('get_dungeon_run_loot', { p_run_id: lootRunId }).then(({ data, error }) => {
+          if (error) setMessage(error.message)
+          else setLootDrops((data as DungeonLootDrop[] | null) ?? [])
+        }),
+      )
     } else {
       setLootDrops([])
     }
 
     if (latestEncounter) {
-      const [turnResult, statusResult] = await Promise.all([
-        supabase
-          .from('combat_turns')
-          .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
-          .eq('encounter_id', latestEncounter.id)
-          .order('id', { ascending: false })
-          .limit(18),
-        supabase
-          .from('combat_status_effects')
-          .select('id, encounter_id, target, effect_type, potency, remaining_turns, source, created_at, updated_at')
-          .eq('encounter_id', latestEncounter.id)
-          .order('created_at', { ascending: true }),
-      ])
+      detailRequests.push(
+        Promise.all([
+          supabase
+            .from('combat_turns')
+            .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
+            .eq('encounter_id', latestEncounter.id)
+            .order('id', { ascending: false })
+            .limit(18),
+          supabase
+            .from('combat_status_effects')
+            .select('id, encounter_id, target, effect_type, potency, remaining_turns, source, created_at, updated_at')
+            .eq('encounter_id', latestEncounter.id)
+            .order('created_at', { ascending: true }),
+        ]).then(([turnResult, statusResult]) => {
+          if (turnResult.error) setMessage(turnResult.error.message)
+          else setTurns((turnResult.data as CombatTurn[] | null) ?? [])
 
-      if (turnResult.error) {
-        setMessage(turnResult.error.message)
-      } else {
-        setTurns((turnResult.data as CombatTurn[] | null) ?? [])
-      }
-
-      if (statusResult.error) {
-        setMessage(statusResult.error.message)
-      } else {
-        setStatusEffects((statusResult.data as CombatStatusEffect[] | null) ?? [])
-      }
+          if (statusResult.error) setMessage(statusResult.error.message)
+          else setStatusEffects((statusResult.data as CombatStatusEffect[] | null) ?? [])
+        }),
+      )
     } else {
       setTurns([])
       setStatusEffects([])
     }
 
-    setLoading(false)
+    await Promise.all(detailRequests)
+    if (!silent) setLoading(false)
   }
 
   useEffect(() => {
-    void loadAdventures()
+    setLoading(true)
+    void Promise.all([
+      loadAdventureStatic(),
+      loadAdventures(true),
+    ]).finally(() => setLoading(false))
   }, [characterId])
+
+  useSmartRefresh(
+    () => loadAdventures(true),
+    {
+      enabled: true,
+      intervalMs: mode === 'battles' && encounters[0]?.status === 'active' ? 6000 : 0,
+      minGapMs: 1000,
+    },
+  )
 
   const activeDungeon = useMemo(
     () => sites.find(
