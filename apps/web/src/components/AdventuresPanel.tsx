@@ -297,7 +297,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, death_spirit_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, enemy_bloodshed_stacks, created_at, ended_at')
+        .select('id, dungeon_run_id, death_spirit_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_wound_stacks, enemy_rage_hunt_stacks, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, enemy_bloodshed_stacks, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(6),
@@ -1714,7 +1714,7 @@ export function AdventuresPanel({
                 <div>
                   <span className="eyebrow">
                     {activeEventBoss
-                      ? `НЕДЕЛЬНЫЙ БОСС · РАУНД ${activeCombat.round + 1}`
+                      ? `ВРЕМЕННАЯ УГРОЗА · РАУНД ${activeCombat.round + 1}`
                       : activeCombat.is_boss
                         ? `ХРАНИТЕЛЬ · РАУНД ${activeCombat.round + 1}`
                         : `ЗАЛ ${activeCombat.room_index} · РАУНД ${activeCombat.round + 1}`}
@@ -1727,7 +1727,7 @@ export function AdventuresPanel({
                   </span>
                 </div>
                 <span className="badge">
-                  {activeEventBoss ? 'недельный' : `${activeCombat.room_index} / ${totalRooms}`}
+                  {activeEventBoss ? 'событие' : `${activeCombat.room_index} / ${totalRooms}`}
                 </span>
               </div>
 
@@ -1758,6 +1758,16 @@ export function AdventuresPanel({
                     <div className="combat-counter-ready">
                       <strong>Магическое усиление +{activeCombat.player_spell_damage_bonus_percent}%</strong>
                       <span>Осталось усиленных атак: {activeCombat.player_spell_damage_bonus_hits}</span>
+                    </div>
+                  )}
+                  {activeCombat.player_wound_stacks > 0 && (
+                    <div className={'wolf-wound-state ' + (activeCombat.player_wound_stacks >= 3 ? 'danger' : '')}>
+                      <strong>Ранения · {activeCombat.player_wound_stacks}/3</strong>
+                      <span>
+                        {activeCombat.player_wound_stacks >= 3
+                          ? 'Следующая успешная атака Белого волка или его Рывок вызовет Разрыв на 6% Max HP. Блок не поможет — нужно очищение.'
+                          : 'Успешные атаки Белого волка накапливают Ранения. Очищение снимает их полностью.'}
+                      </span>
                     </div>
                   )}
                   {playerStatusEffects.length > 0 && (
@@ -1821,6 +1831,14 @@ export function AdventuresPanel({
                     <div className="enemy-combat-state">
                       {activeCombat.enemy_phase > 1 && (
                         <span>Фаза {activeCombat.enemy_phase}{activeCombat.enemy_phase2_name ? ' · ' + activeCombat.enemy_phase2_name : ''}</span>
+                      )}
+                      {activeCombat.enemy_rage_hunt_stacks > 0 && (
+                        <span>
+                          Ярость охоты {activeCombat.enemy_rage_hunt_stacks}/4
+                          {' · '}шанс Рывка {
+                            [20, 35, 50, 70][Math.min(4, Math.max(1, activeCombat.enemy_rage_hunt_stacks)) - 1]
+                          }%
+                        </span>
                       )}
                       {activeCombat.enemy_guard_hits > 0 && (
                         <span>Стойка · −{activeCombat.enemy_guard_percent}% следующего урона</span>
