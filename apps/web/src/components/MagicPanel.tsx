@@ -27,6 +27,10 @@ const damageLabels: Record<DamageType, string> = {
   air: 'Воздушный',
   lightning: 'Электрический',
   ice: 'Ледяной',
+  arcane: 'Арканный',
+  star: 'Звёздный',
+  gravity: 'Гравитационный',
+  moon: 'Лунный',
 }
 
 export function MagicPanel({ characterId, progress }: Props) {
