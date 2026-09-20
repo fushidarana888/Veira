@@ -851,7 +851,7 @@ export function PartyDungeonPanel({
                   <div>
                     <strong>{member.name}</strong>
                     <span>
-                      @{member.display_name} · LVL {member.level}
+                      @{member.display_name} · УР. {member.level}
                       {member.character_id === characterId ? ' · ты' : ''}
                     </span>
                   </div>
@@ -931,7 +931,7 @@ export function PartyDungeonPanel({
                     : 'Зал ' + nextRoom + ' из ' + activeRun.total_rooms}
                 </strong>
                 <p className="muted">
-                  HP и мана сохраняются между залами. После победы можно немного подождать пассивного восстановления или идти дальше.
+                  ОЗ и мана сохраняются между залами. После победы можно немного подождать пассивного восстановления или идти дальше.
                 </p>
               </div>
 
@@ -951,7 +951,7 @@ export function PartyDungeonPanel({
                     disabled={busy || escapeLocked || Boolean(me?.bow_draw_pending)}
                     title={escapeLocked
                       ? 'Попытка побега на этом этапе уже использована.'
-                      : '80% успеха. При провале HP всей группы станет 1.'}
+                      : '80% успеха. При провале ОЗ всей группы станет 1.'}
                     onClick={() => void attemptEscape()}
                   >
                     {escapeLocked ? 'Побег уже использован' : 'Групповой побег · 80%'}
@@ -969,7 +969,7 @@ export function PartyDungeonPanel({
                     </span>
                     <h3>{activeEncounter.enemy_name}</h3>
                     <p className="muted">
-                      LVL {activeEncounter.enemy_level} · атака: {damageLabels[activeEncounter.enemy_damage_type] ?? activeEncounter.enemy_damage_type}
+                      УР. {activeEncounter.enemy_level} · атака: {damageLabels[activeEncounter.enemy_damage_type] ?? activeEncounter.enemy_damage_type}
                     </p>
                   </div>
                   <strong>{activeEncounter.enemy_hp_current} / {activeEncounter.enemy_hp_max} ОЗ</strong>
@@ -1112,7 +1112,7 @@ export function PartyDungeonPanel({
                     <div className="party-spell-card sacrifice">
                       <div>
                         <strong>Последняя жертва</strong>
-                        <span>×{state.sacrifice_scroll_count} · требует &gt;200 текущего HP</span>
+                        <span>×{state.sacrifice_scroll_count} · требует &gt;200 текущего ОЗ</span>
                       </div>
                       <p className="muted">
                         Ты становишься Потерянным до конца похода. Все остальные живые союзники полностью лечатся и получают −30% входящего урона на 3 раунда. Мёртвых не воскрешает.
@@ -1191,7 +1191,7 @@ export function PartyDungeonPanel({
                                       : spell.spell_kind === 'taunt'
                                         ? 'провокация союзника'
                                         : 'усиление урона'}
-                              {' · '}{spell.mana_cost} MP
+                              {' · '}{spell.mana_cost} ОМ
                             </span>
                           </div>
 
