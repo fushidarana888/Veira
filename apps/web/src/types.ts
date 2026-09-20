@@ -197,6 +197,7 @@ export type CharacterItem = {
   custom_name: string | null
   metadata: Record<string, unknown>
   enhancement_level: number
+  awakening_level: number
   acquired_at: string
   item_definitions: ItemDefinition | ItemDefinition[] | null
 }
@@ -483,10 +484,38 @@ export type CombatTurn = {
 }
 
 
+export type BlacksmithAffix = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  stat_modifiers: Record<string, number>
+  damage_resistances: Partial<Record<DamageType, number>>
+  unique_effect_type: string | null
+  unique_effect_value: number
+}
+
+export type BlacksmithDuplicate = {
+  id: string
+  custom_name: string | null
+  enhancement_level: number
+  awakening_level: number
+  affix_count: number
+}
+
+export type BlacksmithRerollCost = {
+  slot: number
+  affix_id: string
+  cost: number
+}
+
 export type BlacksmithWeapon = {
   settlement_name: string
   settlement_level: number
   max_enhancement: number
+  affix_apply_unlocked: boolean
+  affix_reroll_unlocked: boolean
+  awakening_unlocked: boolean
   character_item_id: string
   item_definition_id: string
   item_name: string
@@ -501,6 +530,19 @@ export type BlacksmithWeapon = {
   can_enhance_here: boolean
   can_afford: boolean
   is_equipped: boolean
+  awakening_level: number
+  max_awakening: number
+  awakening_effect_text: string
+  duplicate_count: number
+  duplicate_candidates: BlacksmithDuplicate[]
+  affix_slots: number
+  affix_count: number
+  affixes: BlacksmithAffix[]
+  next_affix_cost: number | null
+  can_add_affix: boolean
+  can_afford_affix: boolean
+  affix_reroll_count: number
+  reroll_costs: BlacksmithRerollCost[]
 }
 
 export type SettlementShopItem = {
