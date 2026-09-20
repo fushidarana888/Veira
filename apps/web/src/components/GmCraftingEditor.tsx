@@ -360,7 +360,7 @@ export function GmCraftingEditor() {
 
             <div className="gm-form-grid two">
               <label><span>Название</span><input value={recipe.name} onChange={(e) => setRecipe({ ...recipe, name: e.target.value })} /></label>
-              <label><span>Slug</span><input value={recipe.slug} onChange={(e) => setRecipe({ ...recipe, slug: e.target.value })} /></label>
+              <label><span>Служебный код</span><input value={recipe.slug} onChange={(e) => setRecipe({ ...recipe, slug: e.target.value })} /></label>
             </div>
             <label><span>Описание</span><textarea rows={3} value={recipe.description} onChange={(e) => setRecipe({ ...recipe, description: e.target.value })} /></label>
 
@@ -439,7 +439,7 @@ export function GmCraftingEditor() {
 
             <div className="gm-form-grid two">
               <label><span>Название</span><input value={affix.name} onChange={(e) => setAffix({ ...affix, name: e.target.value })} /></label>
-              <label><span>Slug</span><input value={affix.slug} onChange={(e) => setAffix({ ...affix, slug: e.target.value })} /></label>
+              <label><span>Служебный код</span><input value={affix.slug} onChange={(e) => setAffix({ ...affix, slug: e.target.value })} /></label>
             </div>
             <label><span>Описание</span><textarea rows={3} value={affix.description} onChange={(e) => setAffix({ ...affix, description: e.target.value })} /></label>
 
