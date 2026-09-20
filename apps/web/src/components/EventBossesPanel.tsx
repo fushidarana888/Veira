@@ -98,7 +98,7 @@ function bossError(raw: string) {
   if (raw.includes('PARTY_TOO_LARGE')) return 'В событие можно войти группой максимум из 4 персонажей.'
   if (raw.includes('PARTY_DUNGEON_ALREADY_ACTIVE')) return 'У этой пати уже идёт другой групповой бой.'
   if (raw.includes('EVENT_BOSS_NOT_ACTIVE')) return 'Эта ротация уже закончилась или ещё не началась.'
-  if (raw.includes('CHARACTER_HAS_NO_HP') || raw.includes('PARTY_MEMBER_HAS_NO_HP')) return 'Перед входом хотя бы немного восстанови HP.'
+  if (raw.includes('CHARACTER_HAS_NO_HP') || raw.includes('PARTY_MEMBER_HAS_NO_HP')) return 'Перед входом хотя бы немного восстанови ОЗ.'
   return raw
 }
 
@@ -292,10 +292,10 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
                 </div>
 
                 <div className="event-boss-stat-grid">
-                  <span><small>Рекомендация</small><strong>LVL {boss.recommended_level}+</strong></span>
-                  <span><small>Соло HP</small><strong>{boss.enemy_hp}</strong></span>
-                  <span><small>ATK</small><strong>{boss.enemy_attack}</strong></span>
-                  <span><small>DEF</small><strong>{boss.enemy_defense}</strong></span>
+                  <span><small>Рекомендация</small><strong>УР. {boss.recommended_level}+</strong></span>
+                  <span><small>Соло ОЗ</small><strong>{boss.enemy_hp}</strong></span>
+                  <span><small>АТАКА</small><strong>{boss.enemy_attack}</strong></span>
+                  <span><small>ЗАЩИТА</small><strong>{boss.enemy_defense}</strong></span>
                   <span><small>Тип атаки</small><strong>{damageLabels[boss.enemy_damage_type] ?? boss.enemy_damage_type}</strong></span>
                 </div>
 
