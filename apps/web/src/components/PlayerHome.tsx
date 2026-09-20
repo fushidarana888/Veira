@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
-import { AdventuresPanel } from './AdventuresPanel'
-import { CraftingPanel } from './CraftingPanel'
-import { DuelPanel } from './DuelPanel'
-import { GuidePanel } from './GuidePanel'
-import { MagicPanel } from './MagicPanel'
-import { WorldMap } from './WorldMap'
+
+const AdventuresPanel = lazy(() => import('./AdventuresPanel').then((module) => ({ default: module.AdventuresPanel })))
+const BattleCenterPanel = lazy(() => import('./BattleCenterPanel').then((module) => ({ default: module.BattleCenterPanel })))
+const CraftingPanel = lazy(() => import('./CraftingPanel').then((module) => ({ default: module.CraftingPanel })))
+const GuidePanel = lazy(() => import('./GuidePanel').then((module) => ({ default: module.GuidePanel })))
+const MagicPanel = lazy(() => import('./MagicPanel').then((module) => ({ default: module.MagicPanel })))
+const WorldMap = lazy(() => import('./WorldMap').then((module) => ({ default: module.WorldMap })))
 import type {
   Character,
   CharacterEquipment,
@@ -28,7 +29,7 @@ type Props = {
   onSignOut: () => Promise<void> | void
 }
 
-type Tab = 'world' | 'character' | 'adventures' | 'community' | 'more'
+type Tab = 'world' | 'character' | 'adventures' | 'battles' | 'more'
 type CharacterTab = 'overview' | 'inventory' | 'equipment' | 'magic' | 'crafting'
 
 type CharacterCustomizationState = {
@@ -1171,40 +1172,59 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           )}
 
           {characterTab === 'magic' && (
-            <MagicPanel
-              characterId={character.id}
-              progress={progress}
-            />
+            <Suspense fallback={<LazyPanelFallback title="Загружаем магию…" />}>
+              <MagicPanel
+                characterId={character.id}
+                progress={progress}
+              />
+            </Suspense>
           )}
 
           {characterTab === 'crafting' && (
-            <CraftingPanel
-              characterId={character.id}
-              progress={progress}
-              onProgressChanged={loadProgress}
-              onInventoryChanged={loadInventory}
-            />
+            <Suspense fallback={<LazyPanelFallback title="Загружаем ремесло…" />}>
+              <CraftingPanel
+                characterId={character.id}
+                progress={progress}
+                onProgressChanged={loadProgress}
+                onInventoryChanged={loadInventory}
+              />
+            </Suspense>
           )}
         </>
       )}
 
       {tab === 'world' && (
-        <WorldMap
-          characterId={character.id}
-          onProgressChanged={loadProgress}
-          onInventoryChanged={loadInventory}
-        />
+        <Suspense fallback={<LazyPanelFallback title="Загружаем карту…" />}>
+          <WorldMap
+            characterId={character.id}
+            onProgressChanged={loadProgress}
+            onInventoryChanged={loadInventory}
+          />
+        </Suspense>
       )}
       {tab === 'adventures' && (
-        <AdventuresPanel
-          characterId={character.id}
-          onProgressChanged={loadProgress}
-          onInventoryChanged={loadInventory}
-        />
+        <Suspense fallback={<LazyPanelFallback title="Загружаем приключения…" />}>
+          <AdventuresPanel
+            characterId={character.id}
+            onOpenBattles={() => setTab('battles')}
+            onProgressChanged={loadProgress}
+            onInventoryChanged={loadInventory}
+          />
+        </Suspense>
       )}
-      {tab === 'community' && <DuelPanel characterId={character.id} />}
+      {tab === 'battles' && (
+        <Suspense fallback={<LazyPanelFallback title="Загружаем бои…" />}>
+          <BattleCenterPanel
+            characterId={character.id}
+            onProgressChanged={loadProgress}
+            onInventoryChanged={loadInventory}
+          />
+        </Suspense>
+      )}
       {tab === 'more' && moreView === 'guide' && (
-        <GuidePanel onBack={() => setMoreView('menu')} />
+        <Suspense fallback={<LazyPanelFallback title="Загружаем гид…" />}>
+          <GuidePanel onBack={() => setMoreView('menu')} />
+        </Suspense>
       )}
       {tab === 'more' && moreView === 'menu' && (
         <div className="more-section">
@@ -1411,7 +1431,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         <NavButton active={tab === 'world'} onClick={() => setTab('world')}>Мир</NavButton>
         <NavButton active={tab === 'character'} onClick={() => setTab('character')}>Персонаж</NavButton>
         <NavButton active={tab === 'adventures'} onClick={() => setTab('adventures')}>Приключения</NavButton>
-        <NavButton active={tab === 'community'} onClick={() => setTab('community')}>Сообщество</NavButton>
+        <NavButton active={tab === 'battles'} onClick={() => setTab('battles')}>Бои</NavButton>
         <NavButton
           active={tab === 'more'}
           onClick={() => {
@@ -1423,6 +1443,15 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         </NavButton>
       </nav>
     </main>
+  )
+}
+
+function LazyPanelFallback({ title }: { title: string }) {
+  return (
+    <section className="panel lazy-panel-fallback">
+      <span className="eyebrow">VEIRA</span>
+      <h3>{title}</h3>
+    </section>
   )
 }
 
