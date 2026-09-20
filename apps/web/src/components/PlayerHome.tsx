@@ -67,6 +67,32 @@ const weaponScalingLabels: Record<NonNullable<ItemDefinition['weapon_scaling']>,
   hybrid: 'Гибридное',
 }
 
+const weaponFamilyLabels: Record<NonNullable<ItemDefinition['weapon_family']>, string> = {
+  short_bow: 'Короткий лук',
+  long_bow: 'Длинный лук',
+  dagger: 'Кинжал',
+  rapier: 'Рапира',
+  sword: 'Меч',
+  spear: 'Копьё',
+  axe: 'Топор',
+  battleaxe: 'Секира',
+  mace: 'Булава',
+  hammer: 'Молот',
+  greatsword: 'Двуручный меч',
+  staff: 'Боевой посох',
+  wand: 'Магический жезл',
+}
+
+const weaponFamilyMechanicLabels: Partial<Record<NonNullable<ItemDefinition['weapon_family']>, string>> = {
+  dagger: '×0.80 после Physical Defense',
+  rapier: 'Пробитие Physical Defense 10%',
+  spear: 'Physical Defense цели ×1.20 · повышенный base damage',
+  axe: 'До +20% урона от Max HP цели',
+  battleaxe: 'До +20% урона от Max HP цели',
+  mace: 'Оглушение 8% соло/PvP · 5% пати',
+  hammer: 'Оглушение 8% соло/PvP · 5% пати',
+}
+
 const statLabels: Record<StatKey, string> = {
   strength: 'Сила',
   agility: 'Ловкость',
@@ -988,8 +1014,11 @@ function InventoryPanel({
                           ? 'STR ×1.75 + AGI ×1.75'
                           : 'STR ×3 + AGI ×0.5'}
                     </span>
-                    {definition.weapon_family === 'dagger' && (
-                      <span>Кинжал · итог физического удара ×0.80 после защиты</span>
+                    {definition.weapon_family && (
+                      <span>{weaponFamilyLabels[definition.weapon_family]}</span>
+                    )}
+                    {definition.weapon_family && weaponFamilyMechanicLabels[definition.weapon_family] && (
+                      <span>{weaponFamilyMechanicLabels[definition.weapon_family]}</span>
                     )}
                     {definition.echo_strike_chance_percent > 0 && (
                       <span>Эхо ударов · {definition.echo_strike_chance_percent}%</span>
@@ -1161,7 +1190,10 @@ function EquipmentPanel({
                     <div className="modifier-list compact">
                       <span>Базовый урон +{definition.weapon_base_damage ?? 0}</span>
                       <span>{weaponScalingLabels[definition.weapon_scaling ?? 'strength']}</span>
-                      {definition.weapon_family === 'dagger' && <span>Кинжал · ×0.80 после защиты</span>}
+                      {definition.weapon_family && <span>{weaponFamilyLabels[definition.weapon_family]}</span>}
+                      {definition.weapon_family && weaponFamilyMechanicLabels[definition.weapon_family] && (
+                        <span>{weaponFamilyMechanicLabels[definition.weapon_family]}</span>
+                      )}
                       {definition.echo_strike_chance_percent > 0 && (
                         <span>Эхо ударов · {definition.echo_strike_chance_percent}%</span>
                       )}
