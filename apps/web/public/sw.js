@@ -1,4 +1,4 @@
-const CACHE_NAME = 'veira-static-v1'
+const CACHE_NAME = 'veira-static-v2'
 
 self.addEventListener('install', () => {
   self.skipWaiting()
@@ -41,22 +41,34 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  const cacheable =
-    url.pathname.includes('/assets/')
-    || /\.(?:webp|png|jpe?g|svg|gif|woff2?)$/i.test(url.pathname)
-
-  if (!cacheable) return
+  const immutableAsset = url.pathname.includes('/assets/')
+  const imageAsset = /\.(?:webp|png|jpe?g|svg|gif|woff2?)$/i.test(url.pathname)
+  if (!immutableAsset && !imageAsset) return
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = await cache.match(request)
-      if (cached) return cached
 
-      const response = await fetch(request)
-      if (response.ok) {
-        await cache.put(request, response.clone())
+      if (immutableAsset) {
+        if (cached) return cached
+        const response = await fetch(request)
+        if (response.ok) await cache.put(request, response.clone())
+        return response
       }
-      return response
+
+      const networkUpdate = fetch(request)
+        .then(async (response) => {
+          if (response.ok) await cache.put(request, response.clone())
+          return response
+        })
+        .catch(() => null)
+
+      if (cached) {
+        event.waitUntil(networkUpdate)
+        return cached
+      }
+
+      return (await networkUpdate) || Response.error()
     }),
   )
 })
