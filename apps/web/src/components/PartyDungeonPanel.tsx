@@ -89,6 +89,9 @@ type PartyCombatMember = {
   acted: boolean
   is_leader: boolean
   joined_order: number
+  reward_exhausted: boolean
+  reward_attempt_number: number | null
+  reward_cycle_ends_at: string | null
 }
 
 type PartyTurn = {
@@ -801,7 +804,7 @@ export function PartyDungeonPanel({
 
       {!activeRun && (
         <p className="muted party-dungeon-exhaustion-note">
-          После 30 личных попыток за сутки персонаж всё ещё может идти в этот данж с группой, но до окончания 20-часового истощения не получает там опыт, золото и личный лут.
+          Для каждого данжа действует личный 18-часовой цикл. Первые 25 попыток дают награды по обычной шкале; с 26-й попытки можно заходить сколько угодно, но без опыта, золота и личного лута. После окончания 18 часов цикл начинается заново.
         </p>
       )}
 
@@ -905,13 +908,19 @@ export function PartyDungeonPanel({
                     : `За полную зачистку · рекомендованный уровень ≤ ${dungeonRecommendedLevel(activeRun.danger_level)}`}
                 </span>
                 <strong>
-                  {me
-                    ? scaledPartyDungeonReward(activeRun.reward_gold, activeRun.danger_level, me.level, 'gold')
-                    : activeRun.reward_gold} золота · {me
-                    ? scaledPartyDungeonReward(activeRun.reward_experience, activeRun.danger_level, me.level, 'xp')
-                    : activeRun.reward_experience} опыта тебе
+                  {me?.reward_exhausted
+                    ? 0
+                    : me
+                      ? scaledPartyDungeonReward(activeRun.reward_gold, activeRun.danger_level, me.level, 'gold')
+                      : activeRun.reward_gold} золота · {me?.reward_exhausted
+                    ? 0
+                    : me
+                      ? scaledPartyDungeonReward(activeRun.reward_experience, activeRun.danger_level, me.level, 'xp')
+                      : activeRun.reward_experience} опыта тебе
                 </strong>
-                {activeRun.danger_level === 0 ? (
+                {me?.reward_exhausted ? (
+                  <small>Личный лимит наград исчерпан: это попытка №{me.reward_attempt_number ?? 26} текущего 18-часового цикла. Вход и прохождение доступны, награда — 0.</small>
+                ) : activeRun.danger_level === 0 ? (
                   <small>ОПЫТ: УР. 1 — 15 · УР. 2 — 11 · УР. 3 — 6 · УР. 4 — 2 · УР. 5+ — 1. Золото всегда 40.</small>
                 ) : (
                   <small>Если перерасти данж, награда постепенно снижается, но не ниже 5% опыта и 35% золота.</small>
@@ -964,6 +973,11 @@ export function PartyDungeonPanel({
                   </div>
                 </div>
 
+                {member.reward_exhausted && (
+                  <small className="party-buff-state">
+                    Лимит наград исчерпан · попытка №{member.reward_attempt_number ?? 26} · этот поход без опыта, золота и личного лута
+                  </small>
+                )}
                 {member.lost && (
                   <small className="party-buff-state">
                     Потерян до конца текущего боя-похода · воскресить нельзя
