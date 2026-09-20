@@ -319,7 +319,7 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
                   <div>
                     <strong>{boss.phase2_name}</strong>
                     <span>
-                      Ниже {boss.phase2_hp_percent}% HP горн разгорается, и Кузнец начинает бить сильнее.
+                      Ниже {boss.phase2_hp_percent}% ОЗ горн разгорается, и Кузнец начинает бить сильнее.
                     </span>
                   </div>
                 </div>
