@@ -613,7 +613,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
           <span className="eyebrow">РЕДАКТОР ЭЙЛАРА</span>
           <h2>300 секторов мира</h2>
           <p className="muted">
-            GM видит всю карту и скрытое содержимое. Игрок получает детали сектора только после открытия.
+            ГМ видит всю карту и скрытое содержимое. Игрок получает детали сектора только после открытия.
           </p>
         </div>
         <div className="gm-world-counters">
@@ -988,7 +988,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                         gmNotes: event.target.checked,
                       })}
                     />
-                    Одинаковые заметки GM
+                    Одинаковые заметки ГМ
                   </span>
                   <textarea
                     rows={3}
@@ -1277,7 +1277,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
 
         <p className="muted gm-event-pool-intro">
           После 6 часов сначала проверяется закреплённое за сектором событие, затем один подходящий шаблон из этого пула.
-          Шаблоны фильтруются по местности, содержимому и опасности. Если событие требует GM, экспедиция остановится и попадёт в очередь ниже.
+          Шаблоны фильтруются по местности, содержимому и опасности. Если событие требует ГМ, экспедиция остановится и попадёт в очередь ниже.
         </p>
 
         <div className="gm-event-pool-layout">
