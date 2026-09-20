@@ -478,8 +478,10 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.resolve(onProgressChanged?.())
-    await loadAdventures(true)
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      loadAdventures(true),
+    ])
     setBusy(false)
   }
 
@@ -526,8 +528,10 @@ export function AdventuresPanel({
       return
     }
 
-    await Promise.resolve(onProgressChanged?.())
-    await loadAdventures(true)
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      loadAdventures(true),
+    ])
     setBusy(false)
   }
 
