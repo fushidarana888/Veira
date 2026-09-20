@@ -1333,6 +1333,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         <Suspense fallback={<LazyPanelFallback title="Загружаем карту…" />}>
           <WorldMap
             characterId={character.id}
+            onOpenBattles={() => setTab('battles')}
             onProgressChanged={loadProgress}
             onInventoryChanged={refreshInventoryState}
           />
