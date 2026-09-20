@@ -246,6 +246,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
             durability_max,
             custom_name,
             metadata,
+            enhancement_level,
             acquired_at,
             item_definitions (
               id,
@@ -369,6 +370,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     return {
       baseDamage: Math.max(0, Number(weaponDefinition?.weapon_base_damage ?? 0)),
       scaling: weaponDefinition?.weapon_scaling ?? 'strength',
+      enhancementLevel: Math.min(20, Math.max(0, Number(weaponItem?.enhancement_level ?? 0))),
     }
   }, [equipment, itemById])
 
@@ -1001,7 +1003,10 @@ function InventoryPanel({
                   </div>
                   <div className="item-title">
                     <span className="rarity-label">{rarityLabels[definition.rarity]}</span>
-                    <h3>{item.custom_name || definition.name}</h3>
+                    <h3>
+                      {item.custom_name || definition.name}
+                      {item.enhancement_level > 0 ? ` +${item.enhancement_level}` : ''}
+                    </h3>
                   </div>
                   {item.quantity > 1 && <span className="quantity">×{item.quantity}</span>}
                 </div>
@@ -1017,6 +1022,12 @@ function InventoryPanel({
                 {definition.category === 'weapon' && (
                   <div className="modifier-list">
                     <span>Базовый урон +{definition.weapon_base_damage ?? 0}</span>
+                    {item.enhancement_level > 0 && (
+                      <span>
+                        Заточка +{item.enhancement_level} · оружейная база ×
+                        {(1 + item.enhancement_level * 0.03).toFixed(2)}
+                      </span>
+                    )}
                     <span>
                       {weaponScalingLabels[definition.weapon_scaling ?? 'strength']}
                       {' · '}
@@ -1189,7 +1200,10 @@ function EquipmentPanel({
 
               {definition ? (
                 <>
-                  <strong>{item?.custom_name || definition.name}</strong>
+                  <strong>
+                    {item?.custom_name || definition.name}
+                    {(item?.enhancement_level ?? 0) > 0 ? ` +${item?.enhancement_level}` : ''}
+                  </strong>
                   <span className={'rarity-label rarity-text-' + definition.rarity}>
                     {rarityLabels[definition.rarity]}
                   </span>
@@ -1201,6 +1215,12 @@ function EquipmentPanel({
                   {definition.category === 'weapon' && (
                     <div className="modifier-list compact">
                       <span>Базовый урон +{definition.weapon_base_damage ?? 0}</span>
+                      {(item?.enhancement_level ?? 0) > 0 && (
+                        <span>
+                          Заточка +{item?.enhancement_level} · оружейная база ×
+                          {(1 + (item?.enhancement_level ?? 0) * 0.03).toFixed(2)}
+                        </span>
+                      )}
                       <span>{weaponScalingLabels[definition.weapon_scaling ?? 'strength']}</span>
                       {definition.weapon_family && <span>{weaponFamilyLabels[definition.weapon_family]}</span>}
                       {definition.weapon_family && weaponFamilyMechanicLabels[definition.weapon_family] && (
