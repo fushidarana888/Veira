@@ -10,7 +10,7 @@ type Props = {
   onSignOut: () => Promise<void> | void
 }
 
-type GmTab = 'players' | 'world' | 'races' | 'content' | 'audit'
+type GmTab = 'players' | 'world' | 'quests' | 'races' | 'content' | 'audit'
 
 type AuditEntry = {
   id: number
@@ -291,6 +291,9 @@ export function GmHome({ profile, onSignOut }: Props) {
         <button className={tab === 'world' ? 'active' : ''} type="button" onClick={() => setTab('world')}>
           Карта мира
         </button>
+        <button className={tab === 'quests' ? 'active' : ''} type="button" onClick={() => setTab('quests')}>
+          Поручения
+        </button>
         <button className={tab === 'races' ? 'active' : ''} type="button" onClick={() => setTab('races')}>
           Расы
         </button>
@@ -515,6 +518,8 @@ export function GmHome({ profile, onSignOut }: Props) {
 
           <GmWorldEditor characters={characters} profiles={profiles} />
         </div>
+      ) : tab === 'quests' ? (
+        <GmSettlementQuests />
       ) : tab === 'races' ? (
         <GmRaceEditor />
       ) : tab === 'content' ? (
