@@ -36,7 +36,7 @@ const passiveOptions: Array<{ value: RacePassiveType; label: string }> = [
   { value: 'mana_on_hit', label: 'Мана при попадании' },
   { value: 'damage_vs_wounded', label: 'Урон по раненой цели' },
   { value: 'guard_boost', label: 'Усиленная защита' },
-  { value: 'low_hp_damage_reduction', label: 'Снижение урона при низком HP' },
+  { value: 'low_hp_damage_reduction', label: 'Снижение урона при низком ОЗ' },
   { value: 'boss_damage_bonus', label: 'Урон по хранителям' },
 ]
 
@@ -301,19 +301,19 @@ export function GmRaceEditor() {
             <strong>Ресурсы и восстановление</strong>
             <div className="gm-form-grid four">
               <label>
-                <span>Бонус HP</span>
+                <span>Бонус ОЗ</span>
                 <input type="number" min={-100} max={500} value={draft.hp_bonus} onChange={(e) => setDraft({ ...draft, hp_bonus: Number(e.target.value) })} />
               </label>
               <label>
-                <span>Бонус MP</span>
+                <span>Бонус ОМ</span>
                 <input type="number" min={-100} max={500} value={draft.mana_bonus} onChange={(e) => setDraft({ ...draft, mana_bonus: Number(e.target.value) })} />
               </label>
               <label>
-                <span>HP в час</span>
+                <span>ОЗ в час</span>
                 <input type="number" min={0} max={100} value={draft.hp_regen_per_hour} onChange={(e) => setDraft({ ...draft, hp_regen_per_hour: Number(e.target.value) })} />
               </label>
               <label>
-                <span>MP в час</span>
+                <span>ОМ в час</span>
                 <input type="number" min={0} max={100} value={draft.mana_regen_per_hour} onChange={(e) => setDraft({ ...draft, mana_regen_per_hour: Number(e.target.value) })} />
               </label>
             </div>
