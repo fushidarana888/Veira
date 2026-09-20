@@ -11,6 +11,8 @@ import type {
   ItemDefinition,
   ItemEquipGroup,
   ItemRarity,
+  MagicFamily,
+  MagicFamilyKind,
   SpellDefinition,
   WeaponScaling,
   WeaponFamily,
@@ -55,6 +57,13 @@ const spellKindLabels: Record<SpellDefinition['spell_kind'], string> = {
   buff: 'Усиление',
   taunt: 'Провокация',
   sacrifice: 'Последняя жертва',
+}
+
+const magicFamilyKindLabels: Record<MagicFamilyKind, string> = {
+  element: 'Стихия',
+  school: 'Школа',
+  function: 'Назначение',
+  other: 'Другое',
 }
 
 const categories: Array<{ value: ItemCategory; label: string }> = [
@@ -203,6 +212,7 @@ type SpellDraft = {
   support_effect_type: 'guard' | 'cleanse' | 'empower' | 'taunt' | 'sacrifice' | null
   support_value: number
   support_turns: number
+  family_slugs: string[]
 }
 
 function emptyItem(): ItemDraft {
@@ -240,6 +250,20 @@ function emptyItem(): ItemDraft {
   }
 }
 
+function defaultFamilySlugs(
+  kind: SpellDraft['spell_kind'],
+  damageType: ElementalDamageType | null,
+): string[] {
+  if (kind === 'damage' && damageType) return [damageType]
+  if (kind === 'heal') return ['healing']
+  if (kind === 'guard') return ['protective']
+  if (kind === 'cleanse') return ['cleansing']
+  if (kind === 'buff') return ['enhancement']
+  if (kind === 'taunt') return ['control']
+  if (kind === 'sacrifice') return ['sacrifice', 'healing', 'protective']
+  return []
+}
+
 function emptySpell(): SpellDraft {
   return {
     id: null,
@@ -260,6 +284,7 @@ function emptySpell(): SpellDraft {
     support_effect_type: null,
     support_value: 0,
     support_turns: 0,
+    family_slugs: ['fire'],
   }
 }
 
@@ -296,18 +321,22 @@ export function GmItemsAndSpells() {
   const [section, setSection] = useState<'items' | 'spells' | 'affixes' | 'loot' | 'crafting'>('items')
   const [items, setItems] = useState<ItemDefinition[]>([])
   const [spells, setSpells] = useState<SpellDefinition[]>([])
+  const [magicFamilies, setMagicFamilies] = useState<MagicFamily[]>([])
   const [itemDraft, setItemDraft] = useState<ItemDraft>(emptyItem)
   const [spellDraft, setSpellDraft] = useState<SpellDraft>(emptySpell)
+  const [newFamilyName, setNewFamilyName] = useState('')
+  const [newFamilyKind, setNewFamilyKind] = useState<MagicFamilyKind>('other')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
   async function loadData() {
-    const [itemResult, spellResult] = await Promise.all([
+    const [itemResult, spellResult, familyResult] = await Promise.all([
       supabase.rpc('get_gm_item_definitions'),
-      supabase.rpc('get_gm_spell_definitions'),
+      supabase.rpc('get_gm_spell_definitions_v2'),
+      supabase.rpc('gm_list_magic_families'),
     ])
 
-    const error = itemResult.error ?? spellResult.error
+    const error = itemResult.error ?? spellResult.error ?? familyResult.error
     if (error) {
       setMessage(error.message)
       return
@@ -315,6 +344,7 @@ export function GmItemsAndSpells() {
 
     setItems((itemResult.data as ItemDefinition[] | null) ?? [])
     setSpells((spellResult.data as SpellDefinition[] | null) ?? [])
+    setMagicFamilies((familyResult.data as MagicFamily[] | null) ?? [])
   }
 
   useEffect(() => {
@@ -387,6 +417,9 @@ export function GmItemsAndSpells() {
       support_effect_type: spell.support_effect_type,
       support_value: spell.support_value,
       support_turns: spell.support_turns,
+      family_slugs: spell.family_slugs
+        ?? spell.magic_families?.map((family) => family.slug)
+        ?? defaultFamilySlugs(spell.spell_kind, spell.damage_type),
     })
     setMessage('')
   }
@@ -596,11 +629,59 @@ export function GmItemsAndSpells() {
     setBusy(false)
   }
 
+  function toggleSpellFamily(slug: string) {
+    setSpellDraft((current) => ({
+      ...current,
+      family_slugs: current.family_slugs.includes(slug)
+        ? current.family_slugs.filter((entry) => entry !== slug)
+        : [...current.family_slugs, slug],
+    }))
+  }
+
+  async function createMagicFamily() {
+    const name = newFamilyName.trim()
+    const slug = itemSlugFromName(name)
+    if (!name || !slug) {
+      setMessage('Укажи название нового семейства магии.')
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('gm_save_magic_family', {
+      p_slug: slug,
+      p_name: name,
+      p_kind: newFamilyKind,
+      p_description: '',
+      p_enabled: true,
+      p_sort_order: 500,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    await loadData()
+    setNewFamilyName('')
+    setNewFamilyKind('other')
+    setSpellDraft((current) => ({
+      ...current,
+      family_slugs: current.family_slugs.includes(slug)
+        ? current.family_slugs
+        : [...current.family_slugs, slug],
+    }))
+    setMessage(`Семейство «${name}» создано и добавлено к текущему заклинанию.`)
+    setBusy(false)
+  }
+
   async function saveSpell() {
     setBusy(true)
     setMessage('')
 
-    const { data, error } = await supabase.rpc('gm_save_spell_definition_v2', {
+    const { data, error } = await supabase.rpc('gm_save_spell_definition_v3', {
       p_id: spellDraft.id,
       p_slug: spellDraft.slug.trim(),
       p_name: spellDraft.name.trim(),
@@ -619,6 +700,7 @@ export function GmItemsAndSpells() {
       p_support_effect_type: spellDraft.support_effect_type,
       p_support_value: spellDraft.support_value,
       p_support_turns: spellDraft.support_turns,
+      p_family_slugs: spellDraft.family_slugs,
     })
 
     if (error) {
@@ -1272,6 +1354,10 @@ export function GmItemsAndSpells() {
                             : kind === 'sacrifice' ? 3
                               : 0,
                       mana_cost: kind === 'sacrifice' ? 0 : spellDraft.mana_cost,
+                      family_slugs: defaultFamilySlugs(
+                        kind,
+                        kind === 'damage' ? spellDraft.damage_type ?? 'fire' : null,
+                      ),
                     })
                   }}
                 >
@@ -1286,11 +1372,77 @@ export function GmItemsAndSpells() {
               </label>
               <label>
                 <span>Стихия</span>
-                <select disabled={spellDraft.spell_kind !== 'damage'} value={spellDraft.damage_type ?? ''} onChange={(e) => setSpellDraft({ ...spellDraft, damage_type: e.target.value as ElementalDamageType })}>
+                <select
+                  disabled={spellDraft.spell_kind !== 'damage'}
+                  value={spellDraft.damage_type ?? ''}
+                  onChange={(e) => {
+                    const damageType = e.target.value as ElementalDamageType
+                    setSpellDraft((current) => ({
+                      ...current,
+                      damage_type: damageType,
+                      family_slugs: [
+                        ...current.family_slugs.filter((slug) => !elementalTypes.includes(slug as ElementalDamageType)),
+                        damageType,
+                      ],
+                    }))
+                  }}
+                >
                   {elementalTypes.map((type) => <option key={type} value={type}>{damageLabels[type]}</option>)}
                 </select>
               </label>
               <label><span>Мана</span><input type="number" min={0} value={spellDraft.mana_cost} onChange={(e) => setSpellDraft({ ...spellDraft, mana_cost: Math.max(0, Number(e.target.value)) })} /></label>
+            </div>
+
+            <div className="gm-editor-box">
+              <div>
+                <strong>Семейства магии</strong>
+                <small>
+                  Одно заклинание может относиться сразу к нескольким семействам. Будущие бонусы смогут усиливать каждое семейство отдельно.
+                </small>
+              </div>
+
+              <div className="spell-stats">
+                {magicFamilies.filter((family) => family.enabled !== false).map((family) => (
+                  <label className="gm-inline-check" key={family.slug}>
+                    <input
+                      type="checkbox"
+                      checked={spellDraft.family_slugs.includes(family.slug)}
+                      onChange={() => toggleSpellFamily(family.slug)}
+                    />
+                    <span>{family.name} · {magicFamilyKindLabels[family.kind]}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="gm-form-grid three">
+                <label>
+                  <span>Новое семейство</span>
+                  <input
+                    value={newFamilyName}
+                    placeholder="Например: Пространственная"
+                    onChange={(e) => setNewFamilyName(e.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Тип семейства</span>
+                  <select
+                    value={newFamilyKind}
+                    onChange={(e) => setNewFamilyKind(e.target.value as MagicFamilyKind)}
+                  >
+                    {Object.entries(magicFamilyKindLabels).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  disabled={busy || !newFamilyName.trim()}
+                  onClick={() => void createMagicFamily()}
+                >
+                  + Добавить семейство
+                </button>
+              </div>
             </div>
 
             <div className="gm-form-grid three">
