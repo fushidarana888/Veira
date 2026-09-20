@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { AdventuresPanel } from './AdventuresPanel'
 import { CraftingPanel } from './CraftingPanel'
 import { DuelPanel } from './DuelPanel'
+import { GuidePanel } from './GuidePanel'
 import { MagicPanel } from './MagicPanel'
 import { WorldMap } from './WorldMap'
 import type {
@@ -231,6 +232,7 @@ function combinedResistances(item: CharacterItem, definition: ItemDefinition) {
 export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) {
   const [tab, setTab] = useState<Tab>('character')
   const [characterTab, setCharacterTab] = useState<CharacterTab>('overview')
+  const [moreView, setMoreView] = useState<'menu' | 'guide'>('menu')
   const [items, setItems] = useState<CharacterItem[]>([])
   const [equipment, setEquipment] = useState<CharacterEquipment[]>([])
   const [equipmentSets, setEquipmentSets] = useState<EquipmentSetState[]>([])
@@ -1201,8 +1203,28 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         />
       )}
       {tab === 'community' && <DuelPanel characterId={character.id} />}
-      {tab === 'more' && (
+      {tab === 'more' && moreView === 'guide' && (
+        <GuidePanel onBack={() => setMoreView('menu')} />
+      )}
+      {tab === 'more' && moreView === 'menu' && (
         <div className="more-section">
+          <section className="panel guide-entry-panel">
+            <div>
+              <span className="eyebrow">ГИД VEIRA</span>
+              <h2>Механики, предметы и заклинания</h2>
+              <p className="muted">
+                Полный справочник по оружию, броне, аксессуарам, магии, баффам и дебаффам,
+                аффиксам, заточке, пробуждению, Кровопролитию, подземельям и другим системам.
+              </p>
+            </div>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => setMoreView('guide')}
+            >
+              Открыть гид
+            </button>
+          </section>
           <section className="panel account-security-panel">
             <div className="section-heading">
               <div>
@@ -1390,7 +1412,15 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         <NavButton active={tab === 'character'} onClick={() => setTab('character')}>Персонаж</NavButton>
         <NavButton active={tab === 'adventures'} onClick={() => setTab('adventures')}>Приключения</NavButton>
         <NavButton active={tab === 'community'} onClick={() => setTab('community')}>Сообщество</NavButton>
-        <NavButton active={tab === 'more'} onClick={() => setTab('more')}>Ещё</NavButton>
+        <NavButton
+          active={tab === 'more'}
+          onClick={() => {
+            setTab('more')
+            setMoreView('menu')
+          }}
+        >
+          Ещё
+        </NavButton>
       </nav>
     </main>
   )
