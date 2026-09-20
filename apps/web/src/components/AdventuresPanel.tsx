@@ -306,7 +306,7 @@ export function AdventuresPanel({
       null
     const lootRunId = latestEncounter?.dungeon_run_id ?? activeRunId
 
-    const detailRequests: Promise<unknown>[] = []
+    const detailRequests: PromiseLike<unknown>[] = []
 
     if (lootRunId) {
       detailRequests.push(
