@@ -119,7 +119,7 @@ function enemySpecialValueText(encounter: CombatEncounter) {
   if (encounter.enemy_special_kind === 'attack') {
     return '×' + Number(encounter.enemy_special_damage_multiplier).toFixed(2)
   }
-  if (encounter.enemy_special_kind === 'heal') return '+' + encounter.enemy_special_value + '% max HP'
+  if (encounter.enemy_special_kind === 'heal') return '+' + encounter.enemy_special_value + '% макс. ОЗ'
   if (encounter.enemy_special_kind === 'guard') return '-' + encounter.enemy_special_value + '% следующего урона'
   if (encounter.enemy_special_kind === 'enrage') return '+' + encounter.enemy_special_value + '% атаки'
   return 'снимает негативные эффекты'
@@ -555,7 +555,7 @@ export function AdventuresPanel({
     if (error) {
       const raw = error.message
       if (raw.includes('ALREADY_FULL_RESOURCES')) {
-        setMessage('HP и мана уже заполнены настолько, что этот предмет ничего не восстановит.')
+        setMessage('ОЗ и мана уже заполнены настолько, что этот предмет ничего не восстановит.')
       } else if (raw.includes('ITEM_IS_NOT_COMBAT_CONSUMABLE')) {
         setMessage('Этот расходник нельзя использовать в бою.')
       } else if (raw.includes('LEVEL_TOO_LOW')) {
@@ -752,7 +752,7 @@ export function AdventuresPanel({
       return 'Автобой закончился поражением. Персонаж отступил из подземелья.'
     }
     if (result.reason === 'low_hp' || result.reason === 'low_hp_between_rooms') {
-      return 'Автобой остановился по порогу безопасности HP. Можно продолжить вручную или после лечения.'
+      return 'Автобой остановился по порогу безопасности ОЗ. Можно продолжить вручную или после лечения.'
     }
     if (result.reason === 'boss_wait') {
       return 'Автозачистка дошла до хранителя и остановилась: бой с боссом отключён в настройках.'
@@ -936,7 +936,7 @@ export function AdventuresPanel({
     setMessage(
       result?.escaped
         ? 'Побег удался. Персонаж покинул подземелье; прохождение можно начать заново позже.'
-        : 'Побег провален. Персонаж остаётся в подземелье с 1 HP. Повторить попытку можно будет только после прохождения следующего зала.',
+        : 'Побег провален. Персонаж остаётся в подземелье с 1 ОЗ. Повторить попытку можно будет только после прохождения следующего зала.',
     )
     setBusy(false)
   }
@@ -1240,14 +1240,14 @@ export function AdventuresPanel({
                     })}
                   >
                     <option value="never">Не использовать</option>
-                    <option value="low_hp">При низком HP</option>
+                    <option value="low_hp">При низком ОЗ</option>
                     <option value="interval">Каждые N ходов</option>
-                    <option value="low_hp_or_interval">HP или каждые N ходов</option>
+                    <option value="low_hp_or_interval">ОЗ или через заданное число ходов</option>
                   </select>
                 </label>
 
                 <label>
-                  <span>Защита при HP ≤ %</span>
+                  <span>Защита при ОЗ ≤ %</span>
                   <input
                     type="number"
                     min={0}
@@ -1285,7 +1285,7 @@ export function AdventuresPanel({
 
               <div className="autobattle-global-settings">
                 <label>
-                  <span>Полностью остановить автобой при HP ≤</span>
+                  <span>Полностью остановить автобой при ОЗ ≤</span>
                   <strong>{autobattleSettings.stop_hp_percent}%</strong>
                   <input
                     type="range"
@@ -1358,7 +1358,7 @@ export function AdventuresPanel({
 
                 <div className="autobattle-global-settings">
                   <label>
-                    <span>Лечиться при HP ≤</span>
+                    <span>Лечиться при ОЗ ≤</span>
                     <strong>
                       {autobattleEditorMode === 'boss'
                         ? autobattleSettings.boss_heal_hp_percent
@@ -1554,7 +1554,7 @@ export function AdventuresPanel({
                   </span>
                 </div>
                 <span className="badge">
-                  {activeEventBoss ? 'weekly' : `${activeCombat.room_index} / ${totalRooms}`}
+                  {activeEventBoss ? 'недельный' : `${activeCombat.room_index} / ${totalRooms}`}
                 </span>
               </div>
 
@@ -1906,8 +1906,8 @@ export function AdventuresPanel({
                               <strong>{definition.name}</strong>
                               <span>
                                 ×{item.quantity}
-                                {resources.heal > 0 ? ' · +' + resources.heal + ' HP' : ''}
-                                {resources.mana > 0 ? ' · +' + resources.mana + ' MP' : ''}
+                                {resources.heal > 0 ? ' · +' + resources.heal + ' ОЗ' : ''}
+                                {resources.mana > 0 ? ' · +' + resources.mana + ' ОМ' : ''}
                               </span>
                             </button>
                           )
@@ -1955,8 +1955,8 @@ export function AdventuresPanel({
                     : 'Противник повержен. Можно перейти к следующему залу.'
                 : latestCombat.status === 'defeat'
                   ? latestCombatSite?.is_event_boss
-                    ? 'Персонаж отступил от недельного босса и остался с 1 HP. Попытку можно повторить до конца ротации.'
-                    : 'Персонаж отступил из подземелья и остался с 1 HP.'
+                    ? 'Персонаж отступил от недельного босса и остался с 1 ОЗ. Попытку можно повторить до конца ротации.'
+                    : 'Персонаж отступил из подземелья и остался с 1 ОЗ.'
                   : 'Прохождение было прервано.'}
             </p>
           </div>
