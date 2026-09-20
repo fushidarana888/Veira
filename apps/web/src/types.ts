@@ -139,6 +139,20 @@ export type CombatStatusEffectType =
   | 'weaken'
   | 'vulnerable'
 
+
+export type MagicFamilyKind = 'element' | 'school' | 'function' | 'other'
+
+export type MagicFamily = {
+  slug: string
+  name: string
+  kind: MagicFamilyKind
+  description: string
+  enabled?: boolean
+  is_system?: boolean
+  sort_order?: number
+  spell_count?: number
+}
+
 export type ItemEquipGroup =
   | 'weapon'
   | 'offhand'
@@ -711,6 +725,8 @@ export type SpellDefinition = {
   support_effect_type: 'guard' | 'cleanse' | 'empower' | 'taunt' | 'sacrifice' | null
   support_value: number
   support_turns: number
+  family_slugs?: string[]
+  magic_families?: MagicFamily[]
   created_at: string
   updated_at: string
 }
@@ -730,6 +746,7 @@ export type CharacterSpell = {
   status_effect_chance: number
   status_effect_turns: number
   status_effect_potency: number
+  magic_families: MagicFamily[]
   learned_at: string
   source: string
   combat_slot: number | null
