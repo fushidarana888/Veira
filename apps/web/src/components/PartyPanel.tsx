@@ -390,11 +390,11 @@ export function PartyPanel({ characterId }: Props) {
                       <strong>{member.name}</strong>
                       <span>@{member.display_name} · {member.race}</span>
                     </div>
-                    <span className="badge">{member.is_leader ? 'лидер' : 'LVL ' + member.level}</span>
+                    <span className="badge">{member.is_leader ? 'лидер' : 'УР. ' + member.level}</span>
                   </div>
 
                   <div className="party-hp-row">
-                    <span>HP {member.hp_current} / {member.hp_max}</span>
+                    <span>ОЗ {member.hp_current} / {member.hp_max}</span>
                     <div className="party-hp-meter"><span style={{ width: hpPercent + '%' }} /></div>
                   </div>
 
