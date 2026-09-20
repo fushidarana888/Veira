@@ -980,7 +980,7 @@ export function AdventuresPanel({
         onInventoryChanged={onInventoryChanged}
       />
 
-      <EventBossesPanel />
+      <EventBossesPanel characterId={characterId} />
 
       {message && <p className="gm-notice" aria-live="polite">{message}</p>}
 
