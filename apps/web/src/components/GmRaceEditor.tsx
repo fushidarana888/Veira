@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
   DamageType,
-  ElementalDamageType,
+  MagicDamageType,
   RaceDefinition,
   RacePassiveType,
 } from '../types'
@@ -10,10 +10,12 @@ import type {
 const damageTypes: DamageType[] = [
   'slashing', 'piercing', 'blunt',
   'fire', 'water', 'earth', 'air', 'lightning', 'ice',
+  'arcane', 'star', 'gravity', 'moon',
 ]
 
-const elementalTypes: ElementalDamageType[] = [
+const magicDamageTypes: MagicDamageType[] = [
   'fire', 'water', 'earth', 'air', 'lightning', 'ice',
+  'arcane', 'star', 'gravity', 'moon',
 ]
 
 const damageLabels: Record<DamageType, string> = {
@@ -26,6 +28,10 @@ const damageLabels: Record<DamageType, string> = {
   air: 'Воздух',
   lightning: 'Молния',
   ice: 'Лёд',
+  arcane: 'Аркана',
+  star: 'Звёзды',
+  gravity: 'Гравитация',
+  moon: 'Луна',
 }
 
 const passiveOptions: Array<{ value: RacePassiveType; label: string }> = [
@@ -278,9 +284,9 @@ export function GmRaceEditor() {
               <span>Врождённая стихия</span>
               <select
                 value={draft.innate_magic_damage_type}
-                onChange={(e) => setDraft({ ...draft, innate_magic_damage_type: e.target.value as ElementalDamageType })}
+                onChange={(e) => setDraft({ ...draft, innate_magic_damage_type: e.target.value as MagicDamageType })}
               >
-                {elementalTypes.map((type) => <option key={type} value={type}>{damageLabels[type]}</option>)}
+                {magicDamageTypes.map((type) => <option key={type} value={type}>{damageLabels[type]}</option>)}
               </select>
             </label>
             <label>
