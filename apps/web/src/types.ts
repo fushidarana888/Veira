@@ -196,6 +196,7 @@ export type CharacterItem = {
   durability_max: number | null
   custom_name: string | null
   metadata: Record<string, unknown>
+  enhancement_level: number
   acquired_at: string
   item_definitions: ItemDefinition | ItemDefinition[] | null
 }
