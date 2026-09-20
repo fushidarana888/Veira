@@ -8811,8 +8811,13 @@ textarea {
 
 .battle-center-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
+}
+
+.battle-group-section {
+  display: grid;
+  gap: 14px;
 }
 
 .battle-center-tabs button {
@@ -9053,6 +9058,10 @@ textarea {
   .battle-center-header,
   .battle-history-layout {
     grid-template-columns: 1fr;
+  }
+
+  .battle-center-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .battle-live-indicator {
