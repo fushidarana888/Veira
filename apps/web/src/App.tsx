@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { AuthScreen } from './components/AuthScreen'
-import { CharacterSetup } from './components/CharacterSetup'
-import { GmHome } from './components/GmHome'
-import { PlayerHome } from './components/PlayerHome'
 import { supabase } from './lib/supabase'
 import type { Character, Profile } from './types'
+
+const CharacterSetup = lazy(() => import('./components/CharacterSetup').then((module) => ({ default: module.CharacterSetup })))
+const GmHome = lazy(() => import('./components/GmHome').then((module) => ({ default: module.GmHome })))
+const PlayerHome = lazy(() => import('./components/PlayerHome').then((module) => ({ default: module.PlayerHome })))
 
 type AccountState = {
   user: User | null
@@ -25,9 +26,11 @@ const initialState: AccountState = {
 
 export function App() {
   const [state, setState] = useState<AccountState>(initialState)
+  const loadedUserIdRef = useRef<string | null>(null)
 
   const loadAccount = useCallback(async (user: User | null) => {
     if (!user) {
+      loadedUserIdRef.current = null
       setState({ ...initialState, loading: false })
       return
     }
@@ -108,6 +111,7 @@ export function App() {
       return
     }
 
+    loadedUserIdRef.current = user.id
     setState({
       user,
       profile,
@@ -124,8 +128,36 @@ export function App() {
       if (active) void loadAccount(data.user)
     })
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) void loadAccount(session?.user ?? null)
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return
+
+      if (event === 'SIGNED_OUT') {
+        loadedUserIdRef.current = null
+        void loadAccount(null)
+        return
+      }
+
+      if (event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          setState((current) => current.user?.id === session.user.id
+            ? { ...current, user: session.user }
+            : current)
+        }
+        return
+      }
+
+      if (event === 'INITIAL_SESSION') return
+
+      const nextUser = session?.user ?? null
+      if (
+        event === 'SIGNED_IN'
+        && nextUser
+        && loadedUserIdRef.current === nextUser.id
+      ) return
+
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'PASSWORD_RECOVERY') {
+        void loadAccount(nextUser)
+      }
     })
 
     return () => {
@@ -172,26 +204,43 @@ export function App() {
   if (!state.profile) return null
 
   if (state.profile.account_type === 'gm') {
-    return <GmHome profile={state.profile} onSignOut={signOut} />
+    return (
+      <Suspense fallback={<AppSectionLoading />}>
+        <GmHome profile={state.profile} onSignOut={signOut} />
+      </Suspense>
+    )
   }
 
   if (!state.character) {
     return (
-      <CharacterSetup
-        userId={state.user.id}
-        displayName={state.profile.display_name}
-        onCreated={() => loadAccount(state.user)}
-        onSignOut={signOut}
-      />
+      <Suspense fallback={<AppSectionLoading />}>
+        <CharacterSetup
+          userId={state.user.id}
+          displayName={state.profile.display_name}
+          onCreated={() => loadAccount(state.user)}
+          onSignOut={signOut}
+        />
+      </Suspense>
     )
   }
 
   return (
-    <PlayerHome
-      profile={state.profile}
-      character={state.character}
-      userEmail={state.user.email ?? ''}
-      onSignOut={signOut}
-    />
+    <Suspense fallback={<AppSectionLoading />}>
+      <PlayerHome
+        profile={state.profile}
+        character={state.character}
+        userEmail={state.user.email ?? ''}
+        onSignOut={signOut}
+      />
+    </Suspense>
+  )
+}
+
+function AppSectionLoading() {
+  return (
+    <main className="loading-screen">
+      <div className="loading-mark">V</div>
+      <p>Открываем раздел…</p>
+    </main>
   )
 }
