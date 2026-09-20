@@ -7,6 +7,7 @@ const AdventuresPanel = lazy(() => import('./AdventuresPanel').then((module) => 
 const BattleCenterPanel = lazy(() => import('./BattleCenterPanel').then((module) => ({ default: module.BattleCenterPanel })))
 const CraftingPanel = lazy(() => import('./CraftingPanel').then((module) => ({ default: module.CraftingPanel })))
 const GuidePanel = lazy(() => import('./GuidePanel').then((module) => ({ default: module.GuidePanel })))
+const GuildPanel = lazy(() => import('./GuildPanel').then((module) => ({ default: module.GuildPanel })))
 const MagicPanel = lazy(() => import('./MagicPanel').then((module) => ({ default: module.MagicPanel })))
 const WorldMap = lazy(() => import('./WorldMap').then((module) => ({ default: module.WorldMap })))
 import type {
@@ -32,6 +33,17 @@ type Props = {
 
 type Tab = 'world' | 'character' | 'adventures' | 'battles' | 'more'
 type CharacterTab = 'overview' | 'inventory' | 'equipment' | 'magic' | 'crafting'
+
+type ItemHistoryEvent = {
+  event_id: number
+  lineage_id: string
+  event_type: string
+  title: string
+  description: string
+  owner_name: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
 
 type CharacterCustomizationState = {
   character_id: string
@@ -234,8 +246,12 @@ function combinedResistances(item: CharacterItem, definition: ItemDefinition) {
 export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) {
   const [tab, setTab] = useState<Tab>('character')
   const [characterTab, setCharacterTab] = useState<CharacterTab>('overview')
-  const [moreView, setMoreView] = useState<'menu' | 'guide'>('menu')
+  const [moreView, setMoreView] = useState<'menu' | 'guide' | 'guild'>('menu')
   const [items, setItems] = useState<CharacterItem[]>([])
+  const [historyItem, setHistoryItem] = useState<CharacterItem | null>(null)
+  const [historyEvents, setHistoryEvents] = useState<ItemHistoryEvent[]>([])
+  const [historyBusy, setHistoryBusy] = useState(false)
+  const [historyMessage, setHistoryMessage] = useState('')
   const [equipment, setEquipment] = useState<CharacterEquipment[]>([])
   const [equipmentSets, setEquipmentSets] = useState<EquipmentSetState[]>([])
   const [inventoryHydrated, setInventoryHydrated] = useState(false)
@@ -491,6 +507,28 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   async function refreshInventoryState() {
     if (inventoryHydrated) return loadInventory()
     return loadEquippedState()
+  }
+
+  async function openItemHistory(item: CharacterItem) {
+    setHistoryItem(item)
+    setHistoryEvents([])
+    setHistoryMessage('')
+    setHistoryBusy(true)
+
+    const { data, error } = await supabase.rpc('get_item_history', {
+      p_character_item_id: item.id,
+    })
+
+    if (error) {
+      setHistoryMessage(error.message.includes('ITEM_HISTORY_NOT_TRACKED')
+        ? 'Для этого типа предмета история не ведётся.'
+        : error.message)
+      setHistoryBusy(false)
+      return
+    }
+
+    setHistoryEvents((data as ItemHistoryEvent[] | null) ?? [])
+    setHistoryBusy(false)
   }
 
   async function refreshVisiblePlayerData() {
@@ -1293,6 +1331,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               onUseResource={useResourceItem}
               onExchangeItem={exchangeItem}
               onLearnScroll={learnSpellFromScroll}
+              onHistory={openItemHistory}
             />
           )}
 
@@ -1363,8 +1402,30 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           <GuidePanel onBack={() => setMoreView('menu')} />
         </Suspense>
       )}
+      {tab === 'more' && moreView === 'guild' && (
+        <Suspense fallback={<LazyPanelFallback title="Загружаем гильдии…" />}>
+          <GuildPanel characterId={character.id} onBack={() => setMoreView('menu')} />
+        </Suspense>
+      )}
       {tab === 'more' && moreView === 'menu' && (
         <div className="more-section">
+          <section className="panel guild-entry-panel">
+            <div>
+              <span className="eyebrow">ГИЛЬДИИ</span>
+              <h2>Создай свою фракцию</h2>
+              <p className="muted">
+                Постоянные объединения игроков: состав, роли, заявки и управление. Позже поверх этой основы появятся гильдейские хранилища, казна и совместные активности.
+              </p>
+            </div>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => setMoreView('guild')}
+            >
+              Открыть гильдии
+            </button>
+          </section>
+
           <section className="panel guide-entry-panel">
             <div>
               <span className="eyebrow">ГИД VEIRA</span>
@@ -1564,6 +1625,49 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         </div>
       )}
 
+      {historyItem && (
+        <div className="item-history-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.currentTarget === event.target) setHistoryItem(null)
+        }}>
+          <section className="panel item-history-dialog" role="dialog" aria-modal="true" aria-label="История предмета">
+            <div className="item-history-heading">
+              <div>
+                <span className="eyebrow">ХРОНИКА ПРЕДМЕТА</span>
+                <h2>{historyItem.custom_name || normalizeDefinition(historyItem.item_definitions)?.name || 'Предмет'}</h2>
+                <p className="muted">История относится именно к этому экземпляру и сохраняется при смене владельца.</p>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setHistoryItem(null)}>Закрыть</button>
+            </div>
+
+            {historyBusy ? (
+              <p className="muted">Читаем хронику…</p>
+            ) : historyMessage ? (
+              <p className="form-message">{historyMessage}</p>
+            ) : historyEvents.length === 0 ? (
+              <p className="muted">У этого экземпляра пока нет записанных событий.</p>
+            ) : (
+              <div className="item-history-timeline">
+                {historyEvents.map((event) => (
+                  <article className={'item-history-event type-' + event.event_type} key={event.event_id}>
+                    <span className="item-history-dot" aria-hidden="true" />
+                    <div>
+                      <div className="item-history-event-head">
+                        <strong>{event.title}</strong>
+                        <time dateTime={event.created_at}>
+                          {new Date(event.created_at).toLocaleString('ru-RU')}
+                        </time>
+                      </div>
+                      {event.description && <p>{event.description}</p>}
+                      {event.owner_name && <small>Владелец: {event.owner_name}</small>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
       <nav className="bottom-nav" aria-label="Основная навигация">
         <NavButton active={tab === 'world'} onClick={() => setTab('world')}>Мир</NavButton>
         <NavButton active={tab === 'character'} onClick={() => setTab('character')}>Персонаж</NavButton>
@@ -1603,6 +1707,7 @@ function InventoryPanel({
   onUseResource,
   onExchangeItem,
   onLearnScroll,
+  onHistory,
 }: {
   items: CharacterItem[]
   equippedItemIds: Set<string>
@@ -1612,6 +1717,7 @@ function InventoryPanel({
   onUseResource: (item: CharacterItem, fillToMax?: boolean) => Promise<void>
   onExchangeItem: (item: CharacterItem, quantity: number) => Promise<void>
   onLearnScroll: (item: CharacterItem) => Promise<void>
+  onHistory: (item: CharacterItem) => Promise<void>
 }) {
   const [filter, setFilter] = useState<InventoryFilter>('all')
 
@@ -1844,6 +1950,14 @@ function InventoryPanel({
                         onClick={() => void onEquip(item)}
                       >
                         {equipped ? 'Надето' : 'Экипировать'}
+                      </button>
+                      <button
+                        className="ghost-button item-history-button"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void onHistory(item)}
+                      >
+                        История
                       </button>
                       {!equipped && ['weapon', 'armor', 'accessory'].includes(definition.category) && (
                         <button
