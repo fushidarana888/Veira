@@ -13,6 +13,7 @@ import type {
   ItemRarity,
   SpellDefinition,
   WeaponScaling,
+  WeaponFamily,
 } from '../types'
 
 const damageTypes: DamageType[] = [
@@ -171,6 +172,8 @@ type ItemDraft = {
   damage_type: DamageType | null
   weapon_base_damage: number
   weapon_scaling: WeaponScaling
+  weapon_family: WeaponFamily | null
+  echo_strike_chance_percent: number
   damage_resistances: Partial<Record<DamageType, number>>
   damage_bonuses: Partial<Record<DamageType, number>>
   scroll_spell_id: string | null
@@ -224,6 +227,8 @@ function emptyItem(): ItemDraft {
     damage_type: 'slashing',
     weapon_base_damage: 5,
     weapon_scaling: 'strength',
+    weapon_family: null,
+    echo_strike_chance_percent: 0,
     damage_resistances: {},
     damage_bonuses: {},
     scroll_spell_id: null,
@@ -348,6 +353,8 @@ export function GmItemsAndSpells() {
       damage_type: item.damage_type,
       weapon_base_damage: item.weapon_base_damage ?? 0,
       weapon_scaling: item.weapon_scaling ?? 'strength',
+      weapon_family: item.weapon_family ?? null,
+      echo_strike_chance_percent: item.echo_strike_chance_percent ?? 0,
       damage_resistances: item.damage_resistances ?? {},
       damage_bonuses: item.damage_bonuses ?? {},
       scroll_spell_id: item.scroll_spell_id,
@@ -451,6 +458,8 @@ export function GmItemsAndSpells() {
       damage_type: category === 'weapon' ? current.damage_type ?? 'slashing' : null,
       weapon_base_damage: category === 'weapon' ? Math.max(1, current.weapon_base_damage || 5) : 0,
       weapon_scaling: category === 'weapon' ? current.weapon_scaling : 'strength',
+      weapon_family: category === 'weapon' ? current.weapon_family : null,
+      echo_strike_chance_percent: category === 'weapon' ? current.echo_strike_chance_percent : 0,
       damage_resistances: defaultEquipGroup ? current.damage_resistances : {},
       damage_bonuses: defaultEquipGroup ? current.damage_bonuses : {},
       unique_effect_type: defaultEquipGroup ? current.unique_effect_type : null,
@@ -526,10 +535,12 @@ export function GmItemsAndSpells() {
       return
     }
 
-    const { error: weaponProfileError } = await supabase.rpc('gm_set_weapon_profile', {
+    const { error: weaponProfileError } = await supabase.rpc('gm_set_weapon_profile_v2', {
       p_item_id: savedId,
       p_weapon_base_damage: itemDraft.category === 'weapon' ? itemDraft.weapon_base_damage : 0,
       p_weapon_scaling: itemDraft.category === 'weapon' ? itemDraft.weapon_scaling : null,
+      p_weapon_family: itemDraft.category === 'weapon' ? itemDraft.weapon_family : null,
+      p_echo_strike_chance_percent: itemDraft.category === 'weapon' ? itemDraft.echo_strike_chance_percent : 0,
     })
 
     if (weaponProfileError) {
@@ -910,8 +921,38 @@ export function GmItemsAndSpells() {
                     </select>
                   </label>
                 </div>
+                <div className="gm-form-grid two">
+                  <label>
+                    <span>Семейство оружия</span>
+                    <select
+                      value={itemDraft.weapon_family ?? ''}
+                      onChange={(e) => setItemDraft({
+                        ...itemDraft,
+                        weapon_family: e.target.value ? e.target.value as WeaponFamily : null,
+                      })}
+                    >
+                      <option value="">Обычное оружие</option>
+                      <option value="short_bow">Короткий лук</option>
+                      <option value="long_bow">Длинный лук</option>
+                      <option value="dagger">Кинжал</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Эхо ударов %</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={itemDraft.echo_strike_chance_percent}
+                      onChange={(e) => setItemDraft({
+                        ...itemDraft,
+                        echo_strike_chance_percent: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                      })}
+                    />
+                  </label>
+                </div>
                 <p className="muted">
-                  Базовый урон добавляется к урону от характеристик и уровня. Он ничего не заменяет.
+                  Базовый урон добавляется к урону от характеристик и уровня. Кинжал наносит ×0.80 после Physical Defense. «Эхо ударов» — пассивка конкретного предмета, а не всего семейства кинжалов.
                 </p>
 
                 <div className="gm-editor-box">
