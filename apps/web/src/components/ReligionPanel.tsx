@@ -356,7 +356,7 @@ export function ReligionPanel({
               <strong>{currentReligion.favor > 0 ? '+' : ''}{currentReligion.favor}</strong>
             </div>
             <div>
-              <small>Сегодня</small>
+              <small>Обычная вера сегодня</small>
               <strong>{currentReligion.daily_earned}/{currentReligion.daily_cap}</strong>
             </div>
           </div>
@@ -436,7 +436,7 @@ export function ReligionPanel({
                   ? 'Максимальный уровень'
                   : `До следующего: ${selectedReligion.next_level_points - selectedReligion.faith_points}`}
               </span>
-              <span>Суточный прогресс {selectedReligion.daily_earned}/{selectedReligion.daily_cap}</span>
+              <span>Обычная вера сегодня {selectedReligion.daily_earned}/{selectedReligion.daily_cap}</span>
             </div>
           </div>
 
@@ -487,7 +487,9 @@ export function ReligionPanel({
           </div>
 
           <p className="muted">
-            Одновременно можно держать только одну клятву. Нарушение или смена религии уменьшает веру и благосклонность.
+            Одновременно можно держать только одну клятву. Обычными действиями можно получить до 60 веры в сутки,
+            а выполненными клятвами — ещё до 100 веры за скользящие 7 дней. При идеальном фарме 10 уровень занимает примерно месяц.
+            Нарушение или смена религии уменьшает веру и благосклонность.
           </p>
 
           <div className="religion-oath-grid">
