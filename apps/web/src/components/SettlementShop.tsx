@@ -196,7 +196,7 @@ export function SettlementShop({
           <span className="eyebrow">МАГАЗИН ПОСЕЛЕНИЯ</span>
           <h3>{settlementName}</h3>
           <p className="muted">
-            Уровень поселения {settlementLevel}/10. Чем выше уровень, тем шире и сильнее ассортимент.
+            Уровень поселения {settlementLevel}/10 определяет силу товаров. Сам ассортимент зависит от региона и специализации поселения.
           </p>
         </div>
         <span className="badge">ур. {settlementLevel}</span>
