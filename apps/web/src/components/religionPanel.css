@@ -1,0 +1,410 @@
+.religion-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.religion-intro,
+.religion-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.religion-intro .section-heading p,
+.religion-detail > p {
+  margin: 4px 0 0;
+}
+
+.religion-current-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.religion-current-summary > div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #323a44;
+  border-radius: 12px;
+  background: #10151b;
+  padding: 10px;
+}
+
+.religion-current-summary small {
+  color: #8f98a3;
+  font-size: 9px;
+}
+
+.religion-current-summary strong {
+  font-size: 14px;
+}
+
+.religion-leave {
+  justify-self: start;
+}
+
+.religion-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.religion-choice-card {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #303741;
+  border-radius: 14px;
+  background: #10151b;
+  padding: 12px;
+  color: inherit;
+  text-align: left;
+}
+
+.religion-choice-card:hover,
+.religion-choice-card.selected {
+  border-color: #65543a;
+  background:
+    linear-gradient(145deg, rgba(172, 130, 69, .10), transparent 55%),
+    #10151b;
+}
+
+.religion-choice-card.current {
+  box-shadow: inset 0 0 0 1px rgba(207, 169, 105, .25);
+}
+
+.religion-choice-card > span {
+  color: #9d8866;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.religion-choice-card > strong {
+  font-size: 13px;
+}
+
+.religion-choice-card > small {
+  min-height: 28px;
+  color: #929ba5;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.religion-choice-card > b {
+  color: #d3bd99;
+  font-size: 9px;
+}
+
+.religion-code-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.religion-code-grid article {
+  border: 1px solid #344339;
+  border-radius: 12px;
+  background: rgba(66, 100, 74, .08);
+  padding: 11px;
+}
+
+.religion-code-grid article.taboo {
+  border-color: #563939;
+  background: rgba(119, 58, 58, .07);
+}
+
+.religion-code-grid span,
+.religion-max-reward > span {
+  color: #9b907c;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.religion-code-grid p {
+  margin: 5px 0 0;
+  color: #a8b0ba;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.religion-faith-block {
+  display: grid;
+  gap: 7px;
+}
+
+.religion-faith-heading,
+.religion-faith-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.religion-faith-heading {
+  font-size: 11px;
+}
+
+.religion-faith-heading span {
+  color: #d5ba8d;
+}
+
+.religion-faith-caption {
+  color: #89929d;
+  font-size: 9px;
+}
+
+.religion-faith-meter,
+.oath-progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #222831;
+}
+
+.religion-faith-meter > span,
+.oath-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #766047, #c7a26d);
+}
+
+.religion-max-reward {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #58472f;
+  border-radius: 13px;
+  background: rgba(139, 102, 54, .08);
+  padding: 11px;
+}
+
+.religion-max-reward strong {
+  color: #ead0a5;
+  font-size: 13px;
+}
+
+.religion-max-reward p {
+  margin: 0;
+  color: #9da5af;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.religion-max-reward b {
+  color: #bfa373;
+  font-size: 9px;
+}
+
+.religion-perk-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.religion-perk {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #303741;
+  border-radius: 12px;
+  background: #10151b;
+  padding: 9px 10px;
+}
+
+.religion-perk > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #202730;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.religion-perk > div {
+  display: grid;
+  gap: 2px;
+}
+
+.religion-perk strong {
+  font-size: 11px;
+}
+
+.religion-perk p {
+  margin: 0;
+  color: #939ca7;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.religion-perk > b {
+  color: #69737e;
+  font-size: 8px;
+}
+
+.religion-perk.unlocked {
+  border-color: #4f4736;
+}
+
+.religion-perk.unlocked > span {
+  background: #443923;
+  color: #e5c893;
+}
+
+.religion-perk.unlocked > b {
+  color: #c8aa76;
+}
+
+.religion-perk.locked {
+  opacity: .58;
+}
+
+.religion-oath-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.religion-oath {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border: 1px solid #303741;
+  border-radius: 13px;
+  background: #10151b;
+  padding: 11px;
+}
+
+.religion-oath.active {
+  border-color: #635139;
+  background:
+    linear-gradient(145deg, rgba(158, 119, 63, .10), transparent 50%),
+    #10151b;
+}
+
+.religion-oath > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.religion-oath strong {
+  font-size: 11px;
+}
+
+.religion-oath > div:first-child span {
+  color: #c6aa7b;
+  font-size: 8px;
+}
+
+.religion-oath p {
+  margin: 0;
+  color: #979faa;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.abyss-sacrifice {
+  display: grid;
+  gap: 11px;
+  border-color: #4d3038;
+}
+
+.abyss-sacrifice > p {
+  margin: 0;
+}
+
+.sacrifice-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.religious-item-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.religious-item-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #3f493d;
+  border-radius: 11px;
+  background: #10151b;
+  padding: 10px;
+}
+
+.religious-item-list article.weakened {
+  border-color: #4b3c3c;
+  opacity: .78;
+}
+
+.religious-item-list article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.religious-item-list strong {
+  font-size: 11px;
+}
+
+.religious-item-list small {
+  color: #8e97a1;
+  font-size: 8px;
+}
+
+.religious-item-list article > span {
+  color: #c5a974;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.religious-item-list article.weakened > span {
+  color: #bd8f8f;
+}
+
+@media (max-width: 900px) {
+  .religion-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .religion-oath-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .religion-code-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .religion-card-grid,
+  .religion-current-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .religion-faith-heading,
+  .religion-faith-caption,
+  .religious-item-list article {
+    display: grid;
+  }
+
+  .religion-perk {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .religion-perk > b {
+    grid-column: 2;
+  }
+
+  .sacrifice-controls {
+    grid-template-columns: 1fr;
+  }
+}
