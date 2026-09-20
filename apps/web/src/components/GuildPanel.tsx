@@ -65,7 +65,8 @@ type GuildHub = {
 
 type Props = {
   characterId: string
-  onBack: () => void
+  onBack?: () => void
+  embedded?: boolean
 }
 
 const roleLabels: Record<GuildRole, string> = {
@@ -87,7 +88,7 @@ function guildError(raw: string) {
   return raw
 }
 
-export function GuildPanel({ characterId, onBack }: Props) {
+export function GuildPanel({ characterId, onBack, embedded = false }: Props) {
   const [hub, setHub] = useState<GuildHub | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -287,7 +288,7 @@ export function GuildPanel({ characterId, onBack }: Props) {
 
   if (loading && !hub) {
     return (
-      <section className="panel guild-loading-panel">
+      <section className={embedded ? 'panel guild-loading-panel embedded' : 'panel guild-loading-panel'}>
         <span className="eyebrow">ГИЛЬДИИ</span>
         <h2>Загружаем гильдии…</h2>
       </section>
@@ -295,17 +296,19 @@ export function GuildPanel({ characterId, onBack }: Props) {
   }
 
   return (
-    <section className="guild-section">
-      <article className="panel guild-header-panel">
-        <div>
-          <span className="eyebrow">ГИЛЬДИИ VEIRA</span>
-          <h2>{guild ? `[${guild.tag}] ${guild.name}` : 'Фракции игроков'}</h2>
-          <p className="muted">
-            Гильдия объединяет персонажей в постоянную организацию. Один персонаж может состоять только в одной гильдии.
-          </p>
-        </div>
-        <button className="ghost-button" type="button" onClick={onBack}>Назад</button>
-      </article>
+    <section className={'guild-section' + (embedded ? ' embedded' : '')}>
+      {!embedded && (
+        <article className="panel guild-header-panel">
+          <div>
+            <span className="eyebrow">ГИЛЬДИИ VEIRA</span>
+            <h2>{guild ? `[${guild.tag}] ${guild.name}` : 'Фракции игроков'}</h2>
+            <p className="muted">
+              Гильдия объединяет персонажей в постоянную организацию. Один персонаж может состоять только в одной гильдии.
+            </p>
+          </div>
+          {onBack && <button className="ghost-button" type="button" onClick={onBack}>Назад</button>}
+        </article>
+      )}
 
       {message && <p className="gm-notice" aria-live="polite">{message}</p>}
 
