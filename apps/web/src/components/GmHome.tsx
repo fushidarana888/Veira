@@ -23,6 +23,12 @@ type AuditEntry = {
   created_at: string
 }
 
+type HiddenFavorInfo = {
+  religion_slug: string
+  religion_name: string
+  favor: number
+}
+
 function normalizeProgress(value: Character['character_progress']): CharacterProgress | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value
@@ -43,6 +49,8 @@ export function GmHome({ profile, onSignOut }: Props) {
   const [mapFile, setMapFile] = useState<File | null>(null)
   const [mapUploading, setMapUploading] = useState(false)
   const [mapPreviewVersion, setMapPreviewVersion] = useState(() => Date.now())
+  const [hiddenFavor, setHiddenFavor] = useState<HiddenFavorInfo | null>(null)
+  const [hiddenFavorInput, setHiddenFavorInput] = useState(0)
 
   async function loadData() {
     setLoading(true)
@@ -127,6 +135,29 @@ export function GmHome({ profile, onSignOut }: Props) {
     void loadData()
   }, [])
 
+  useEffect(() => {
+    if (!selectedId) {
+      setHiddenFavor(null)
+      setHiddenFavorInput(0)
+      return
+    }
+
+    void (async () => {
+      const { data, error } = await supabase.rpc('gm_get_character_hidden_favor', {
+        p_character_id: selectedId,
+      })
+
+      if (error) {
+        setHiddenFavor(null)
+        return
+      }
+
+      const row = ((data as HiddenFavorInfo[] | null) ?? [])[0] ?? null
+      setHiddenFavor(row)
+      setHiddenFavorInput(row?.favor ?? 0)
+    })()
+  }, [selectedId])
+
   const profileById = useMemo(
     () => new Map(profiles.map((entry) => [entry.user_id, entry])),
     [profiles],
@@ -156,6 +187,30 @@ export function GmHome({ profile, onSignOut }: Props) {
 
     setNotice(successMessage)
     await loadData()
+    setBusy(false)
+  }
+
+  async function saveHiddenFavor() {
+    if (!selectedCharacter || !hiddenFavor) return
+
+    setBusy(true)
+    setNotice('')
+
+    const nextFavor = Math.max(0, Math.min(100, Math.round(hiddenFavorInput || 0)))
+    const { error } = await supabase.rpc('gm_set_character_hidden_favor', {
+      p_character_id: selectedCharacter.id,
+      p_favor: nextFavor,
+    })
+
+    if (error) {
+      setNotice(error.message)
+      setBusy(false)
+      return
+    }
+
+    setHiddenFavor({ ...hiddenFavor, favor: nextFavor })
+    setHiddenFavorInput(nextFavor)
+    setNotice(`Скрытая благосклонность: ${nextFavor}/100.`)
     setBusy(false)
   }
 
@@ -424,6 +479,41 @@ export function GmHome({ profile, onSignOut }: Props) {
                       -25 ОЗ
                     </button>
                   </div>
+                </article>
+
+                <article className="panel">
+                  <span className="eyebrow">СКРЫТАЯ СИСТЕМА</span>
+                  <h2>Благосклонность</h2>
+                  {hiddenFavor ? (
+                    <>
+                      <p className="muted">
+                        Видно только ГМ · {hiddenFavor.religion_name}. Игрок не получает это значение через игровой интерфейс.
+                      </p>
+                      <div className="gm-loot-row">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={hiddenFavorInput}
+                          onChange={(event) => setHiddenFavorInput(Number(event.target.value))}
+                          aria-label="Скрытая благосклонность"
+                        />
+                        <button
+                          className="primary-button"
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void saveHiddenFavor()}
+                        >
+                          Сохранить
+                        </button>
+                      </div>
+                      <p className="muted">
+                        25+: скрытое уклонение · 50+: качество лута · 75+: скрытый крит · 100: скрытый переброс награды данжа.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="muted">У персонажа нет активной религии.</p>
+                  )}
                 </article>
 
                 <article className="panel">
