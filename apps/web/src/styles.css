@@ -9112,6 +9112,10 @@ textarea {
 }
 
 
+.fog-sector {
+  contain: layout paint style;
+}
+
 /* Mobile performance pass */
 @media (max-width: 760px) {
   html {
