@@ -9681,3 +9681,303 @@ textarea {
     width: 100%;
   }
 }
+
+
+/* Guilds */
+.guild-section {
+  display: grid;
+  gap: 14px;
+}
+
+.guild-header-panel,
+.guild-entry-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.guild-header-panel > div,
+.guild-entry-panel > div {
+  min-width: 0;
+}
+
+.guild-profile-card,
+.guild-create-card {
+  display: grid;
+  gap: 14px;
+}
+
+.guild-profile-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.guild-profile-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.guild-profile-heading p,
+.guild-directory-card p,
+.guild-application-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.guild-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 220px);
+  gap: 12px;
+}
+
+.guild-edit-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.guild-edit-grid label > span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.guild-edit-grid input,
+.guild-edit-grid textarea,
+.guild-apply-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.guild-edit-grid textarea,
+.guild-apply-form textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.guild-description-field {
+  grid-column: 1 / -1;
+}
+
+.guild-edit-grid > button {
+  justify-self: start;
+}
+
+.guild-member-list,
+.guild-application-list,
+.guild-directory-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.guild-directory-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.guild-member-card,
+.guild-application-card,
+.guild-directory-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 13px;
+  background: rgba(0,0,0,0.12);
+}
+
+.guild-member-card > div:first-child,
+.guild-application-card > div:first-child,
+.guild-directory-card > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.guild-member-card span,
+.guild-application-card span,
+.guild-directory-card small {
+  color: var(--muted);
+}
+
+.guild-member-actions,
+.guild-application-card > div:last-child,
+.guild-exit-actions,
+.guild-apply-form > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.guild-apply-form {
+  display: grid;
+  gap: 8px;
+  min-width: min(100%, 280px);
+}
+
+.guild-exit-actions {
+  margin-top: 12px;
+}
+
+/* Item lineage/history */
+.item-history-button {
+  margin-left: 0;
+}
+
+.item-history-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 6, 10, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.item-history-dialog {
+  width: min(760px, 100%);
+  max-height: min(82vh, 820px);
+  overflow: auto;
+}
+
+.item-history-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.item-history-heading > div {
+  min-width: 0;
+}
+
+.item-history-timeline {
+  position: relative;
+  display: grid;
+  gap: 0;
+}
+
+.item-history-event {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  padding: 0 0 18px;
+}
+
+.item-history-event:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255,255,255,0.13);
+}
+
+.item-history-dot {
+  position: relative;
+  z-index: 1;
+  width: 11px;
+  height: 11px;
+  margin-top: 5px;
+  border: 2px solid rgba(221, 227, 238, 0.7);
+  border-radius: 50%;
+  background: rgba(25, 29, 38, 1);
+}
+
+.item-history-event.type-event_victory .item-history-dot {
+  border-color: rgba(239, 201, 91, 0.95);
+  box-shadow: 0 0 12px rgba(239, 201, 91, 0.22);
+}
+
+.item-history-event.type-owner_changed .item-history-dot,
+.item-history-event.type-recovered_from_spirit .item-history-dot {
+  border-color: rgba(123, 196, 255, 0.92);
+}
+
+.item-history-event.type-lost_to_spirit .item-history-dot,
+.item-history-event.type-spirit_expired .item-history-dot {
+  border-color: rgba(199, 121, 255, 0.9);
+}
+
+.item-history-event.type-enhanced .item-history-dot,
+.item-history-event.type-awakened .item-history-dot,
+.item-history-event.type-affixes_changed .item-history-dot {
+  border-color: rgba(117, 224, 159, 0.9);
+}
+
+.item-history-event-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.item-history-event-head time,
+.item-history-event small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.item-history-event p {
+  margin: 5px 0 3px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .guild-header-panel,
+  .guild-entry-panel,
+  .guild-profile-heading,
+  .guild-member-card,
+  .guild-application-card,
+  .guild-directory-card,
+  .item-history-heading {
+    flex-direction: column;
+  }
+
+  .guild-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guild-description-field {
+    grid-column: auto;
+  }
+
+  .guild-member-actions,
+  .guild-application-card > div:last-child,
+  .guild-exit-actions,
+  .guild-apply-form > div {
+    width: 100%;
+  }
+
+  .guild-member-actions button,
+  .guild-application-card button,
+  .guild-exit-actions button,
+  .guild-apply-form button,
+  .guild-entry-panel > button {
+    width: 100%;
+  }
+
+  .item-history-overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .item-history-dialog {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .item-history-event-head {
+    display: grid;
+    gap: 2px;
+  }
+}
