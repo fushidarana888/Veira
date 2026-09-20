@@ -154,6 +154,8 @@ function isBowProfile(profile: BowProfile | null | undefined): profile is BowPro
 
 type Props = {
   characterId: string
+  mode?: 'all' | 'management' | 'combat'
+  onOpenBattles?: () => void
   onProgressChanged?: () => Promise<unknown> | void
   onInventoryChanged?: () => Promise<unknown> | void
 }
@@ -284,6 +286,8 @@ function scaledPartyDungeonReward(base: number, danger: number, level: number, k
 
 export function PartyDungeonPanel({
   characterId,
+  mode = 'all',
+  onOpenBattles,
   onProgressChanged,
   onInventoryChanged,
 }: Props) {
@@ -360,13 +364,17 @@ export function PartyDungeonPanel({
 
   useEffect(() => {
     void loadState()
+  }, [characterId])
+
+  useEffect(() => {
+    if (state.run?.status !== 'active') return
 
     const timer = window.setInterval(() => {
-      void loadState(true)
-    }, 3500)
+      if (document.visibilityState === 'visible') void loadState(true)
+    }, mode === 'combat' ? 4500 : 8000)
 
     return () => window.clearInterval(timer)
-  }, [characterId])
+  }, [characterId, mode, state.run?.id, state.run?.status])
 
   async function refreshPlayer() {
     await Promise.all([
@@ -700,6 +708,23 @@ export function PartyDungeonPanel({
   }
 
   if (!party) return null
+
+  if (mode === 'management' && state.encounter?.status === 'active') {
+    return (
+      <article className="panel party-dungeon-panel battle-moved-panel">
+        <span className="eyebrow">ГРУППОВОЙ БОЙ ИДЁТ</span>
+        <h3>{state.encounter.enemy_name}</h3>
+        <p className="muted">
+          Управление текущей битвой перенесено в нижний раздел «Бои». Состав группы и сам поход остаются в «Приключениях».
+        </p>
+        <button className="primary-button" type="button" onClick={onOpenBattles}>
+          Открыть групповой бой
+        </button>
+      </article>
+    )
+  }
+
+  if (mode === 'combat' && state.encounter?.status !== 'active') return null
 
   return (
     <article className="panel party-dungeon-panel">
