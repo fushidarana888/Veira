@@ -73,11 +73,16 @@ export function useSmartRefresh(
 }
 
 export function scheduleIdle(task: () => void, timeout = 1400) {
-  if ('requestIdleCallback' in window) {
-    const id = window.requestIdleCallback(task, { timeout })
-    return () => window.cancelIdleCallback(id)
+  const idleWindow = window as Window & {
+    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
+    cancelIdleCallback?: (handle: number) => void
   }
 
-  const id = window.setTimeout(task, Math.min(timeout, 350))
-  return () => window.clearTimeout(id)
+  if (typeof idleWindow.requestIdleCallback === 'function') {
+    const id = idleWindow.requestIdleCallback(task, { timeout })
+    return () => idleWindow.cancelIdleCallback?.(id)
+  }
+
+  const id = globalThis.setTimeout(task, Math.min(timeout, 350))
+  return () => globalThis.clearTimeout(id)
 }
