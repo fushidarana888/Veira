@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { BowDistance, BowProfile, CharacterSpell, CombatStatusEffectType } from '../types'
 
+function isBowProfile(profile: BowProfile | null | undefined): profile is BowProfile & { weapon_family: 'short_bow' | 'long_bow' } {
+  return profile?.weapon_family === 'short_bow' || profile?.weapon_family === 'long_bow'
+}
+
 type Props = {
   characterId: string
 }
@@ -343,7 +347,7 @@ export function DuelPanel({ characterId }: Props) {
   }
 
   async function setBowDistance(distance: BowDistance) {
-    if (!details || !myTurn || !mine || !bowProfile?.weapon_family || mine.bow_draw_pending) return
+    if (!details || !myTurn || !mine || !isBowProfile(bowProfile) || mine.bow_draw_pending) return
 
     setBusy('action')
     setMessage('')
@@ -430,7 +434,7 @@ export function DuelPanel({ characterId }: Props) {
             <DuelFighter participant={opponent} statuses={opponentStatuses} />
           </div>
 
-          {bowProfile?.weapon_family && (
+          {isBowProfile(bowProfile) && (
             <div className="duel-turn-help">
               <strong>Дистанция лучника:</strong>{' '}
               {([
@@ -453,7 +457,7 @@ export function DuelPanel({ characterId }: Props) {
           )}
 
           <div className="duel-actions">
-            {bowProfile?.weapon_family ? (
+            {isBowProfile(bowProfile) ? (
               mine.bow_draw_pending ? (
                 <button className="primary-button" type="button" disabled={!myTurn || busy === 'action'} onClick={() => void act('physical')}>
                   Выпустить стрелу · полный натяг
