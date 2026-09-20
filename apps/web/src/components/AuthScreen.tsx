@@ -87,7 +87,7 @@ export function AuthScreen() {
   return (
     <main className="auth-layout">
       <section className="auth-copy">
-        <span className="eyebrow">VEIRA GAME</span>
+        <span className="eyebrow">VEIRA · ИГРА</span>
         <h1>Войди в Эйлар</h1>
         <p>
           Один аккаунт хранит твоих персонажей и весь игровой прогресс.
