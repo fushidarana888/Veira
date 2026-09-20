@@ -15,8 +15,57 @@ import type {
 
 type Props = {
   characterId: string
+  onOpenBattles?: () => void
   onProgressChanged?: () => Promise<unknown> | void
   onInventoryChanged?: () => Promise<unknown> | void
+}
+
+type WorldStrongEnemy = {
+  event_id: string
+  slug: string
+  name: string
+  description: string
+  sector_id: number
+  grid_col: number
+  grid_row: number
+  starts_at: string
+  ends_at: string
+  recommended_level: number
+  enemy_level: number
+  enemy_hp: number
+  enemy_attack: number
+  enemy_defense: number
+  enemy_initiative: number
+  enemy_damage_type: string
+  enemy_resistances: Record<string, number>
+  phase2_hp_percent: number
+  phase2_name: string
+  mechanics: {
+    wound_rupture?: {
+      enabled?: boolean
+      max_stacks?: number
+      rupture_max_hp_percent?: number
+    }
+    rage_hunt?: {
+      enabled?: boolean
+      self_damage_max_hp_percent?: number
+      dash_damage_percent?: number
+      dash_chance_1?: number
+      dash_chance_2?: number
+      dash_chance_3?: number
+      dash_chance_4?: number
+    }
+  }
+  reward_name: string | null
+  reward_description: string | null
+  victories: number
+  defeated: boolean
+  solo_only: boolean
+  run_id: string | null
+  run_status: 'active' | 'completed' | 'abandoned' | null
+  encounter_id: string | null
+  encounter_status: 'active' | 'victory' | 'defeat' | 'cancelled' | null
+  character_busy: boolean
 }
 
 type DeathSpiritMapEntry = {
@@ -42,6 +91,7 @@ type WorldMapCacheEntry = {
   siteProgress: SectorSiteProgress[]
   dungeonRuns: DungeonRun[]
   deathSpirits: DeathSpiritMapEntry[]
+  strongEnemies: WorldStrongEnemy[]
 }
 
 const worldMapCache = new Map<string, WorldMapCacheEntry>()
@@ -192,6 +242,7 @@ const MapSectorButton = memo(function MapSectorButton({
   selected,
   showGameplayOverlay,
   deathSpiritCount,
+  strongEnemyCount,
   onSelect,
 }: {
   sector: CharacterMapSector
@@ -200,6 +251,7 @@ const MapSectorButton = memo(function MapSectorButton({
   selected: boolean
   showGameplayOverlay: boolean
   deathSpiritCount: number
+  strongEnemyCount: number
   onSelect: (sectorId: number) => void
 }) {
   const contentType =
@@ -219,6 +271,7 @@ const MapSectorButton = memo(function MapSectorButton({
     awaitingEvent && active ? 'awaiting-event' : '',
     selected ? 'selected' : '',
     deathSpiritCount > 0 ? 'has-death-spirit' : '',
+    strongEnemyCount > 0 ? 'has-strong-enemy' : '',
   ].filter(Boolean).join(' ')
 
   return (
@@ -242,6 +295,15 @@ const MapSectorButton = memo(function MapSectorButton({
       {active && (
         <span className="sector-expedition-mark">
           {awaitingEvent ? '!' : '⌛'}
+        </span>
+      )}
+      {showGameplayOverlay && strongEnemyCount > 0 && (
+        <span
+          className="sector-strong-enemy-mark"
+          title={strongEnemyCount > 1 ? `Сильные враги: ${strongEnemyCount}` : 'Сильный враг'}
+          aria-label={strongEnemyCount > 1 ? `Сильные враги: ${strongEnemyCount}` : 'Сильный враг'}
+        >
+          ⚔
         </span>
       )}
       {showGameplayOverlay && deathSpiritCount > 0 && (
@@ -301,6 +363,7 @@ function Countdown({ endsAt }: { endsAt: string }) {
 
 export function WorldMap({
   characterId,
+  onOpenBattles,
   onProgressChanged,
   onInventoryChanged,
 }: Props) {
@@ -313,6 +376,7 @@ export function WorldMap({
   const [siteProgress, setSiteProgress] = useState<SectorSiteProgress[]>(() => cachedMap?.siteProgress ?? [])
   const [dungeonRuns, setDungeonRuns] = useState<DungeonRun[]>(() => cachedMap?.dungeonRuns ?? [])
   const [deathSpirits, setDeathSpirits] = useState<DeathSpiritMapEntry[]>(() => cachedMap?.deathSpirits ?? [])
+  const [strongEnemies, setStrongEnemies] = useState<WorldStrongEnemy[]>(() => cachedMap?.strongEnemies ?? [])
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(() => !cachedMap)
   const [busy, setBusy] = useState(false)
@@ -338,6 +402,7 @@ export function WorldMap({
       siteProgressResult,
       dungeonRunResult,
       deathSpiritResult,
+      strongEnemyResult,
     ] = await Promise.all([
       supabase.rpc('get_character_map_state', {
         p_character_id: characterId,
@@ -379,6 +444,9 @@ export function WorldMap({
       supabase.rpc('get_visible_death_spirits', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_visible_world_strong_enemies', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
@@ -389,7 +457,8 @@ export function WorldMap({
       siteActionResult.error ??
       siteProgressResult.error ??
       dungeonRunResult.error ??
-      deathSpiritResult.error
+      deathSpiritResult.error ??
+      strongEnemyResult.error
 
     if (error) {
       if (!silent) setMessage(error.message)
@@ -406,6 +475,7 @@ export function WorldMap({
       siteProgress: (siteProgressResult.data as SectorSiteProgress[] | null) ?? [],
       dungeonRuns: (dungeonRunResult.data as DungeonRun[] | null) ?? [],
       deathSpirits: (deathSpiritResult.data as DeathSpiritMapEntry[] | null) ?? [],
+      strongEnemies: (strongEnemyResult.data as WorldStrongEnemy[] | null) ?? [],
     }
 
     worldMapCache.set(characterId, nextCache)
@@ -417,6 +487,7 @@ export function WorldMap({
     setSiteProgress(nextCache.siteProgress)
     setDungeonRuns(nextCache.dungeonRuns)
     setDeathSpirits(nextCache.deathSpirits)
+    setStrongEnemies(nextCache.strongEnemies)
     if (!silent) setLoading(false)
   }
 
@@ -445,6 +516,20 @@ export function WorldMap({
     return () => window.clearTimeout(timeout)
   }, [deathSpirits])
 
+  useEffect(() => {
+    if (strongEnemies.length === 0) return
+
+    const nextExpiry = Math.min(
+      ...strongEnemies.map((enemy) => new Date(enemy.ends_at).getTime()),
+    )
+    const delay = Math.max(0, nextExpiry - Date.now() + 500)
+    const timeout = window.setTimeout(() => {
+      void loadMapData(true)
+    }, delay)
+
+    return () => window.clearTimeout(timeout)
+  }, [strongEnemies])
+
   const sectorById = useMemo(
     () => new Map(sectors.map((sector) => [sector.id, sector])),
     [sectors],
@@ -459,6 +544,16 @@ export function WorldMap({
     }
     return grouped
   }, [deathSpirits])
+
+  const strongEnemiesBySector = useMemo(() => {
+    const grouped = new Map<number, WorldStrongEnemy[]>()
+    for (const enemy of strongEnemies) {
+      const entries = grouped.get(enemy.sector_id) ?? []
+      entries.push(enemy)
+      grouped.set(enemy.sector_id, entries)
+    }
+    return grouped
+  }, [strongEnemies])
 
   const discoveredCount = useMemo(
     () => sectors.filter((sector) => sector.is_discovered).length,
@@ -572,6 +667,10 @@ export function WorldMap({
 
   const selectedDeathSpirits = selectedSector
     ? deathSpiritsBySector.get(selectedSector.id) ?? []
+    : []
+
+  const selectedStrongEnemies = selectedSector
+    ? strongEnemiesBySector.get(selectedSector.id) ?? []
     : []
 
   const selectSector = useCallback((sectorId: number) => {
@@ -720,6 +819,52 @@ export function WorldMap({
 
     await loadMapData()
     setBusy(false)
+  }
+
+  async function startWorldStrongEnemy(enemy: WorldStrongEnemy) {
+    if (enemy.run_status === 'active') {
+      onOpenBattles?.()
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.rpc('start_event_boss', {
+      p_character_id: characterId,
+      p_event_id: enemy.event_id,
+      p_mode: 'solo',
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('EVENT_BOSS_CHARACTER_LIMIT_REACHED')) {
+        setMessage('Этот персонаж уже победил данного сильного врага. Повторная победа недоступна.')
+      } else if (raw.includes('EVENT_BOSS_NOT_ACTIVE')) {
+        setMessage('Это мировое событие уже закончилось.')
+      } else if (raw.includes('EVENT_BOSS_SECTOR_NOT_DISCOVERED')) {
+        setMessage('Сначала нужно открыть сектор с этим противником.')
+      } else if (raw.includes('EVENT_BOSS_SOLO_ONLY')) {
+        setMessage('Этого противника можно атаковать только в одиночку.')
+      } else if (raw.includes('CHARACTER_BUSY') || raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
+        setMessage('Персонаж уже занят другим боем или исследованием.')
+      } else if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
+        setMessage('Перед боем восстанови хотя бы часть ОЗ.')
+      } else {
+        setMessage(raw)
+      }
+      setBusy(false)
+      return
+    }
+
+    await Promise.all([
+      loadMapData(true),
+      Promise.resolve(onProgressChanged?.()),
+    ])
+    setBusy(false)
+    onOpenBattles?.()
   }
 
   async function startDeathSpiritCombat(spirit: DeathSpiritMapEntry) {
@@ -997,6 +1142,10 @@ export function WorldMap({
                 {entry.label}
               </span>
             ))}
+            <span className="map-legend-item strong-enemy">
+              <span className="map-legend-icon strong-enemy">⚔</span>
+              Сильный враг
+            </span>
           </div>
         )}
       </div>
@@ -1035,6 +1184,7 @@ export function WorldMap({
                 selected={selectedSectorId === sector.id}
                 showGameplayOverlay={showGameplayOverlay}
                 deathSpiritCount={deathSpiritsBySector.get(sector.id)?.length ?? 0}
+                strongEnemyCount={strongEnemiesBySector.get(sector.id)?.length ?? 0}
                 onSelect={selectSector}
               />
             ))}
@@ -1073,6 +1223,85 @@ export function WorldMap({
               {selectedSector.player_description ||
                 'Этот сектор уже нанесён на карту, но подробное описание пока не задано.'}
             </p>
+
+            {selectedStrongEnemies.length > 0 && (
+              <div className="world-strong-enemy-list">
+                {selectedStrongEnemies.map((enemy) => {
+                  const wounds = enemy.mechanics.wound_rupture
+                  const rage = enemy.mechanics.rage_hunt
+                  const runActive = enemy.run_status === 'active'
+
+                  return (
+                    <div className={'world-strong-enemy-card ' + (enemy.defeated ? 'defeated' : '')} key={enemy.event_id}>
+                      <div className="world-strong-enemy-head">
+                        <div>
+                          <span className="eyebrow">{enemy.defeated ? 'ПОБЕЖДЁН' : 'СИЛЬНЫЙ ВРАГ · ТОЛЬКО СОЛО'}</span>
+                          <strong>{enemy.name}</strong>
+                          <small>Исчезнет через <Countdown endsAt={enemy.ends_at} /></small>
+                        </div>
+                        <span className={'badge ' + (enemy.defeated ? 'ready' : '')}>
+                          ур. {enemy.enemy_level}
+                        </span>
+                      </div>
+
+                      <p>{enemy.description}</p>
+
+                      <div className="world-strong-enemy-stats">
+                        <span><small>ОЗ</small><b>{enemy.enemy_hp}</b></span>
+                        <span><small>Атака</small><b>{enemy.enemy_attack}</b></span>
+                        <span><small>Защита</small><b>{enemy.enemy_defense}</b></span>
+                        <span><small>Рекомендация</small><b>ур. {enemy.recommended_level}+</b></span>
+                      </div>
+
+                      <div className="world-strong-enemy-mechanics">
+                        {wounds?.enabled && (
+                          <div>
+                            <strong>Ранения → Разрыв</strong>
+                            <span>
+                              3 успешных удара накапливают Ранения. Следующая успешная атака вызывает Разрыв:
+                              {' '}{wounds.rupture_max_hp_percent ?? 6}% макс. ОЗ. Разрыв нельзя заблокировать;
+                              Ранения снимаются очищением.
+                            </span>
+                          </div>
+                        )}
+                        {rage?.enabled && (
+                          <div>
+                            <strong>{enemy.phase2_name || 'Вторая фаза'} · &lt;{enemy.phase2_hp_percent}% ОЗ</strong>
+                            <span>
+                              Каждый обычный удар отнимает у врага {rage.self_damage_max_hp_percent ?? 3}% его Max HP.
+                              Шанс слабого Рывка растёт: {rage.dash_chance_1 ?? 20}% → {rage.dash_chance_2 ?? 35}% →
+                              {' '}{rage.dash_chance_3 ?? 50}% → {rage.dash_chance_4 ?? 70}%. Рывок не создаёт Ранение,
+                              но может вызвать Разрыв при 3 Ранениях.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="world-strong-enemy-reward">
+                        <span className="eyebrow">ГАРАНТИРОВАНО ЗА ПЕРВУЮ ПОБЕДУ</span>
+                        <strong>{enemy.reward_name ?? 'Особая награда'}</strong>
+                        {enemy.reward_description && <small>{enemy.reward_description}</small>}
+                      </div>
+
+                      <button
+                        className="primary-button"
+                        type="button"
+                        disabled={busy || enemy.defeated || (!runActive && enemy.character_busy)}
+                        onClick={() => runActive ? onOpenBattles?.() : void startWorldStrongEnemy(enemy)}
+                      >
+                        {enemy.defeated
+                          ? 'Уже побеждён'
+                          : runActive
+                            ? 'Продолжить бой'
+                            : enemy.character_busy
+                              ? 'Персонаж занят'
+                              : 'Сразиться с сильным врагом'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             {selectedDeathSpirits.length > 0 && (
               <div className="death-spirit-sector-list">
