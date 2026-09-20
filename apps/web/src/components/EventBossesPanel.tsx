@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 
 type EventBossKind = 'weekly' | 'monthly'
 
@@ -15,9 +16,51 @@ const kindLabels: Record<EventBossKind, { title: string; eyebrow: string; descri
   },
 }
 
-export function EventBossesPanel() {
+type PartyOverview = {
+  party: {
+    id: string
+    leader_character_id: string
+    member_count: number
+  } | null
+  members: Array<{
+    character_id: string
+    name: string
+    is_leader: boolean
+  }>
+}
+
+const emptyParty: PartyOverview = { party: null, members: [] }
+
+export function EventBossesPanel({ characterId }: { characterId: string }) {
   const [kind, setKind] = useState<EventBossKind>('weekly')
+  const [party, setParty] = useState<PartyOverview>(emptyParty)
   const copy = kindLabels[kind]
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadParty() {
+      const { data, error } = await supabase.rpc('get_party_overview', {
+        p_character_id: characterId,
+      })
+
+      if (!cancelled && !error) {
+        setParty((data as PartyOverview | null) ?? emptyParty)
+      }
+    }
+
+    void loadParty()
+    const timer = window.setInterval(() => void loadParty(), 10000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [characterId])
+
+  const partySize = party.party?.member_count ?? party.members.length
+  const inParty = Boolean(party.party)
+  const isLeader = party.party?.leader_character_id === characterId
 
   return (
     <article className="panel event-bosses-panel">
@@ -34,8 +77,8 @@ export function EventBossesPanel() {
 
       <div className="event-boss-rules">
         <div>
-          <strong>Доступ</strong>
-          <span>Можно отправиться к боссу в любой момент, если персонаж сейчас не находится в экспедиции.</span>
+          <strong>Соло или группа</strong>
+          <span>Недельные и месячные боссы рассчитаны и на одиночный вход, и на существующую пати до 4 персонажей.</span>
         </div>
         <div>
           <strong>Особая добыча</strong>
@@ -44,6 +87,24 @@ export function EventBossesPanel() {
         <div>
           <strong>Не связаны с картой</strong>
           <span>Открывать сектор или искать вход не нужно. Активные события появляются здесь автоматически.</span>
+        </div>
+      </div>
+
+      <div className="event-boss-party-state">
+        <div>
+          <span className="eyebrow">РЕЖИМ ВХОДА</span>
+          <strong>{inParty ? `Текущая пати · ${partySize}/4` : 'Соло'}</strong>
+          <small>
+            {inParty
+              ? isLeader
+                ? 'Ты лидер группы. При групповом входе запуск события будет подтверждать лидер.'
+                : 'Ты состоишь в группе. На группового босса вас запускает лидер.'
+              : 'Можно идти одному или сначала создать группу в разделе выше.'}
+          </small>
+        </div>
+        <div className="event-boss-entry-modes">
+          <span className="active">Соло</span>
+          <span className={inParty ? 'active' : ''}>Пати до 4</span>
         </div>
       </div>
 
