@@ -7059,3 +7059,64 @@ textarea {
     justify-self: stretch;
   }
 }
+
+
+.event-boss-party-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #343a43;
+  border-radius: 12px;
+  background: rgba(255,255,255,.018);
+  padding: 10px 11px;
+}
+
+.event-boss-party-state > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.event-boss-party-state strong {
+  color: #e0e4e8;
+  font-size: 12px;
+}
+
+.event-boss-party-state small {
+  color: #8f99a4;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.event-boss-entry-modes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.event-boss-entry-modes span {
+  border: 1px solid #333b45;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #7f8994;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.event-boss-entry-modes span.active {
+  border-color: #4c475b;
+  background: rgba(116, 88, 140, .14);
+  color: #d3b4e4;
+}
+
+@media (max-width: 620px) {
+  .event-boss-party-state {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .event-boss-entry-modes {
+    justify-content: flex-start;
+  }
+}
