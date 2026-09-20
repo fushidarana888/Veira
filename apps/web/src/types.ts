@@ -483,6 +483,26 @@ export type CombatTurn = {
 }
 
 
+export type BlacksmithWeapon = {
+  settlement_name: string
+  settlement_level: number
+  max_enhancement: number
+  character_item_id: string
+  item_definition_id: string
+  item_name: string
+  custom_name: string | null
+  rarity: ItemRarity
+  weapon_family: WeaponFamily | null
+  weapon_base_damage: number
+  enhancement_level: number
+  enhanced_base_damage: number
+  next_enhancement_level: number | null
+  next_cost: number | null
+  can_enhance_here: boolean
+  can_afford: boolean
+  is_equipped: boolean
+}
+
 export type SettlementShopItem = {
   settlement_name: string
   settlement_level: number
