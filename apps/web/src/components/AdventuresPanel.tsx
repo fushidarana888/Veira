@@ -27,6 +27,8 @@ function isBowProfile(profile: BowProfile | null | undefined): profile is BowPro
 
 type Props = {
   characterId: string
+  mode?: 'adventures' | 'battles'
+  onOpenBattles?: () => void
   onProgressChanged?: () => Promise<unknown> | void
   onInventoryChanged?: () => Promise<unknown> | void
 }
@@ -166,6 +168,8 @@ function combatStyleTraits(profile: CombatStyleProfile) {
 
 export function AdventuresPanel({
   characterId,
+  mode = 'adventures',
+  onOpenBattles,
   onProgressChanged,
   onInventoryChanged,
 }: Props) {
@@ -994,51 +998,57 @@ export function AdventuresPanel({
 
   return (
     <section className="adventures-section">
-      <article className="panel adventures-header">
-        <div>
-          <span className="eyebrow">ПРИКЛЮЧЕНИЯ</span>
-          <h2>Центр приключений</h2>
-          <p className="muted">
-            Разделы теперь разнесены по папкам: текущий поход, найденные места, группа и временные боссы.
-          </p>
-        </div>
-        <div className="adventure-counters">
-          <span><strong>{ruins.length}</strong><small>руин найдено</small></span>
-          <span><strong>{dungeons.length}</strong><small>данжей найдено</small></span>
-        </div>
-      </article>
+      {mode === 'adventures' && (
+        <>
+          <article className="panel adventures-header">
+            <div>
+              <span className="eyebrow">ПРИКЛЮЧЕНИЯ</span>
+              <h2>Центр приключений</h2>
+              <p className="muted">
+                Здесь выбираются места, собирается группа и начинается поход. Сам бой теперь находится в отдельной кнопке «Бои».
+              </p>
+            </div>
+            <div className="adventure-counters">
+              <span><strong>{ruins.length}</strong><small>руин найдено</small></span>
+              <span><strong>{dungeons.length}</strong><small>данжей найдено</small></span>
+            </div>
+          </article>
 
-      <div className="adventure-folder-tabs" role="tablist" aria-label="Разделы приключений">
-        <button className={adventureTab === 'current' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'current'} onClick={() => setAdventureTab('current')}>
-          <span>Сейчас</span>
-          {activeDungeon && <b>1</b>}
-        </button>
-        <button className={adventureTab === 'locations' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'locations'} onClick={() => setAdventureTab('locations')}>
-          <span>Места</span>
-          <b>{ruins.length + dungeons.length}</b>
-        </button>
-        <button className={adventureTab === 'party' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'party'} onClick={() => setAdventureTab('party')}>
-          <span>Группа</span>
-        </button>
-        <button className={adventureTab === 'bosses' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'bosses'} onClick={() => setAdventureTab('bosses')}>
-          <span>Боссы</span>
-        </button>
-      </div>
+          <div className="adventure-folder-tabs" role="tablist" aria-label="Разделы приключений">
+            <button className={adventureTab === 'current' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'current'} onClick={() => setAdventureTab('current')}>
+              <span>Поход</span>
+              {activeDungeon && <b>1</b>}
+            </button>
+            <button className={adventureTab === 'locations' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'locations'} onClick={() => setAdventureTab('locations')}>
+              <span>Места</span>
+              <b>{ruins.length + dungeons.length}</b>
+            </button>
+            <button className={adventureTab === 'party' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'party'} onClick={() => setAdventureTab('party')}>
+              <span>Группа</span>
+            </button>
+            <button className={adventureTab === 'bosses' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'bosses'} onClick={() => setAdventureTab('bosses')}>
+              <span>Боссы</span>
+            </button>
+          </div>
+        </>
+      )}
 
       {message && <p className="gm-notice" aria-live="polite">{message}</p>}
 
-      {adventureTab === 'party' && (
+      {mode === 'adventures' && adventureTab === 'party' && (
         <div className="adventure-folder-content">
           <PartyPanel characterId={characterId} />
           <PartyDungeonPanel
             characterId={characterId}
+            mode="management"
+            onOpenBattles={onOpenBattles}
             onProgressChanged={onProgressChanged}
             onInventoryChanged={onInventoryChanged}
           />
         </div>
       )}
 
-      {adventureTab === 'bosses' && (
+      {mode === 'adventures' && adventureTab === 'bosses' && (
         <div className="adventure-folder-content">
           <EventBossesPanel
             characterId={characterId}
@@ -1050,7 +1060,7 @@ export function AdventuresPanel({
         </div>
       )}
 
-      {adventureTab === 'current' && (
+      {(mode === 'battles' || adventureTab === 'current') && (
         <div className="adventure-folder-content">
           {!activeDungeon && !latestCombat && (
             <article className="panel adventure-empty-folder">
@@ -1060,7 +1070,18 @@ export function AdventuresPanel({
             </article>
           )}
 
-      {activeDungeon && activeDungeon.active_run_id && (
+      {activeDungeon && activeDungeon.active_run_id && (mode === 'adventures' && activeCombat ? (
+        <article className="panel battle-moved-panel">
+          <span className="eyebrow">БОЙ ИДЁТ</span>
+          <h3>{activeCombat.enemy_name}</h3>
+          <p className="muted">
+            Боевой интерфейс перенесён в отдельный раздел «Бои». Здесь остаётся управление самим походом.
+          </p>
+          <button className="primary-button" type="button" onClick={onOpenBattles}>
+            Открыть текущий бой
+          </button>
+        </article>
+      ) : (
         <article className="panel active-dungeon-panel">
           <div className="section-heading">
             <div>
@@ -1975,9 +1996,9 @@ export function AdventuresPanel({
             </div>
           )}
         </article>
-      )}
+      ))}
 
-      {!activeCombat && latestCombat && latestCombat.status !== 'active' && (
+      {mode === 'battles' && !activeCombat && latestCombat && latestCombat.status !== 'active' && (
         <article className="panel combat-result-panel">
           <div>
             <span className="eyebrow">
@@ -2046,7 +2067,7 @@ export function AdventuresPanel({
         </div>
       )}
 
-      {adventureTab === 'locations' && (
+      {mode === 'adventures' && adventureTab === 'locations' && (
         <div className="adventure-folder-content">
           <article className="panel dungeon-fatigue-rule">
             <span className="eyebrow">ИСТОЩЕНИЕ ПОДЗЕМЕЛЬЯ</span>
