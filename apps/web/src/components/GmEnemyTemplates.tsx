@@ -66,6 +66,7 @@ type Draft = {
   min_danger: number
   max_danger: number
   is_boss: boolean
+  is_strong_enemy: boolean
   weight: number
   attack_damage_type: DamageType
   damage_resistances: Partial<Record<DamageType, number>>
@@ -108,6 +109,7 @@ function emptyDraft(): Draft {
     min_danger: 0,
     max_danger: 10,
     is_boss: false,
+    is_strong_enemy: false,
     weight: 1,
     attack_damage_type: 'slashing',
     damage_resistances: {},
@@ -199,6 +201,7 @@ export function GmEnemyTemplates() {
       min_danger: template.min_danger,
       max_danger: template.max_danger,
       is_boss: template.is_boss,
+      is_strong_enemy: template.is_strong_enemy ?? template.is_boss,
       weight: template.weight,
       attack_damage_type: template.attack_damage_type,
       damage_resistances: template.damage_resistances ?? {},
@@ -274,6 +277,17 @@ export function GmEnemyTemplates() {
 
     if (!savedId) {
       setMessage('Шаблон сохранён, но не удалось получить его ID для настройки особой атаки.')
+      setBusy(false)
+      return
+    }
+
+    const { error: strongError } = await supabase.rpc('gm_set_enemy_strong_status', {
+      p_enemy_id: savedId,
+      p_is_strong_enemy: draft.is_strong_enemy,
+    })
+
+    if (strongError) {
+      setMessage(strongError.message)
       setBusy(false)
       return
     }
@@ -548,11 +562,26 @@ export function GmEnemyTemplates() {
               <input
                 type="checkbox"
                 checked={draft.is_boss}
-                onChange={(event) => setDraft({ ...draft, is_boss: event.target.checked })}
+                onChange={(event) => setDraft({
+                  ...draft,
+                  is_boss: event.target.checked,
+                  is_strong_enemy: event.target.checked ? true : draft.is_strong_enemy,
+                })}
               />
               <span>Шаблон босса</span>
             </label>
+            <label className="gm-check-row">
+              <input
+                type="checkbox"
+                checked={draft.is_strong_enemy}
+                onChange={(event) => setDraft({ ...draft, is_strong_enemy: event.target.checked })}
+              />
+              <span>Сильный противник</span>
+            </label>
           </div>
+          <p className="muted">
+            Боссы автоматически считаются сильными. Отдельный флаг нужен для элитных врагов, которые не являются боссами.
+          </p>
 
           <div className="gm-enemy-multipliers">
             <label>
