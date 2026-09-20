@@ -431,6 +431,20 @@ export function WorldMap({
     { enabled: sectors.length > 0, minGapMs: 1500 },
   )
 
+  useEffect(() => {
+    if (deathSpirits.length === 0) return
+
+    const nextExpiry = Math.min(
+      ...deathSpirits.map((spirit) => new Date(spirit.expires_at).getTime()),
+    )
+    const delay = Math.max(0, nextExpiry - Date.now() + 500)
+    const timeout = window.setTimeout(() => {
+      void loadMapData(true)
+    }, delay)
+
+    return () => window.clearTimeout(timeout)
+  }, [deathSpirits])
+
   const sectorById = useMemo(
     () => new Map(sectors.map((sector) => [sector.id, sector])),
     [sectors],
