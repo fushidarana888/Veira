@@ -412,10 +412,10 @@ export function PartyDungeonPanel({
     },
   )
 
-  async function refreshPlayer() {
+  async function refreshPlayer(includeInventory = false) {
     await Promise.all([
       Promise.resolve(onProgressChanged?.()),
-      Promise.resolve(onInventoryChanged?.()),
+      includeInventory ? Promise.resolve(onInventoryChanged?.()) : Promise.resolve(),
     ])
   }
 
@@ -436,7 +436,7 @@ export function PartyDungeonPanel({
       return
     }
 
-    await Promise.all([loadDynamicState(true), refreshPlayer()])
+    await loadDynamicState(true)
     setMessage('Группа вошла в подземелье. Лидер может открыть первый зал.')
     setBusy(false)
   }
@@ -458,7 +458,7 @@ export function PartyDungeonPanel({
       return
     }
 
-    await Promise.all([loadDynamicState(true), refreshPlayer()])
+    await loadDynamicState(true)
     setMessage('Битва началась. Каждый живой участник получает одно действие в раунде.')
     setBusy(false)
   }
@@ -484,7 +484,10 @@ export function PartyDungeonPanel({
 
     const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
 
-    await Promise.all([loadDynamicState(true), refreshPlayer()])
+    await Promise.all([
+      loadDynamicState(true),
+      refreshPlayer(result?.status === 'victory'),
+    ])
 
     if (result?.status === 'victory') {
       setMessage(
@@ -543,7 +546,10 @@ export function PartyDungeonPanel({
     }
 
     const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
-    await Promise.all([loadDynamicState(true), refreshPlayer()])
+    await Promise.all([
+      loadDynamicState(true),
+      refreshPlayer(result?.status === 'victory'),
+    ])
 
     if (result?.status === 'victory') {
       setMessage(
@@ -585,7 +591,10 @@ export function PartyDungeonPanel({
     }
 
     const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
-    await Promise.all([loadDynamicState(true), refreshPlayer()])
+    await Promise.all([
+      loadDynamicState(true),
+      refreshPlayer(result?.status === 'victory'),
+    ])
 
     if (result?.status === 'defeat') {
       setMessage('Последняя жертва была принесена, но оставшиеся участники погибли. Бой завершён поражением.')
@@ -617,7 +626,10 @@ export function PartyDungeonPanel({
     }
 
     const result = data as { status?: string; enemy_acted?: boolean; enemy_stunned?: boolean } | null
-    await Promise.all([loadDynamicState(true), refreshPlayer()])
+    await Promise.all([
+      loadDynamicState(true),
+      refreshPlayer(result?.status === 'victory'),
+    ])
 
     if (result?.status === 'defeat') {
       setMessage('После пропущенного хода группа потерпела поражение.')
@@ -680,7 +692,7 @@ export function PartyDungeonPanel({
     }
 
     const result = data as { escaped?: boolean; message?: string } | null
-    await Promise.all([loadDynamicState(true), refreshPlayer()])
+    await Promise.all([loadDynamicState(true), refreshPlayer(false)])
 
     setMessage(
       result?.escaped
