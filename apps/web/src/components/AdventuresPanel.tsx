@@ -20,6 +20,10 @@ import type {
   DungeonLootDrop,
 } from '../types'
 
+function isBowProfile(profile: BowProfile | null | undefined): profile is BowProfile & { weapon_family: 'short_bow' | 'long_bow' } {
+  return profile?.weapon_family === 'short_bow' || profile?.weapon_family === 'long_bow'
+}
+
 type Props = {
   characterId: string
   onProgressChanged?: () => Promise<unknown> | void
@@ -445,7 +449,7 @@ export function AdventuresPanel({
   }
 
   async function setBowDistance(distance: BowDistance) {
-    if (!activeCombat || !bowProfile?.weapon_family || activeCombat.player_bow_draw_pending) return
+    if (!activeCombat || !isBowProfile(bowProfile) || activeCombat.player_bow_draw_pending) return
 
     setBusy(true)
     setMessage('')
@@ -1623,7 +1627,7 @@ export function AdventuresPanel({
                 </div>
               )}
 
-              {bowProfile?.weapon_family && (
+              {isBowProfile(bowProfile) && (
                 <div className="combat-guard-help">
                   <strong>Дистанция лучника:</strong>{' '}
                   {([
@@ -1655,7 +1659,7 @@ export function AdventuresPanel({
                   className="autobattle-button"
                   type="button"
                   disabled={busy}
-                  title={bowProfile?.weapon_family
+                  title={isBowProfile(bowProfile)
                     ? 'Для лука автобой сам выбирает дистанцию и решает между быстрым выстрелом и полным натягом.'
                     : undefined}
                   onClick={() => void runCombatAutobattle()}
@@ -1668,7 +1672,7 @@ export function AdventuresPanel({
                   type="button"
                   disabled={busy || !normalStyleReady}
                   title={normalStyleReady
-                    ? bowProfile?.weapon_family
+                    ? isBowProfile(bowProfile)
                       ? 'Повторяет твой общий боевой стиль, а луковую дистанцию и Fast/Full выбирает тактически.'
                       : 'Повторяет твой изученный стиль в этом бою.'
                     : 'Стиль ещё изучается на ручных боях.'}
@@ -1677,7 +1681,7 @@ export function AdventuresPanel({
                   Играть как я
                 </button>
 
-                {bowProfile?.weapon_family ? (
+                {isBowProfile(bowProfile) ? (
                   activeCombat.player_bow_draw_pending ? (
                     <button className="primary-button" type="button" disabled={busy} onClick={() => void performCombatAction('physical')}>
                       Выпустить стрелу · полный натяг
