@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { DamageType, RaceDefinition } from '../types'
+import type { DamageType, RaceDefinition, RaceTrait } from '../types'
 
 type Props = {
   userId: string
@@ -56,6 +56,15 @@ const defaultStats: Record<InitialStatKey, number> = {
   intellect: INITIAL_STAT_MIN,
   vitality: INITIAL_STAT_MIN,
   luck: INITIAL_STAT_MIN,
+}
+
+function raceTraitLines(traits: RaceTrait[] | undefined) {
+  return (traits ?? []).filter((trait) => trait.name && trait.description)
+}
+
+function raceStatLines(race: RaceDefinition) {
+  return Object.entries(race.stat_modifiers ?? {})
+    .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && entry[1] !== 0)
 }
 
 async function sha256Hex(value: string) {
@@ -285,7 +294,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
               <div className="race-picker-heading">
                 <div>
                   <span className="form-label">Раса</span>
-                  <p className="muted">Раса влияет на запас HP/MP, восстановление, сопротивления, врождённую стихию и одну пассивную способность.</p>
+                  <p className="muted">Раса влияет на характеристики, HP/MP, восстановление, сопротивления, стихию и собственные боевые особенности.</p>
                 </div>
                 {selectedRace && <span className="selected-race-badge">Выбрано: {selectedRace.name}</span>}
               </div>
@@ -333,7 +342,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
                     >
                       <div className="race-card-top">
                         <strong>{race.name}</strong>
-                        {race.id === raceId ? <span>✓</span> : race.is_available === false ? <span>GM</span> : null}
+                        {race.id === raceId ? <span>✓</span> : null}
                       </div>
                       <small>{race.category}</small>
                       <p>{race.description}</p>
@@ -343,9 +352,6 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
                         {race.mana_bonus !== 0 && <span>MP {race.mana_bonus > 0 ? '+' : ''}{race.mana_bonus}</span>}
                         {race.passive_name && <span>{race.passive_name}</span>}
                       </div>
-                      {race.is_available === false && (
-                        <div className="race-lock-note">Требуется разрешение GM</div>
-                      )}
                     </button>
                   ))}
 
@@ -392,10 +398,31 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
                     </div>
                   )}
 
+                {raceStatLines(selectedRace).length > 0 && (
+                  <div className="race-trait-list">
+                    {raceStatLines(selectedRace).map(([stat, value]) => (
+                      <span key={stat}>
+                        {statLabels[stat as InitialStatKey]?.name ?? stat} {value > 0 ? '+' : ''}{value}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {selectedRace.passive_name && (
                   <div className="race-passive-card">
                     <strong>{selectedRace.passive_name}</strong>
                     <p>{selectedRace.passive_description}</p>
+                  </div>
+                )}
+
+                {raceTraitLines(selectedRace.traits).length > 0 && (
+                  <div className="race-extra-traits">
+                    {raceTraitLines(selectedRace.traits).map((trait, index) => (
+                      <div key={trait.type + ':' + index}>
+                        <strong>{trait.name}</strong>
+                        <p>{trait.description}</p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
