@@ -507,6 +507,24 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     { enabled: true, minGapMs: 1800 },
   )
 
+  useEffect(() => {
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string }
+    }).connection
+
+    if (
+      connection?.saveData
+      || connection?.effectiveType === 'slow-2g'
+      || connection?.effectiveType === '2g'
+    ) return
+
+    return scheduleIdle(() => {
+      void import('./BattleCenterPanel')
+      void import('./AdventuresPanel')
+      void import('./WorldMap')
+    }, 2600)
+  }, [])
+
   const itemById = useMemo(
     () => new Map(items.map((item) => [item.id, item])),
     [items],
