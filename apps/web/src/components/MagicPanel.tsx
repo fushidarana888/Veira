@@ -37,7 +37,7 @@ export function MagicPanel({ characterId, progress }: Props) {
 
   async function loadSpells() {
     setLoading(true)
-    const { data, error } = await supabase.rpc('get_character_spells', {
+    const { data, error } = await supabase.rpc('get_character_spells_v2', {
       p_character_id: characterId,
     })
 
@@ -115,7 +115,7 @@ export function MagicPanel({ characterId, progress }: Props) {
           <span className="eyebrow">МАГИЯ</span>
           <h2>Книга заклинаний</h2>
           <p className="muted">
-            Базовая магическая атака использует врождённую стихию расы. Из всех изученных заклинаний в бой можно заранее взять максимум три; свитки и врождённая магия в эти слоты не входят.
+            Базовая магическая атака использует врождённую стихию расы. Изученные заклинания теперь относятся к одному или нескольким семействам магии — это позволит отдельно усиливать, например, огненную, звёздную, защитную или лечебную магию. В бой можно заранее взять максимум три заклинания; свитки и врождённая магия в эти слоты не входят.
           </p>
         </div>
 
@@ -214,6 +214,16 @@ export function MagicPanel({ characterId, progress }: Props) {
                 </div>
 
                 <p>{spell.description}</p>
+
+                {spell.magic_families.length > 0 && (
+                  <div className="spell-stats">
+                    {spell.magic_families.map((family) => (
+                      <span key={family.slug}>
+                        Семейство <strong>{family.name}</strong>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="spell-stats">
                   <span>Мана <strong>{spell.mana_cost}</strong></span>
