@@ -116,6 +116,10 @@ const damageTypeLabels: Record<DamageType, string> = {
   air: 'Воздушный',
   lightning: 'Электрический',
   ice: 'Ледяной',
+  arcane: 'Арканный',
+  star: 'Звёздный',
+  gravity: 'Гравитационный',
+  moon: 'Лунный',
 }
 
 const weaponScalingLabels: Record<NonNullable<ItemDefinition['weapon_scaling']>, string> = {
