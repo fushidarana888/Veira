@@ -16,6 +16,7 @@ import type {
   ItemDefinition,
   Profile,
   RaceDefinition,
+  RaceTrait,
 } from '../types'
 
 type Props = {
@@ -119,6 +120,20 @@ const statLabels: Record<StatKey, string> = {
   intellect: 'Интеллект',
   vitality: 'Живучесть',
   luck: 'Удача',
+}
+
+function raceTraitNumber(traits: RaceTrait[] | undefined, type: string) {
+  return (traits ?? []).reduce((sum, trait) => (
+    trait.type === type && typeof trait.value === 'number'
+      ? sum + trait.value
+      : sum
+  ), 0)
+}
+
+function raceStatEntries(race: RaceDefinition | null) {
+  if (!race) return []
+  return Object.entries(race.stat_modifiers ?? {})
+    .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && entry[1] !== 0)
 }
 
 function normalizeProgress(value: Character['character_progress']): CharacterProgress | null {
@@ -348,17 +363,20 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   const effectiveStats = useMemo(() => {
     if (!progress) return null
 
-    const modifiers = equipment
-      .map((entry) => itemById.get(entry.character_item_id))
-      .filter((item): item is CharacterItem => Boolean(item))
-      .flatMap((item) => {
-        const definition = normalizeDefinition(item.item_definitions)
-        if (!definition) return []
-        return [
-          definition.stat_modifiers ?? {},
-          affixStatModifiers(item),
-        ]
-      })
+    const modifiers = [
+      raceDefinition?.stat_modifiers ?? {},
+      ...equipment
+        .map((entry) => itemById.get(entry.character_item_id))
+        .filter((item): item is CharacterItem => Boolean(item))
+        .flatMap((item) => {
+          const definition = normalizeDefinition(item.item_definitions)
+          if (!definition) return []
+          return [
+            definition.stat_modifiers ?? {},
+            affixStatModifiers(item),
+          ]
+        }),
+    ]
 
     return addStatModifiers(
       {
@@ -370,7 +388,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       },
       modifiers,
     )
-  }, [equipment, itemById, progress])
+  }, [equipment, itemById, progress, raceDefinition])
 
   const equipmentPercentModifiers = useMemo(() => {
     let maxHpPercent = 0
@@ -410,6 +428,10 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     [effectiveStats, equippedWeaponProfile, progress],
   )
 
+  const raceInitiativeBonus = raceTraitNumber(raceDefinition?.traits, 'initiative_flat')
+  const raceCriticalChanceBonus = raceTraitNumber(raceDefinition?.traits, 'critical_chance_bonus')
+  const racePhysicalDefensePercent = raceTraitNumber(raceDefinition?.traits, 'physical_defense_percent')
+
   if (!progress || !effectiveStats || !derivedCombatStats) {
     return (
       <main className="shell">
@@ -437,7 +459,11 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   const hpPercent = Math.min(100, Math.round((effectiveHpCurrent / effectiveHpMax) * 100))
   const effectivePhysicalDefense = Math.max(
     0,
-    Math.round(derivedCombatStats.physicalDefense * (100 + equipmentPercentModifiers.defensePercent) / 100),
+    Math.round(
+      derivedCombatStats.physicalDefense
+        * (100 + equipmentPercentModifiers.defensePercent + racePhysicalDefensePercent)
+        / 100,
+    ),
   )
   const effectiveMagicDefense = Math.max(
     0,
@@ -911,10 +937,33 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                       </div>
                     )}
 
+                  {raceStatEntries(raceDefinition).length > 0 && (
+                    <div className="race-trait-list">
+                      {raceStatEntries(raceDefinition).map(([stat, value]) => (
+                        <span key={stat}>
+                          {statLabels[stat as StatKey] ?? stat} {value > 0 ? '+' : ''}{value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   {raceDefinition.passive_name && (
                     <div className="race-passive-card">
                       <strong>{raceDefinition.passive_name}</strong>
                       <p>{raceDefinition.passive_description}</p>
+                    </div>
+                  )}
+
+                  {(raceDefinition.traits ?? []).filter((trait) => trait.name && trait.description).length > 0 && (
+                    <div className="race-extra-traits">
+                      {(raceDefinition.traits ?? [])
+                        .filter((trait) => trait.name && trait.description)
+                        .map((trait, index) => (
+                          <div key={trait.type + ':' + index}>
+                            <strong>{trait.name}</strong>
+                            <p>{trait.description}</p>
+                          </div>
+                        ))}
                     </div>
                   )}
                 </section>
@@ -989,10 +1038,10 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                   <CombatStat label="Маг. мощь" value={derivedCombatStats.magicPower} />
                   <CombatStat label="Физ. защита" value={effectivePhysicalDefense} />
                   <CombatStat label="Маг. защита" value={effectiveMagicDefense} />
-                  <CombatStat label="Инициатива" value={derivedCombatStats.initiative} />
+                  <CombatStat label="Инициатива" value={Math.round(derivedCombatStats.initiative + raceInitiativeBonus)} />
                   <CombatStat
                     label="Шанс крита"
-                    value={derivedCombatStats.criticalChancePercent.toFixed(1) + '%'}
+                    value={Math.min(60, derivedCombatStats.criticalChancePercent + raceCriticalChanceBonus).toFixed(1) + '%'}
                   />
                   <CombatStat label="Крит. урон" value="Физ. ×1.5 · Маг. ×1.4" />
                 </div>
