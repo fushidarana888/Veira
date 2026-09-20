@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { BlacksmithPanel } from './BlacksmithPanel'
 import type { DamageType, SettlementShopItem, WeaponFamily } from '../types'
 
 type Props = {
@@ -96,6 +97,7 @@ export function SettlementShop({
   const [loading, setLoading] = useState(true)
   const [busyItemId, setBusyItemId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [service, setService] = useState<'shop' | 'blacksmith'>('shop')
 
   async function loadShop() {
     setLoading(true)
@@ -117,6 +119,7 @@ export function SettlementShop({
   }
 
   useEffect(() => {
+    setService('shop')
     void loadShop()
   }, [characterId, sectorId])
 
@@ -199,159 +202,193 @@ export function SettlementShop({
         <span className="badge">ур. {settlementLevel}</span>
       </div>
 
-      <div className="settlement-shop-rule">
-        <strong>Экипировка имеет уровень персонажа.</strong>
-        <span>
-          Даже если накопить золото на топовую вещь в слабых данжах, купить её раньше требуемого уровня нельзя.
-        </span>
+      <div className="settlement-service-tabs" role="tablist" aria-label="Сервисы поселения">
+        <button
+          className={service === 'shop' ? 'active' : ''}
+          type="button"
+          role="tab"
+          aria-selected={service === 'shop'}
+          onClick={() => setService('shop')}
+        >
+          Магазин
+        </button>
+        <button
+          className={service === 'blacksmith' ? 'active' : ''}
+          type="button"
+          role="tab"
+          aria-selected={service === 'blacksmith'}
+          onClick={() => setService('blacksmith')}
+        >
+          Кузнец
+        </button>
       </div>
 
-      {message && <p className="form-message" aria-live="polite">{message}</p>}
-
-      <div className="settlement-shop-groups">
-        {grouped.map(([category, categoryItems]) => (
-          <section className="settlement-shop-group" key={category}>
-            <div className="settlement-shop-group-heading">
-              <h4>{categoryLabels[category] ?? category}</h4>
-              <span>{categoryItems.length}</span>
-            </div>
-
-            <div className="settlement-shop-grid">
-              {categoryItems.map((item) => {
-                const modifiers = Object.entries(item.stat_modifiers ?? {})
-                  .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
-                const resistances = Object.entries(item.damage_resistances ?? {})
-                  .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
-                const damageBonuses = Object.entries(item.damage_bonuses ?? {})
-                  .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
-                const locked = !item.level_unlocked
-                const busy = busyItemId === item.item_id
-
-                return (
-                  <article
-                    className={[
-                      'shop-item-card',
-                      'rarity-' + item.rarity,
-                      locked ? 'locked' : '',
-                    ].filter(Boolean).join(' ')}
-                    key={item.item_id}
-                  >
-                    <div className="shop-item-title-row">
-                      <div>
-                        <span className="rarity-label">{rarityLabels[item.rarity] ?? item.rarity}</span>
-                        <h5>{item.item_name}</h5>
+      {service === 'shop' ? (
+        <>
+        <div className="settlement-shop-rule">
+          <strong>Экипировка имеет уровень персонажа.</strong>
+          <span>
+            Даже если накопить золото на топовую вещь в слабых данжах, купить её раньше требуемого уровня нельзя.
+          </span>
+        </div>
+  
+        {message && <p className="form-message" aria-live="polite">{message}</p>}
+  
+        <div className="settlement-shop-groups">
+          {grouped.map(([category, categoryItems]) => (
+            <section className="settlement-shop-group" key={category}>
+              <div className="settlement-shop-group-heading">
+                <h4>{categoryLabels[category] ?? category}</h4>
+                <span>{categoryItems.length}</span>
+              </div>
+  
+              <div className="settlement-shop-grid">
+                {categoryItems.map((item) => {
+                  const modifiers = Object.entries(item.stat_modifiers ?? {})
+                    .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
+                  const resistances = Object.entries(item.damage_resistances ?? {})
+                    .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
+                  const damageBonuses = Object.entries(item.damage_bonuses ?? {})
+                    .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
+                  const locked = !item.level_unlocked
+                  const busy = busyItemId === item.item_id
+  
+                  return (
+                    <article
+                      className={[
+                        'shop-item-card',
+                        'rarity-' + item.rarity,
+                        locked ? 'locked' : '',
+                      ].filter(Boolean).join(' ')}
+                      key={item.item_id}
+                    >
+                      <div className="shop-item-title-row">
+                        <div>
+                          <span className="rarity-label">{rarityLabels[item.rarity] ?? item.rarity}</span>
+                          <h5>{item.item_name}</h5>
+                        </div>
+                        <span className="shop-item-tier">T{item.shop_tier}</span>
                       </div>
-                      <span className="shop-item-tier">T{item.shop_tier}</span>
-                    </div>
-
-                    <p>{item.description}</p>
-
-                    {item.heal_amount > 0 && (
-                      <div className="shop-item-effect">+{item.heal_amount} HP</div>
-                    )}
-
-                    {item.scroll_mode && item.scroll_spell_name && (
-                      <div className="shop-item-effect scroll-effect">
-                        {item.scroll_mode === 'learn' ? 'Изучает' : 'Одноразово применяет'} · {item.scroll_spell_name}
-                      </div>
-                    )}
-
-                    {item.damage_type && (
-                      <div className="damage-type-chip">
-                        Тип урона · {damageTypeLabels[item.damage_type]}
-                      </div>
-                    )}
-
-                    {item.category === 'weapon' && (
-                      <div className="modifier-list">
-                        <span>Базовый урон +{item.weapon_base_damage ?? 0}</span>
-                        <span>{weaponScalingLabels[item.weapon_scaling ?? 'strength']}</span>
-                        {item.weapon_family && (
-                          <span>{weaponFamilyLabels[item.weapon_family]}</span>
-                        )}
-                        {item.weapon_family && weaponFamilyMechanicLabels[item.weapon_family] && (
-                          <span>{weaponFamilyMechanicLabels[item.weapon_family]}</span>
-                        )}
-                        {item.weapon_family && item.bow_full_draw_armor_penetration_percent > 0 && (
-                          <span>Полный натяг · пробитие брони {item.bow_full_draw_armor_penetration_percent}%</span>
-                        )}
-                        {item.bloodshed_chance_percent > 0 && (
-                          <span>Кровопролитие · шанс {item.bloodshed_chance_percent}%</span>
-                        )}
-                      </div>
-                    )}
-
-                    {resistances.length > 0 && (
-                      <div className="resistance-list">
-                        {resistances.map(([type, value]) => (
-                          <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
-                            {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {damageBonuses.length > 0 && (
-                      <div className="damage-bonus-list">
-                        {damageBonuses.map(([type, value]) => (
-                          <span key={'shop-damage-bonus-' + type}>
-                            {damageTypeLabels[type]} урон +{value}%
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {modifiers.length > 0 && (
-                      <div className="modifier-list">
-                        {modifiers.map(([key, value]) => (
-                          <span key={key}>
-                            {statLabels[key] ?? key} {value >= 0 ? '+' : ''}{value}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="shop-item-meta">
-                      <span>Цена <strong>{item.price.toLocaleString('ru-RU')}</strong></span>
-                      <span className={locked ? 'locked-level' : ''}>
-                        Ур. {item.required_level}
-                      </span>
-                    </div>
-
-                    <div className="shop-item-actions">
-                      <button
-                        className="primary-button"
-                        type="button"
-                        disabled={busyItemId !== null || locked || !item.can_afford}
-                        onClick={() => void buy(item, 1)}
-                      >
-                        {locked
-                          ? `Нужен ур. ${item.required_level}`
-                          : !item.can_afford
-                            ? 'Не хватает золота'
-                            : busy
-                              ? 'Покупаем…'
-                              : 'Купить'}
-                      </button>
-
-                      {item.category === 'consumable' && !locked && (
-                        <button
-                          className="ghost-button"
-                          type="button"
-                          disabled={busyItemId !== null}
-                          onClick={() => void buy(item, 5)}
-                        >
-                          ×5
-                        </button>
+  
+                      <p>{item.description}</p>
+  
+                      {item.heal_amount > 0 && (
+                        <div className="shop-item-effect">+{item.heal_amount} HP</div>
                       )}
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          </section>
-        ))}
-      </div>
+  
+                      {item.scroll_mode && item.scroll_spell_name && (
+                        <div className="shop-item-effect scroll-effect">
+                          {item.scroll_mode === 'learn' ? 'Изучает' : 'Одноразово применяет'} · {item.scroll_spell_name}
+                        </div>
+                      )}
+  
+                      {item.damage_type && (
+                        <div className="damage-type-chip">
+                          Тип урона · {damageTypeLabels[item.damage_type]}
+                        </div>
+                      )}
+  
+                      {item.category === 'weapon' && (
+                        <div className="modifier-list">
+                          <span>Базовый урон +{item.weapon_base_damage ?? 0}</span>
+                          <span>{weaponScalingLabels[item.weapon_scaling ?? 'strength']}</span>
+                          {item.weapon_family && (
+                            <span>{weaponFamilyLabels[item.weapon_family]}</span>
+                          )}
+                          {item.weapon_family && weaponFamilyMechanicLabels[item.weapon_family] && (
+                            <span>{weaponFamilyMechanicLabels[item.weapon_family]}</span>
+                          )}
+                          {item.weapon_family && item.bow_full_draw_armor_penetration_percent > 0 && (
+                            <span>Полный натяг · пробитие брони {item.bow_full_draw_armor_penetration_percent}%</span>
+                          )}
+                          {item.bloodshed_chance_percent > 0 && (
+                            <span>Кровопролитие · шанс {item.bloodshed_chance_percent}%</span>
+                          )}
+                        </div>
+                      )}
+  
+                      {resistances.length > 0 && (
+                        <div className="resistance-list">
+                          {resistances.map(([type, value]) => (
+                            <span className={value >= 0 ? 'positive' : 'negative'} key={type}>
+                              {damageTypeLabels[type]} {value >= 0 ? '+' : ''}{value}%
+                            </span>
+                          ))}
+                        </div>
+                      )}
+  
+                      {damageBonuses.length > 0 && (
+                        <div className="damage-bonus-list">
+                          {damageBonuses.map(([type, value]) => (
+                            <span key={'shop-damage-bonus-' + type}>
+                              {damageTypeLabels[type]} урон +{value}%
+                            </span>
+                          ))}
+                        </div>
+                      )}
+  
+                      {modifiers.length > 0 && (
+                        <div className="modifier-list">
+                          {modifiers.map(([key, value]) => (
+                            <span key={key}>
+                              {statLabels[key] ?? key} {value >= 0 ? '+' : ''}{value}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+  
+                      <div className="shop-item-meta">
+                        <span>Цена <strong>{item.price.toLocaleString('ru-RU')}</strong></span>
+                        <span className={locked ? 'locked-level' : ''}>
+                          Ур. {item.required_level}
+                        </span>
+                      </div>
+  
+                      <div className="shop-item-actions">
+                        <button
+                          className="primary-button"
+                          type="button"
+                          disabled={busyItemId !== null || locked || !item.can_afford}
+                          onClick={() => void buy(item, 1)}
+                        >
+                          {locked
+                            ? `Нужен ур. ${item.required_level}`
+                            : !item.can_afford
+                              ? 'Не хватает золота'
+                              : busy
+                                ? 'Покупаем…'
+                                : 'Купить'}
+                        </button>
+  
+                        {item.category === 'consumable' && !locked && (
+                          <button
+                            className="ghost-button"
+                            type="button"
+                            disabled={busyItemId !== null}
+                            onClick={() => void buy(item, 5)}
+                          >
+                            ×5
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+        </>
+      ) : (
+        <BlacksmithPanel
+          characterId={characterId}
+          sectorId={sectorId}
+          settlementName={settlementName}
+          settlementLevel={settlementLevel}
+          onProgressChanged={onProgressChanged}
+          onInventoryChanged={onInventoryChanged}
+        />
+      )}
     </article>
   )
 }
