@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSmartRefresh } from '../lib/smartRefresh'
 
 type PartyInfo = {
   id: string
@@ -107,13 +108,12 @@ export function PartyPanel({ characterId }: Props) {
 
   useEffect(() => {
     void loadParty()
-
-    const timer = window.setInterval(() => {
-      void loadParty(true)
-    }, 10000)
-
-    return () => window.clearInterval(timer)
   }, [characterId])
+
+  useSmartRefresh(
+    () => loadParty(true),
+    { enabled: true, intervalMs: 15000, minGapMs: 1400 },
+  )
 
   async function createParty() {
     setBusy(true)
