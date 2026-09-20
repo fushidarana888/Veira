@@ -486,7 +486,7 @@ export function AdventuresPanel({
     void refreshCombatDetails(next.id)
     void Promise.resolve(onProgressChanged?.())
 
-    if (inventoryChanged || next.status === 'victory') {
+    if (inventoryChanged || next.status === 'victory' || next.status === 'defeat') {
       void Promise.resolve(onInventoryChanged?.())
     }
 
