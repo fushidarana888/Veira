@@ -269,7 +269,7 @@ export function GmHome({ profile, onSignOut }: Props) {
     <main className="shell gm-shell">
       <header className="topbar">
         <div>
-          <span className="eyebrow">VEIRA GAME MASTER</span>
+          <span className="eyebrow">VEIRA · МАСТЕР ИГРЫ</span>
           <h1>Панель мира</h1>
           <p className="muted">{profile.display_name}</p>
         </div>
@@ -298,7 +298,7 @@ export function GmHome({ profile, onSignOut }: Props) {
           Предметы и магия
         </button>
         <button className={tab === 'audit' ? 'active' : ''} type="button" onClick={() => setTab('audit')}>
-          Журнал GM
+          Журнал ГМ
         </button>
       </div>
 
@@ -326,7 +326,7 @@ export function GmHome({ profile, onSignOut }: Props) {
                     onClick={() => setSelectedId(character.id)}
                   >
                     <strong>{character.name}</strong>
-                    <span>{character.race} · LVL {progress?.level ?? '?'}</span>
+                    <span>{character.race} · УР. {progress?.level ?? '?'}</span>
                     <small>@{owner?.display_name ?? 'unknown'}</small>
                   </button>
                 )
@@ -373,7 +373,7 @@ export function GmHome({ profile, onSignOut }: Props) {
                         'Добавлено 100 опыта.',
                       )}
                     >
-                      +100 EXP
+                      +100 ОПЫТА
                     </button>
                     <button
                       className="primary-button"
@@ -417,7 +417,7 @@ export function GmHome({ profile, onSignOut }: Props) {
                         'Нанесено 25 тестового урона.',
                       )}
                     >
-                      -25 HP
+                      -25 ОЗ
                     </button>
                   </div>
                 </article>
