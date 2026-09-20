@@ -9110,3 +9110,101 @@ textarea {
     contain-intrinsic-size: 90px;
   }
 }
+
+
+/* Mobile performance pass */
+@media (max-width: 760px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .primary-button,
+  .ghost-button,
+  .bottom-nav button,
+  .battle-center-tabs button,
+  .adventure-folder-tabs button,
+  .world-map-mode button,
+  .world-map-zoom button,
+  .spell-action-button,
+  .inventory-filter-button,
+  .character-folder-tabs button {
+    transition: none !important;
+  }
+
+  .panel,
+  .auth-card,
+  .bottom-nav,
+  .eilar-map-frame,
+  .combatant-card,
+  .battle-history-card,
+  .battle-participant-card,
+  .adventure-site-row,
+  .party-member-card,
+  .duel-card {
+    box-shadow: none !important;
+  }
+
+  .fog-sector,
+  .fog-sector::before,
+  .fog-sector::after,
+  .sector-content-mark,
+  .sector-content-mark::before,
+  .sector-content-mark::after {
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transition: none !important;
+  }
+
+  .world-section,
+  .adventures-section,
+  .battle-center-section,
+  .guide-section,
+  .inventory-list,
+  .party-member-list,
+  .duel-history,
+  .combat-log {
+    contain: layout style;
+  }
+
+  .inventory-item,
+  .guide-catalog-card,
+  .guide-effect-card,
+  .battle-history-card,
+  .battle-participant-card,
+  .adventure-site-row,
+  .party-member-card,
+  .duel-card,
+  .combat-log-row,
+  .dungeon-loot-item {
+    content-visibility: auto;
+    contain-intrinsic-size: 84px;
+  }
+
+  .combat-hp-meter > span,
+  .dungeon-progress-meter > span,
+  .world-progress-meter > span {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
