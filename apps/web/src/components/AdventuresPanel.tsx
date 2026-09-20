@@ -2192,11 +2192,13 @@ export function AdventuresPanel({
           <div>
             <span className="eyebrow">
               {latestCombat.status === 'victory'
-                ? latestCombatSite?.is_event_boss
-                  ? 'НЕДЕЛЬНЫЙ БОСС ПОВЕРЖЕН'
-                  : latestCombat.is_boss
-                    ? 'ПОДЗЕМЕЛЬЕ ЗАЧИЩЕНО'
-                    : `ЗАЛ ${latestCombat.room_index} ОЧИЩЕН`
+                ? latestCombatSite?.content_type === 'hunting'
+                  ? 'ОХОТА ЗАВЕРШЕНА'
+                  : latestCombatSite?.is_event_boss
+                    ? 'ВРЕМЕННАЯ УГРОЗА ПОВЕРЖЕНА'
+                    : latestCombat.is_boss
+                      ? 'ПОДЗЕМЕЛЬЕ ЗАЧИЩЕНО'
+                      : `ЗАЛ ${latestCombat.room_index} ОЧИЩЕН`
                 : latestCombat.status === 'defeat'
                   ? 'ПОРАЖЕНИЕ'
                   : 'БОЙ ПРЕКРАЩЁН'}
@@ -2204,25 +2206,33 @@ export function AdventuresPanel({
             <h3>{latestCombat.enemy_name}</h3>
             <p className="muted">
               {latestCombat.status === 'victory'
-                ? latestCombatSite?.is_event_boss
-                  ? `Пепельный Кузнец повержен. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта. Особая награда первой победы отображается в карточке события.`
-                  : latestCombatSite?.run_status === 'completed'
-                    ? `Полная зачистка завершена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта.`
-                    : 'Противник повержен. Можно перейти к следующему залу.'
+                ? latestCombatSite?.content_type === 'hunting'
+                  ? 'Сильный монстр охоты повержен. Давление региона не сброшено и продолжает влиять на следующие попытки.'
+                  : latestCombatSite?.is_event_boss
+                    ? `Временная угроза повержена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта. Дополнительные награды зависят от конкретного события.`
+                    : latestCombatSite?.run_status === 'completed'
+                      ? `Полная зачистка завершена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта.`
+                      : 'Противник повержен. Можно перейти к следующему залу.'
                 : latestCombat.status === 'defeat'
-                  ? latestCombatSite?.is_event_boss
-                    ? 'Персонаж отступил от недельного босса и остался с 1 ОЗ. Попытку можно повторить до конца ротации.'
-                    : 'Персонаж отступил из подземелья и остался с 1 ОЗ.'
-                  : 'Прохождение было прервано.'}
+                  ? latestCombatSite?.content_type === 'hunting'
+                    ? 'Сильный монстр одолел охотника. Персонаж вернулся с 1 ОЗ, а давление региона сохранилось.'
+                    : latestCombatSite?.is_event_boss
+                      ? 'Персонаж проиграл временной угрозе и остался с 1 ОЗ. Пока событие активно, попытку можно повторить.'
+                      : 'Персонаж отступил из подземелья и остался с 1 ОЗ.'
+                  : latestCombatSite?.content_type === 'hunting'
+                    ? 'Охота была прекращена. Давление региона сохранено.'
+                    : 'Прохождение было прервано.'}
             </p>
           </div>
           <span className="badge">
             {latestCombat.status === 'victory'
-              ? latestCombatSite?.is_event_boss
-                ? 'победа'
-                : latestCombatSite?.run_status === 'completed'
-                  ? 'зачищено'
-                  : 'зал очищен'
+              ? latestCombatSite?.content_type === 'hunting'
+                ? 'добыча отбилась'
+                : latestCombatSite?.is_event_boss
+                  ? 'победа'
+                  : latestCombatSite?.run_status === 'completed'
+                    ? 'зачищено'
+                    : 'зал очищен'
               : latestCombat.status}
           </span>
 
