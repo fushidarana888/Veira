@@ -146,6 +146,10 @@ type PartyDungeonState = {
   sacrifice_scroll_count: number
 }
 
+function isBowProfile(profile: BowProfile | null | undefined): profile is BowProfile & { weapon_family: 'short_bow' | 'long_bow' } {
+  return profile?.weapon_family === 'short_bow' || profile?.weapon_family === 'long_bow'
+}
+
 type Props = {
   characterId: string
   onProgressChanged?: () => Promise<unknown> | void
@@ -454,7 +458,7 @@ export function PartyDungeonPanel({
   }
 
   async function setBowDistance(distance: BowDistance) {
-    if (!state.encounter || !me || !bowProfile?.weapon_family || me.bow_draw_pending || me.acted) return
+    if (!state.encounter || !me || !isBowProfile(bowProfile) || me.bow_draw_pending || me.acted) return
     setBusy(true)
     setMessage('')
     const { error } = await supabase.rpc('set_party_bow_distance', {
@@ -956,7 +960,7 @@ export function PartyDungeonPanel({
                       : 'Твой ход в этом раунде.'}
               </div>
 
-              {bowProfile?.weapon_family && me && (
+              {isBowProfile(bowProfile) && me && (
                 <div className="party-turn-status">
                   <strong>Дистанция:</strong>{' '}
                   {([
@@ -982,7 +986,7 @@ export function PartyDungeonPanel({
               )}
 
               <div className="party-combat-actions">
-                {bowProfile?.weapon_family ? (
+                {isBowProfile(bowProfile) ? (
                   me?.bow_draw_pending ? (
                     <button className="primary-button" type="button" disabled={!canAct} onClick={() => void performAction('physical')}>
                       Выпустить стрелу · полный натяг
