@@ -222,7 +222,7 @@ export function BattleCenterPanel({
   )
 
   useEffect(() => {
-    if (tab === 'history' && history.length === 0) void loadHistory()
+    if (tab === 'history') void loadHistory()
   }, [tab, characterId])
 
   const pastBattles = useMemo(
