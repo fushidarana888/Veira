@@ -3,8 +3,6 @@ import { supabase } from '../lib/supabase'
 import type {
   DamageType,
   ElementalDamageType,
-  Profile,
-  RaceAccessGrant,
   RaceDefinition,
   RacePassiveType,
 } from '../types'
@@ -71,42 +69,19 @@ function emptyRace(): RaceDraft {
 
 export function GmRaceEditor() {
   const [races, setRaces] = useState<RaceDefinition[]>([])
-  const [players, setPlayers] = useState<Profile[]>([])
-  const [grants, setGrants] = useState<RaceAccessGrant[]>([])
   const [draft, setDraft] = useState<RaceDraft>(emptyRace)
-  const [grantUserId, setGrantUserId] = useState('')
-  const [grantRaceId, setGrantRaceId] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
   async function loadData() {
-    const [raceResult, playerResult, grantResult] = await Promise.all([
-      supabase.rpc('get_gm_race_definitions'),
-      supabase
-        .from('profiles')
-        .select('user_id, display_name, avatar_url, account_type')
-        .eq('account_type', 'player')
-        .order('display_name', { ascending: true }),
-      supabase.rpc('get_gm_race_access_grants'),
-    ])
+    const { data, error } = await supabase.rpc('get_gm_race_definitions')
 
-    const error = raceResult.error ?? playerResult.error ?? grantResult.error
     if (error) {
       setMessage(error.message)
       return
     }
 
-    const nextRaces = (raceResult.data as RaceDefinition[] | null) ?? []
-    const nextPlayers = (playerResult.data as Profile[] | null) ?? []
-    setRaces(nextRaces)
-    setPlayers(nextPlayers)
-    setGrants((grantResult.data as RaceAccessGrant[] | null) ?? [])
-
-    if (!grantUserId && nextPlayers[0]) setGrantUserId(nextPlayers[0].user_id)
-    if (!grantRaceId) {
-      const firstRestricted = nextRaces.find((race) => race.access_mode === 'gm_only')
-      if (firstRestricted) setGrantRaceId(firstRestricted.id)
-    }
+    setRaces((data as RaceDefinition[] | null) ?? [])
   }
 
   useEffect(() => {
@@ -123,8 +98,6 @@ export function GmRaceEditor() {
     return Array.from(map.entries())
   }, [races])
 
-  const restrictedRaces = races.filter((race) => race.playable && race.access_mode === 'gm_only')
-
   function editRace(race: RaceDefinition) {
     setDraft({
       id: race.id,
@@ -135,7 +108,7 @@ export function GmRaceEditor() {
       sort_order: race.sort_order,
       playable: race.playable,
       innate_magic_damage_type: race.innate_magic_damage_type,
-      access_mode: race.access_mode,
+      access_mode: 'open',
       hp_bonus: race.hp_bonus,
       mana_bonus: race.mana_bonus,
       hp_regen_per_hour: race.hp_regen_per_hour,
@@ -169,7 +142,7 @@ export function GmRaceEditor() {
       p_description: draft.description,
       p_sort_order: draft.sort_order,
       p_playable: draft.playable,
-      p_access_mode: draft.access_mode,
+      p_access_mode: 'open',
       p_innate_magic_damage_type: draft.innate_magic_damage_type,
       p_hp_bonus: draft.hp_bonus,
       p_mana_bonus: draft.mana_bonus,
@@ -221,29 +194,6 @@ export function GmRaceEditor() {
     setBusy(false)
   }
 
-  async function setAccess(granted: boolean, userId = grantUserId, raceId = grantRaceId) {
-    if (!userId || !raceId) return
-
-    setBusy(true)
-    setMessage('')
-
-    const { error } = await supabase.rpc('gm_set_race_access', {
-      p_user_id: userId,
-      p_race_id: raceId,
-      p_granted: granted,
-    })
-
-    if (error) {
-      setMessage(error.message)
-      setBusy(false)
-      return
-    }
-
-    await loadData()
-    setMessage(granted ? 'Доступ к расе выдан.' : 'Доступ к расе отозван.')
-    setBusy(false)
-  }
-
   return (
     <section className="gm-race-editor">
       <article className="panel">
@@ -252,7 +202,7 @@ export function GmRaceEditor() {
             <span className="eyebrow">РАСЫ ЭЙЛАРА</span>
             <h2>Редактор рас</h2>
             <p className="muted">
-              Раса влияет на HP, ману, пассивное восстановление, сопротивления, врождённую стихию и одну боевую пассивку.
+              Раса влияет на характеристики, HP, ману, восстановление, сопротивления, стихию и боевые особенности. Все игровые расы доступны всем игрокам.
             </p>
           </div>
           <span className="badge">{races.length}</span>
@@ -278,7 +228,6 @@ export function GmRaceEditor() {
                 >
                   <span>{race.name}</span>
                   <small>
-                    {race.access_mode === 'gm_only' ? 'GM · ' : ''}
                     {damageLabels[race.innate_magic_damage_type]}
                     {race.passive_name ? ' · ' + race.passive_name : ''}
                   </small>
@@ -336,13 +285,7 @@ export function GmRaceEditor() {
             </label>
             <label>
               <span>Доступ при создании</span>
-              <select
-                value={draft.access_mode}
-                onChange={(e) => setDraft({ ...draft, access_mode: e.target.value as 'open' | 'gm_only' })}
-              >
-                <option value="open">Свободно</option>
-                <option value="gm_only">Только с разрешения GM</option>
-              </select>
+              <input value="Свободно для всех" disabled />
             </label>
             <label>
               <span>Порядок</span>
@@ -469,54 +412,6 @@ export function GmRaceEditor() {
         </article>
       </div>
 
-      <article className="panel gm-race-access-panel">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">ОСОБЫЕ РАСЫ</span>
-            <h2>Индивидуальный доступ</h2>
-            <p className="muted">
-              Расы с режимом «только GM» видны игрокам при создании, но выбрать их можно только после выдачи доступа.
-            </p>
-          </div>
-          <span className="badge">{grants.length} разреш.</span>
-        </div>
-
-        <div className="gm-race-grant-row">
-          <select value={grantUserId} onChange={(e) => setGrantUserId(e.target.value)}>
-            {players.map((player) => (
-              <option key={player.user_id} value={player.user_id}>@{player.display_name}</option>
-            ))}
-          </select>
-          <select value={grantRaceId} onChange={(e) => setGrantRaceId(e.target.value)}>
-            {restrictedRaces.map((race) => (
-              <option key={race.id} value={race.id}>{race.name}</option>
-            ))}
-          </select>
-          <button className="primary-button" type="button" disabled={busy || !grantUserId || !grantRaceId} onClick={() => void setAccess(true)}>
-            Выдать доступ
-          </button>
-        </div>
-
-        <div className="gm-race-grant-list">
-          {grants.length === 0 && <p className="muted">Индивидуальных разрешений пока нет.</p>}
-          {grants.map((grant) => (
-            <div className="gm-race-grant-item" key={grant.user_id + '-' + grant.race_id}>
-              <div>
-                <strong>@{grant.display_name}</strong>
-                <span>{grant.race_name}</span>
-              </div>
-              <button
-                className="ghost-button danger-button"
-                type="button"
-                disabled={busy}
-                onClick={() => void setAccess(false, grant.user_id, grant.race_id)}
-              >
-                Отозвать
-              </button>
-            </div>
-          ))}
-        </div>
-      </article>
     </section>
   )
 }
