@@ -101,17 +101,17 @@ const weaponFamilyLabels: Record<NonNullable<ItemDefinition['weapon_family']>, s
 }
 
 const weaponFamilyMechanicLabels: Partial<Record<NonNullable<ItemDefinition['weapon_family']>, string>> = {
-  dagger: '×0.80 после Physical Defense',
-  rapier: 'Пробитие Physical Defense 10%',
+  dagger: '×0,80 после физической защиты',
+  rapier: 'Игнорирует 10% физической защиты',
   blade: 'Разброс физического урона всегда +4',
   katana: 'Нарастающий ритм · +8% за последовательную физическую атаку по той же цели · максимум +40%',
-  spear: 'Physical Defense цели ×1.20 · повышенный base damage',
-  axe: 'До +20% урона от Max HP цели',
-  battleaxe: 'До +20% урона от Max HP цели',
-  mace: 'Оглушение 8% соло/PvP · 5% пати',
-  hammer: 'Оглушение 8% соло/PvP · 5% пати',
-  club: 'Blunt: уязвимость ×1.5 · сопротивление учитывается на 50%',
-  greatsword: 'Некритический физический удар: +5 п.п. Crit Chance · крит сбрасывает накопление · общий кап 60%',
+  spear: 'Физическая защита цели ×1,20 · повышенный базовый урон',
+  axe: 'До +20% урона от макс. ОЗ цели',
+  battleaxe: 'До +20% урона от макс. ОЗ цели',
+  mace: 'Оглушение 8% соло/дуэль · 5% пати',
+  hammer: 'Оглушение 8% соло/дуэль · 5% пати',
+  club: 'Дробящий урон: уязвимость ×1,5 · сопротивление учитывается на 50%',
+  greatsword: 'Некритический физический удар: +5 п.п. шанс крита · крит сбрасывает накопление · общий кап 60%',
 }
 
 const statLabels: Record<StatKey, string> = {
@@ -154,7 +154,7 @@ const affixEffectLabels: Record<string, { label: string; percent: boolean }> = {
   physical_damage_bonus: { label: 'Физический урон', percent: true },
   magic_damage_bonus: { label: 'Магический урон', percent: true },
   all_damage_bonus: { label: 'Весь прямой урон', percent: true },
-  low_hp_damage_reduction: { label: 'Защита при низком HP', percent: true },
+  low_hp_damage_reduction: { label: 'Защита при низком ОЗ', percent: true },
   boss_damage_bonus: { label: 'Урон боссам', percent: true },
 }
 
@@ -519,11 +519,11 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     if (error) {
       const raw = error.message
       if (raw.includes('ALREADY_FULL_RESOURCES')) {
-        setInventoryMessage('HP и мана уже полные.')
+        setInventoryMessage('ОЗ и мана уже полные.')
       } else if (raw.includes('COMBAT_ACTIVE')) {
         setInventoryMessage('Во время боя используй расходник прямо в интерфейсе боя.')
       } else if (raw.includes('ITEM_IS_NOT_RESOURCE_CONSUMABLE')) {
-        setInventoryMessage('Этот предмет не восстанавливает HP или ману.')
+        setInventoryMessage('Этот предмет не восстанавливает ОЗ или ману.')
       } else {
         setInventoryMessage(raw)
       }
@@ -600,7 +600,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     if (raw.includes('BIOGRAPHY_UNCHANGED')) return 'Новая биография совпадает с текущей.'
     if (raw.includes('BIOGRAPHY_REQUIRED')) return 'Биография не может быть пустой.'
     if (raw.includes('BIOGRAPHY_TOO_LONG')) return 'Биография не может быть длиннее 4000 символов.'
-    if (raw.includes('RACE_REQUIRES_GM_ACCESS')) return 'Эта раса доступна только после разрешения GM.'
+    if (raw.includes('RACE_REQUIRES_GM_ACCESS')) return 'Эта раса доступна только после разрешения ГМ.'
     if (raw.includes('RACE_NOT_PLAYABLE')) return 'Эта раса сейчас недоступна игрокам.'
     if (raw.includes('CHARACTER_BUSY')) return 'Нельзя менять расу во время боя, экспедиции или другого активного действия.'
     return raw
@@ -809,7 +809,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         </div>
 
         <div className="top-actions">
-          <span className="badge">LVL {progress.level}</span>
+          <span className="badge">УР. {progress.level}</span>
           <button className="ghost-button" type="button" onClick={() => void onSignOut()}>
             Выйти
           </button>
@@ -917,10 +917,10 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                   </div>
 
                   <div className="race-mechanic-grid">
-                    <span><small>Макс. HP</small><strong>{raceDefinition.hp_bonus >= 0 ? '+' : ''}{raceDefinition.hp_bonus}</strong></span>
-                    <span><small>Макс. MP</small><strong>{raceDefinition.mana_bonus >= 0 ? '+' : ''}{raceDefinition.mana_bonus}</strong></span>
-                    <span><small>Реген HP/ч</small><strong>{raceDefinition.hp_regen_per_hour}</strong></span>
-                    <span><small>Реген MP/ч</small><strong>{raceDefinition.mana_regen_per_hour}</strong></span>
+                    <span><small>Макс. ОЗ</small><strong>{raceDefinition.hp_bonus >= 0 ? '+' : ''}{raceDefinition.hp_bonus}</strong></span>
+                    <span><small>Макс. ОМ</small><strong>{raceDefinition.mana_bonus >= 0 ? '+' : ''}{raceDefinition.mana_bonus}</strong></span>
+                    <span><small>Реген ОЗ/ч</small><strong>{raceDefinition.hp_regen_per_hour}</strong></span>
+                    <span><small>Реген ОМ/ч</small><strong>{raceDefinition.mana_regen_per_hour}</strong></span>
                   </div>
 
                   {Object.entries(raceDefinition.damage_resistances ?? {})
@@ -1206,7 +1206,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                         value={race.id}
                         disabled={race.is_available === false}
                       >
-                        {race.name}{race.is_available === false ? ' · нужен доступ GM' : ''}
+                        {race.name}{race.is_available === false ? ' · нужен доступ ГМ' : ''}
                       </option>
                     ))}
                   </select>
@@ -1394,10 +1394,10 @@ function InventoryPanel({
                       {weaponScalingLabels[definition.weapon_scaling ?? 'strength']}
                       {' · '}
                       {definition.weapon_scaling === 'agility'
-                        ? 'AGI ×3 + STR ×0.5'
+                        ? 'ЛОВ ×3 + СИЛ ×0,5'
                         : definition.weapon_scaling === 'hybrid'
-                          ? 'STR ×1.75 + AGI ×1.75'
-                          : 'STR ×3 + AGI ×0.5'}
+                          ? 'СИЛ ×1,75 + ЛОВ ×1,75'
+                          : 'СИЛ ×3 + ЛОВ ×0,5'}
                     </span>
                     {definition.weapon_family && (
                       <span>{weaponFamilyLabels[definition.weapon_family]}</span>
@@ -1506,8 +1506,8 @@ function InventoryPanel({
                       onClick={() => void onUseResource(item)}
                     >
                       Использовать
-                      {resourceAmounts.heal > 0 ? ' · +' + resourceAmounts.heal + ' HP' : ''}
-                      {resourceAmounts.mana > 0 ? ' · +' + resourceAmounts.mana + ' MP' : ''}
+                      {resourceAmounts.heal > 0 ? ' · +' + resourceAmounts.heal + ' ОЗ' : ''}
+                      {resourceAmounts.mana > 0 ? ' · +' + resourceAmounts.mana + ' ОМ' : ''}
                     </button>
                   ) : (
                     <span className="muted item-state">
