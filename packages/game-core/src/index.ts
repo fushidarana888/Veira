@@ -27,6 +27,7 @@ export type WeaponScaling = 'strength' | 'agility' | 'hybrid'
 export type WeaponAttackProfile = {
   baseDamage: number
   scaling: WeaponScaling
+  enhancementLevel?: number
 }
 
 export type DerivedCombatStats = {
@@ -57,7 +58,9 @@ export function calculateDerivedCombatStats(
   weapon: WeaponAttackProfile = { baseDamage: 0, scaling: 'strength' },
 ): DerivedCombatStats {
   const safeLevel = Math.max(1, Math.floor(level))
-  const safeWeaponDamage = Math.max(0, Math.floor(weapon.baseDamage))
+  const safeWeaponDamage = Math.max(0, Number(weapon.baseDamage) || 0)
+  const safeEnhancementLevel = Math.min(20, Math.max(0, Math.floor(weapon.enhancementLevel ?? 0)))
+  const enhancedWeaponDamage = safeWeaponDamage * (1 + safeEnhancementLevel * 0.03)
   const physicalStatPower = weapon.scaling === 'agility'
     ? stats.agility * 3 + stats.strength * 0.5
     : weapon.scaling === 'hybrid'
@@ -71,7 +74,7 @@ export function calculateDerivedCombatStats(
   const magicDefense = stats.vitality + stats.intellect + safeLevel
 
   return {
-    physicalPower: Math.max(0, Math.round(safeWeaponDamage + physicalStatPower + safeLevel * 2)),
+    physicalPower: Math.max(0, Math.round(enhancedWeaponDamage + physicalStatPower + safeLevel * 2)),
     magicPower: stats.intellect * 3 + stats.luck + safeLevel * 2,
     physicalDefense,
     magicDefense,
