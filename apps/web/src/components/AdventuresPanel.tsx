@@ -189,7 +189,7 @@ export function AdventuresPanel({
     setLoading(true)
 
     const [siteResult, encounterResult, spellResult, scrollResult, autobattleResult, autobattleSpellResult, combatStyleResult, bowProfileResult] = await Promise.all([
-      supabase.rpc('get_character_adventures_v2', {
+      supabase.rpc('get_character_adventures_v3', {
         p_character_id: characterId,
       }),
       supabase
@@ -337,7 +337,10 @@ export function AdventuresPanel({
   }, [characterId])
 
   const activeDungeon = useMemo(
-    () => sites.find((site) => site.content_type === 'dungeon' && site.run_status === 'active') ?? null,
+    () => sites.find(
+      (site) => (site.content_type === 'dungeon' || site.content_type === 'event_boss')
+        && site.run_status === 'active',
+    ) ?? null,
     [sites],
   )
 
@@ -356,7 +359,7 @@ export function AdventuresPanel({
   const playerStatusEffects = statusEffects.filter((effect) => effect.target === 'player')
   const enemyStatusEffects = statusEffects.filter((effect) => effect.target === 'enemy')
   const latestCombatSite = latestCombat
-    ? dungeons.find((site) => site.active_run_id === latestCombat.dungeon_run_id) ?? null
+    ? sites.find((site) => site.active_run_id === latestCombat.dungeon_run_id) ?? null
     : null
 
   async function startDungeon(site: CharacterAdventureSite) {
@@ -876,6 +879,32 @@ export function AdventuresPanel({
     setBusy(false)
   }
 
+  async function abandonEventBossSolo() {
+    if (!window.confirm('Отступить от Пепельного Кузнеца? Бой завершится без награды, но событие можно будет начать заново.')) return
+
+    setBusy(true)
+    setMessage('Отступаем от недельного босса…')
+
+    const { error } = await supabase.rpc('abandon_event_boss', {
+      p_character_id: characterId,
+      p_mode: 'solo',
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setBusy(false)
+      return
+    }
+
+    await Promise.all([
+      Promise.resolve(onProgressChanged?.()),
+      loadAdventures(),
+    ])
+
+    setMessage('Бой с Пепельным Кузнецом прекращён. Вернуться к нему можно до конца ротации.')
+    setBusy(false)
+  }
+
   async function leaveDungeon(runId: string) {
     if (!window.confirm('Попытаться сбежать из подземелья? Шанс успеха — 80%. При провале HP упадёт до 1, персонаж останется внутри, а повторить побег на этом этапе уже нельзя.')) return
 
@@ -932,6 +961,7 @@ export function AdventuresPanel({
     ? Math.max(0, Math.min(100, Math.round((activeCombat.player_mana_current / activeCombat.player_mana_max) * 100)))
     : 0
 
+  const activeEventBoss = Boolean(activeDungeon?.is_event_boss)
   const clearedRooms = activeDungeon?.run_rooms_cleared ?? 0
   const escapeLocked = Boolean(
     activeDungeon
@@ -980,7 +1010,7 @@ export function AdventuresPanel({
         onInventoryChanged={onInventoryChanged}
       />
 
-      <EventBossesPanel characterId={characterId} />
+      <EventBossesPanel characterId={characterId} onChanged={loadAdventures} />
 
       {message && <p className="gm-notice" aria-live="polite">{message}</p>}
 
@@ -988,27 +1018,34 @@ export function AdventuresPanel({
         <article className="panel active-dungeon-panel">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">АКТИВНОЕ ПРОХОЖДЕНИЕ</span>
+              <span className="eyebrow">{activeEventBoss ? 'НЕДЕЛЬНЫЙ БОСС' : 'АКТИВНОЕ ПРОХОЖДЕНИЕ'}</span>
               <h2>{activeDungeon.title}</h2>
             </div>
-            <span className="badge">сектор #{activeDungeon.sector_id}</span>
+            <span className="badge">{activeEventBoss ? 'особая угроза' : `сектор #${activeDungeon.sector_id}`}</span>
           </div>
 
-          <div className="dungeon-progress-block">
-            <div className="dungeon-progress-head">
-              <span>Пройдено залов</span>
-              <strong>{clearedRooms} / {totalRooms}</strong>
+          {activeEventBoss ? (
+            <div className="event-active-run-note">
+              <strong>Пепельный Кузнец не связан с картой и не имеет залов.</strong>
+              <span>Победи босса в одном бою. Клеймо закалки III выдаётся только за первую победу этой недельной ротации.</span>
             </div>
-            <div className="dungeon-progress-meter">
-              <span style={{ width: dungeonProgress + '%' }} />
+          ) : (
+            <div className="dungeon-progress-block">
+              <div className="dungeon-progress-head">
+                <span>Пройдено залов</span>
+                <strong>{clearedRooms} / {totalRooms}</strong>
+              </div>
+              <div className="dungeon-progress-meter">
+                <span style={{ width: dungeonProgress + '%' }} />
+              </div>
+              <div className="dungeon-reward-preview">
+                <span>За полную зачистку</span>
+                <strong>
+                  {activeDungeon.run_reward_gold ?? 0} золота · {activeDungeon.run_reward_experience ?? 0} опыта
+                </strong>
+              </div>
             </div>
-            <div className="dungeon-reward-preview">
-              <span>За полную зачистку</span>
-              <strong>
-                {activeDungeon.run_reward_gold ?? 0} золота · {activeDungeon.run_reward_experience ?? 0} опыта
-              </strong>
-            </div>
-          </div>
+          )}
 
           {lootDrops.length > 0 && (
             <div className="dungeon-loot-block">
@@ -1433,79 +1470,91 @@ export function AdventuresPanel({
           )}
 
           {!activeCombat ? (
-            <>
-              <div className="dungeon-run-stage">
-                <span>Следующий этап</span>
-                <strong>
-                  {nextRoomIsBoss
-                    ? `Финальный зал · хранитель`
-                    : `Зал ${nextRoom} из ${totalRooms}`}
-                </strong>
-                <p className="muted">
-                  Здоровье между залами не восстанавливается автоматически. Побег не гарантирован: 80% успеха, а при провале HP падает до 1 и персонаж остаётся внутри.
-                </p>
-              </div>
-
-              <div className="dungeon-entry-actions">
-                <button
-                  className="primary-button"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void startCombat(activeDungeon.active_run_id!)}
-                >
-                  {nextRoomIsBoss ? 'Войти к хранителю' : `Войти в зал ${nextRoom}`}
-                </button>
-
-                <button
-                  className="autobattle-button"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void runDungeonAutobattle(activeDungeon.active_run_id!)}
-                >
-                  {busy ? 'Автобой…' : 'Автозачистка'}
-                </button>
-
-                <button
-                  className="style-autobattle-button compact"
-                  type="button"
-                  disabled={busy || !normalStyleReady}
-                  title={normalStyleReady ? 'Автоматически повторяет изученные привычки твоих ручных боёв.' : 'Сначала нужно минимум 3 завершённых ручных боя и 12 решений.'}
-                  onClick={() => void runDungeonStyleAutobattle(activeDungeon.active_run_id!)}
-                >
-                  Играть как я
-                </button>
-
-                <button
-                  className="ghost-button danger-button"
-                  type="button"
-                  disabled={busy || escapeLocked}
-                  title={escapeLocked
-                    ? 'Попытка побега на этом этапе уже использована. Сначала пройди следующий зал.'
-                    : '80% шанс успешно покинуть подземелье. При провале HP снизится до 1, и повторить попытку на этом этапе нельзя.'}
-                  onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
-                >
-                  {escapeLocked ? 'Побег уже использован' : 'Попытаться уйти · 80%'}
+            activeEventBoss ? (
+              <div className="event-active-run-note">
+                <strong>Бой события готовится…</strong>
+                <span>Если поле боя не появилось автоматически, обнови состояние приключений.</span>
+                <button className="ghost-button danger-button" type="button" disabled={busy} onClick={() => void abandonEventBossSolo()}>
+                  Отменить вход
                 </button>
               </div>
-            </>
+            ) : (
+              <>
+                <div className="dungeon-run-stage">
+                  <span>Следующий этап</span>
+                  <strong>
+                    {nextRoomIsBoss
+                      ? `Финальный зал · хранитель`
+                      : `Зал ${nextRoom} из ${totalRooms}`}
+                  </strong>
+                  <p className="muted">
+                    Здоровье между залами не восстанавливается автоматически. Побег не гарантирован: 80% успеха, а при провале HP падает до 1 и персонаж остаётся внутри.
+                  </p>
+                </div>
+
+                <div className="dungeon-entry-actions">
+                  <button
+                    className="primary-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void startCombat(activeDungeon.active_run_id!)}
+                  >
+                    {nextRoomIsBoss ? 'Войти к хранителю' : `Войти в зал ${nextRoom}`}
+                  </button>
+
+                  <button
+                    className="autobattle-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void runDungeonAutobattle(activeDungeon.active_run_id!)}
+                  >
+                    {busy ? 'Автобой…' : 'Автозачистка'}
+                  </button>
+
+                  <button
+                    className="style-autobattle-button compact"
+                    type="button"
+                    disabled={busy || !normalStyleReady}
+                    title={normalStyleReady ? 'Автоматически повторяет изученные привычки твоих ручных боёв.' : 'Сначала нужно минимум 3 завершённых ручных боя и 12 решений.'}
+                    onClick={() => void runDungeonStyleAutobattle(activeDungeon.active_run_id!)}
+                  >
+                    Играть как я
+                  </button>
+
+                  <button
+                    className="ghost-button danger-button"
+                    type="button"
+                    disabled={busy || escapeLocked}
+                    title={escapeLocked
+                      ? 'Попытка побега на этом этапе уже использована. Сначала пройди следующий зал.'
+                      : '80% шанс успешно покинуть подземелье. При провале HP снизится до 1, и повторить попытку на этом этапе нельзя.'}
+                    onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
+                  >
+                    {escapeLocked ? 'Побег уже использован' : 'Попытаться уйти · 80%'}
+                  </button>
+                </div>
+              </>
+            )
           ) : (
             <div className="combat-shell">
               <div className="combat-heading">
                 <div>
                   <span className="eyebrow">
-                    {activeCombat.is_boss
-                      ? `ХРАНИТЕЛЬ · РАУНД ${activeCombat.round + 1}`
-                      : `ЗАЛ ${activeCombat.room_index} · РАУНД ${activeCombat.round + 1}`}
+                    {activeEventBoss
+                      ? `НЕДЕЛЬНЫЙ БОСС · РАУНД ${activeCombat.round + 1}`
+                      : activeCombat.is_boss
+                        ? `ХРАНИТЕЛЬ · РАУНД ${activeCombat.round + 1}`
+                        : `ЗАЛ ${activeCombat.room_index} · РАУНД ${activeCombat.round + 1}`}
                   </span>
                   <h3>{activeCombat.enemy_name}</h3>
                   <span className="muted">
                     Уровень {activeCombat.enemy_level}
-                    {activeCombat.is_boss ? ' · финальный противник' : ''}
+                    {activeEventBoss ? ' · временная угроза' : activeCombat.is_boss ? ' · финальный противник' : ''}
                     {' · '}атака: {damageTypeLabels[activeCombat.enemy_damage_type]}
                   </span>
                 </div>
                 <span className="badge">
-                  {activeCombat.room_index} / {totalRooms}
+                  {activeEventBoss ? 'weekly' : `${activeCombat.room_index} / ${totalRooms}`}
                 </span>
               </div>
 
@@ -1729,19 +1778,31 @@ export function AdventuresPanel({
                 >
                   Защита
                 </button>
-                <button
-                  className="ghost-button danger-button"
-                  type="button"
-                  disabled={busy || escapeLocked || activeCombat.player_bow_draw_pending}
-                  title={activeCombat.player_bow_draw_pending
-                    ? 'Сначала нужно выпустить подготовленную стрелу.'
-                    : escapeLocked
-                      ? 'Попытка побега в этом зале уже использована.'
-                      : '80% шанс успешно сбежать. При провале HP снизится до 1, бой продолжится, а повторная попытка в этом зале будет недоступна.'}
-                  onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
-                >
-                  {escapeLocked ? 'Побег недоступен' : 'Побег · 80%'}
-                </button>
+                {activeEventBoss ? (
+                  <button
+                    className="ghost-button danger-button"
+                    type="button"
+                    disabled={busy || activeCombat.player_bow_draw_pending}
+                    title={activeCombat.player_bow_draw_pending ? 'Сначала нужно выпустить подготовленную стрелу.' : 'Отступление завершит текущую попытку без награды.'}
+                    onClick={() => void abandonEventBossSolo()}
+                  >
+                    Отступить
+                  </button>
+                ) : (
+                  <button
+                    className="ghost-button danger-button"
+                    type="button"
+                    disabled={busy || escapeLocked || activeCombat.player_bow_draw_pending}
+                    title={activeCombat.player_bow_draw_pending
+                      ? 'Сначала нужно выпустить подготовленную стрелу.'
+                      : escapeLocked
+                        ? 'Попытка побега в этом зале уже использована.'
+                        : '80% шанс успешно сбежать. При провале HP снизится до 1, бой продолжится, а повторная попытка в этом зале будет недоступна.'}
+                    onClick={() => void leaveDungeon(activeDungeon.active_run_id!)}
+                  >
+                    {escapeLocked ? 'Побег недоступен' : 'Побег · 80%'}
+                  </button>
+                )}
               </div>
 
               <div className="combat-guard-help">
@@ -1875,9 +1936,11 @@ export function AdventuresPanel({
           <div>
             <span className="eyebrow">
               {latestCombat.status === 'victory'
-                ? latestCombat.is_boss
-                  ? 'ПОДЗЕМЕЛЬЕ ЗАЧИЩЕНО'
-                  : `ЗАЛ ${latestCombat.room_index} ОЧИЩЕН`
+                ? latestCombatSite?.is_event_boss
+                  ? 'НЕДЕЛЬНЫЙ БОСС ПОВЕРЖЕН'
+                  : latestCombat.is_boss
+                    ? 'ПОДЗЕМЕЛЬЕ ЗАЧИЩЕНО'
+                    : `ЗАЛ ${latestCombat.room_index} ОЧИЩЕН`
                 : latestCombat.status === 'defeat'
                   ? 'ПОРАЖЕНИЕ'
                   : 'БОЙ ПРЕКРАЩЁН'}
@@ -1885,19 +1948,25 @@ export function AdventuresPanel({
             <h3>{latestCombat.enemy_name}</h3>
             <p className="muted">
               {latestCombat.status === 'victory'
-                ? latestCombatSite?.run_status === 'completed'
-                  ? `Полная зачистка завершена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта.`
-                  : 'Противник повержен. Можно перейти к следующему залу.'
+                ? latestCombatSite?.is_event_boss
+                  ? `Пепельный Кузнец повержен. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта. Особая награда первой победы отображается в карточке события.`
+                  : latestCombatSite?.run_status === 'completed'
+                    ? `Полная зачистка завершена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта.`
+                    : 'Противник повержен. Можно перейти к следующему залу.'
                 : latestCombat.status === 'defeat'
-                  ? 'Персонаж отступил из подземелья и остался с 1 HP.'
+                  ? latestCombatSite?.is_event_boss
+                    ? 'Персонаж отступил от недельного босса и остался с 1 HP. Попытку можно повторить до конца ротации.'
+                    : 'Персонаж отступил из подземелья и остался с 1 HP.'
                   : 'Прохождение было прервано.'}
             </p>
           </div>
           <span className="badge">
             {latestCombat.status === 'victory'
-              ? latestCombatSite?.run_status === 'completed'
-                ? 'зачищено'
-                : 'зал очищен'
+              ? latestCombatSite?.is_event_boss
+                ? 'победа'
+                : latestCombatSite?.run_status === 'completed'
+                  ? 'зачищено'
+                  : 'зал очищен'
               : latestCombat.status}
           </span>
 
