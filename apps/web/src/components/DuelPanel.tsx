@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSmartRefresh } from '../lib/smartRefresh'
 import type { BowDistance, BowProfile, CharacterSpell, CombatStatusEffectType } from '../types'
 
 function isBowProfile(profile: BowProfile | null | undefined): profile is BowProfile & { weapon_family: 'short_bow' | 'long_bow' } {
@@ -173,23 +174,18 @@ export function DuelPanel({ characterId }: Props) {
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
 
-  async function load(silent = false) {
-    if (!silent) setLoading(true)
-
-    const [overviewResult, spellsResult, bowProfileResult] = await Promise.all([
-      supabase.rpc('get_duel_overview', { p_character_id: characterId }),
+  async function loadStaticCombatData() {
+    const [spellsResult, bowProfileResult] = await Promise.all([
       supabase.rpc('get_character_spells', { p_character_id: characterId }),
       supabase.rpc('get_character_bow_profile', { p_character_id: characterId }),
     ])
 
-    if (overviewResult.error || spellsResult.error || bowProfileResult.error) {
-      setMessage(duelError(overviewResult.error?.message ?? spellsResult.error?.message ?? bowProfileResult.error?.message ?? 'Не удалось загрузить дуэли.'))
-      if (!silent) setLoading(false)
+    const error = spellsResult.error ?? bowProfileResult.error
+    if (error) {
+      setMessage(duelError(error.message))
       return
     }
 
-    const nextOverview = (overviewResult.data as DuelOverview | null) ?? { players: [], duels: [] }
-    setOverview(nextOverview)
     setSpells(
       ((spellsResult.data as CharacterSpell[] | null) ?? [])
         .filter((spell) => (
@@ -198,9 +194,25 @@ export function DuelPanel({ characterId }: Props) {
         )),
     )
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
+  }
+
+  async function loadDynamic(silent = false) {
+    if (!silent) setLoading(true)
+
+    const overviewResult = await supabase.rpc('get_duel_overview', {
+      p_character_id: characterId,
+    })
+
+    if (overviewResult.error) {
+      setMessage(duelError(overviewResult.error.message))
+      if (!silent) setLoading(false)
+      return
+    }
+
+    const nextOverview = (overviewResult.data as DuelOverview | null) ?? { players: [], duels: [] }
+    setOverview(nextOverview)
 
     const active = nextOverview.duels.find((duel) => duel.status === 'active') ?? null
-
     if (active) {
       const detailResult = await supabase.rpc('get_pvp_duel', { p_duel_id: active.id })
       if (detailResult.error) {
@@ -216,14 +228,21 @@ export function DuelPanel({ characterId }: Props) {
   }
 
   useEffect(() => {
-    void load()
-
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void load(true)
-    }, 7000)
-
-    return () => window.clearInterval(timer)
+    setLoading(true)
+    void Promise.all([
+      loadStaticCombatData(),
+      loadDynamic(true),
+    ]).finally(() => setLoading(false))
   }, [characterId])
+
+  useSmartRefresh(
+    () => loadDynamic(true),
+    {
+      enabled: true,
+      intervalMs: details?.duel?.status === 'active' ? 3500 : 12000,
+      minGapMs: details?.duel?.status === 'active' ? 700 : 1800,
+    },
+  )
 
   const activeSummary = overview.duels.find((duel) => duel.status === 'active') ?? null
   const incoming = overview.duels.filter(
@@ -281,7 +300,7 @@ export function DuelPanel({ characterId }: Props) {
       setMessage(duelError(error.message))
     } else {
       setMessage('Вызов отправлен.')
-      await load(true)
+      await loadDynamic(true)
     }
 
     setBusy('')
@@ -300,7 +319,7 @@ export function DuelPanel({ characterId }: Props) {
       setMessage(duelError(error.message))
     } else {
       setMessage(accept ? 'Дуэль началась.' : 'Вызов отклонён.')
-      await load(true)
+      await loadDynamic(true)
     }
 
     setBusy('')
@@ -318,7 +337,7 @@ export function DuelPanel({ characterId }: Props) {
       setMessage(duelError(error.message))
     } else {
       setMessage('Вызов отменён.')
-      await load(true)
+      await loadDynamic(true)
     }
 
     setBusy('')
@@ -340,7 +359,7 @@ export function DuelPanel({ characterId }: Props) {
       setMessage(duelError(error.message))
     } else {
       setDetails((data as DuelDetails | null) ?? null)
-      await load(true)
+      await loadDynamic(true)
     }
 
     setBusy('')
@@ -376,7 +395,7 @@ export function DuelPanel({ characterId }: Props) {
       setMessage(duelError(error.message))
     } else {
       setMessage('Вы признали поражение.')
-      await load(true)
+      await loadDynamic(true)
     }
 
     setBusy('')
