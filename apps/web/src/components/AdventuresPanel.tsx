@@ -1264,10 +1264,19 @@ export function AdventuresPanel({
                 <span style={{ width: dungeonProgress + '%' }} />
               </div>
               <div className="dungeon-reward-preview">
-                <span>За полную зачистку</span>
+                <span>
+                  {activeDungeon.run_reward_exhausted
+                    ? `Попытка №${activeDungeon.run_reward_attempt_number ?? 26} · без награды`
+                    : 'За полную зачистку'}
+                </span>
                 <strong>
-                  {activeDungeon.run_reward_gold ?? 0} золота · {activeDungeon.run_reward_experience ?? 0} опыта
+                  {activeDungeon.run_reward_exhausted
+                    ? '0 золота · 0 опыта · 0 лута'
+                    : `${activeDungeon.run_reward_gold ?? 0} золота · ${activeDungeon.run_reward_experience ?? 0} опыта`}
                 </strong>
+                {activeDungeon.run_reward_exhausted && (
+                  <small>Лимит 25 наградных попыток в текущем 18-часовом цикле исчерпан. Проходить данж можно без ограничений.</small>
+                )}
               </div>
             </div>
           )}
@@ -2216,7 +2225,9 @@ export function AdventuresPanel({
                   : latestCombatSite?.is_event_boss
                     ? `Временная угроза повержена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта. Дополнительные награды зависят от конкретного события.`
                     : latestCombatSite?.run_status === 'completed'
-                      ? `Полная зачистка завершена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта.`
+                      ? latestCombatSite.run_reward_exhausted
+                        ? 'Полная зачистка завершена без награды: лимит 25 попыток текущего 18-часового цикла уже исчерпан.'
+                        : `Полная зачистка завершена. Получено ${latestCombatSite.run_reward_gold ?? 0} золота и ${latestCombatSite.run_reward_experience ?? 0} опыта.`
                       : 'Противник повержен. Можно перейти к следующему залу.'
                 : latestCombat.status === 'defeat'
                   ? latestCombatSite?.content_type === 'hunting'
