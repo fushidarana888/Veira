@@ -237,6 +237,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   const [items, setItems] = useState<CharacterItem[]>([])
   const [equipment, setEquipment] = useState<CharacterEquipment[]>([])
   const [equipmentSets, setEquipmentSets] = useState<EquipmentSetState[]>([])
+  const [inventoryHydrated, setInventoryHydrated] = useState(false)
   const [inventoryBusy, setInventoryBusy] = useState(false)
   const [raceDefinition, setRaceDefinition] = useState<RaceDefinition | null>(null)
   const [inventoryMessage, setInventoryMessage] = useState('')
@@ -301,6 +302,85 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
 
     setProgress(nextProgress)
     return nextProgress
+  }
+
+  async function loadEquippedState() {
+    const { data: equipmentData, error: equipmentError } = await supabase
+      .from('character_equipment')
+      .select('character_id, slot, character_item_id, equipped_at')
+      .eq('character_id', character.id)
+
+    if (equipmentError) {
+      setInventoryMessage(equipmentError.message)
+      return
+    }
+
+    const nextEquipment = (equipmentData as CharacterEquipment[] | null) ?? []
+    const equippedIds = nextEquipment.map((entry) => entry.character_item_id)
+
+    if (equippedIds.length === 0) {
+      setEquipment([])
+      setItems([])
+      return
+    }
+
+    const { data: itemData, error: itemError } = await supabase
+      .from('character_items')
+      .select(`
+        id,
+        character_id,
+        item_definition_id,
+        quantity,
+        durability_current,
+        durability_max,
+        custom_name,
+        metadata,
+        enhancement_level,
+        awakening_level,
+        acquired_at,
+        item_definitions (
+          id,
+          slug,
+          name,
+          description,
+          category,
+          rarity,
+          equip_group,
+          stackable,
+          max_stack,
+          icon_url,
+          stat_modifiers,
+          effects,
+          base_value,
+          required_level,
+          shop_tier,
+          shop_price,
+          shop_enabled,
+          damage_type,
+          weapon_base_damage,
+          weapon_scaling,
+          weapon_family,
+          echo_strike_chance_percent,
+          damage_resistances,
+          damage_bonuses,
+          scroll_spell_id,
+          scroll_mode,
+          unique_property_name,
+          unique_property_description,
+          unique_effect_type,
+          unique_effect_value,
+          equipment_set_id
+        )
+      `)
+      .in('id', equippedIds)
+
+    if (itemError) {
+      setInventoryMessage(itemError.message)
+      return
+    }
+
+    setEquipment(nextEquipment)
+    setItems((itemData as CharacterItem[] | null) ?? [])
   }
 
   async function loadInventory() {
@@ -380,14 +460,33 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     setItems((itemData as CharacterItem[] | null) ?? [])
     setEquipment((equipmentData as CharacterEquipment[] | null) ?? [])
     setEquipmentSets((setData as EquipmentSetState[] | null) ?? [])
+    setInventoryHydrated(true)
     setInventoryBusy(false)
   }
 
   useEffect(() => {
+    setInventoryHydrated(false)
+    setEquipmentSets([])
     void loadProgress()
-    void loadInventory()
+    void loadEquippedState()
     void loadRace()
   }, [character.id])
+
+  useEffect(() => {
+    if (
+      tab === 'character'
+      && (characterTab === 'inventory' || characterTab === 'equipment')
+      && !inventoryHydrated
+      && !inventoryBusy
+    ) {
+      void loadInventory()
+    }
+  }, [tab, characterTab, inventoryHydrated, inventoryBusy, character.id])
+
+  async function refreshInventoryState() {
+    if (inventoryHydrated) return loadInventory()
+    return loadEquippedState()
+  }
 
   const itemById = useMemo(
     () => new Map(items.map((item) => [item.id, item])),
@@ -1186,7 +1285,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                 characterId={character.id}
                 progress={progress}
                 onProgressChanged={loadProgress}
-                onInventoryChanged={loadInventory}
+                onInventoryChanged={refreshInventoryState}
               />
             </Suspense>
           )}
@@ -1198,7 +1297,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           <WorldMap
             characterId={character.id}
             onProgressChanged={loadProgress}
-            onInventoryChanged={loadInventory}
+            onInventoryChanged={refreshInventoryState}
           />
         </Suspense>
       )}
@@ -1208,7 +1307,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
             characterId={character.id}
             onOpenBattles={() => setTab('battles')}
             onProgressChanged={loadProgress}
-            onInventoryChanged={loadInventory}
+            onInventoryChanged={refreshInventoryState}
           />
         </Suspense>
       )}
@@ -1217,7 +1316,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           <BattleCenterPanel
             characterId={character.id}
             onProgressChanged={loadProgress}
-            onInventoryChanged={loadInventory}
+            onInventoryChanged={refreshInventoryState}
           />
         </Suspense>
       )}
