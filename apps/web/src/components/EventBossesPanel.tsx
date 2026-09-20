@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSmartRefresh } from '../lib/smartRefresh'
 
 type EventBossKind = 'weekly' | 'monthly'
 
@@ -142,13 +143,12 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
 
   useEffect(() => {
     void loadData()
-
-    const timer = window.setInterval(() => {
-      void loadData(true)
-    }, 10000)
-
-    return () => window.clearInterval(timer)
   }, [characterId])
+
+  useSmartRefresh(
+    () => loadData(true),
+    { enabled: true, intervalMs: 30000, minGapMs: 2000 },
+  )
 
   const copy = kindLabels[kind]
   const visibleBosses = useMemo(
