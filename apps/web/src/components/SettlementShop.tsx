@@ -45,10 +45,11 @@ const weaponScalingLabels: Record<'strength' | 'agility' | 'hybrid', string> = {
   hybrid: 'Гибридное',
 }
 
-const weaponFamilyLabels: Record<'short_bow' | 'long_bow' | 'dagger', string> = {
+const weaponFamilyLabels: Record<'short_bow' | 'long_bow' | 'dagger' | 'rapier', string> = {
   short_bow: 'Короткий лук',
   long_bow: 'Длинный лук',
   dagger: 'Кинжал',
+  rapier: 'Рапира',
 }
 
 const statLabels: Record<string, string> = {
