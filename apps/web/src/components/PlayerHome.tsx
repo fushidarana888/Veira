@@ -247,6 +247,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
             custom_name,
             metadata,
             enhancement_level,
+            awakening_level,
             acquired_at,
             item_definitions (
               id,
@@ -1006,6 +1007,7 @@ function InventoryPanel({
                     <h3>
                       {item.custom_name || definition.name}
                       {item.enhancement_level > 0 ? ` +${item.enhancement_level}` : ''}
+                      {item.awakening_level > 0 ? ` · ◆${['0','I','II','III','IV','V'][item.awakening_level] ?? item.awakening_level}` : ''}
                     </h3>
                   </div>
                   {item.quantity > 1 && <span className="quantity">×{item.quantity}</span>}
@@ -1203,6 +1205,7 @@ function EquipmentPanel({
                   <strong>
                     {item?.custom_name || definition.name}
                     {(item?.enhancement_level ?? 0) > 0 ? ` +${item?.enhancement_level}` : ''}
+                    {(item?.awakening_level ?? 0) > 0 ? ` · ◆${['0','I','II','III','IV','V'][item?.awakening_level ?? 0] ?? item?.awakening_level}` : ''}
                   </strong>
                   <span className={'rarity-label rarity-text-' + definition.rarity}>
                     {rarityLabels[definition.rarity]}
