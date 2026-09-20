@@ -235,6 +235,8 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               damage_type,
               weapon_base_damage,
               weapon_scaling,
+              weapon_family,
+              echo_strike_chance_percent,
               damage_resistances,
               damage_bonuses,
               scroll_spell_id,
@@ -986,6 +988,12 @@ function InventoryPanel({
                           ? 'STR ×1.75 + AGI ×1.75'
                           : 'STR ×3 + AGI ×0.5'}
                     </span>
+                    {definition.weapon_family === 'dagger' && (
+                      <span>Кинжал · итог физического удара ×0.80 после защиты</span>
+                    )}
+                    {definition.echo_strike_chance_percent > 0 && (
+                      <span>Эхо ударов · {definition.echo_strike_chance_percent}%</span>
+                    )}
                   </div>
                 )}
 
@@ -1153,6 +1161,10 @@ function EquipmentPanel({
                     <div className="modifier-list compact">
                       <span>Базовый урон +{definition.weapon_base_damage ?? 0}</span>
                       <span>{weaponScalingLabels[definition.weapon_scaling ?? 'strength']}</span>
+                      {definition.weapon_family === 'dagger' && <span>Кинжал · ×0.80 после защиты</span>}
+                      {definition.echo_strike_chance_percent > 0 && (
+                        <span>Эхо ударов · {definition.echo_strike_chance_percent}%</span>
+                      )}
                     </div>
                   )}
                   {item && Object.entries(combinedResistances(item, definition))
