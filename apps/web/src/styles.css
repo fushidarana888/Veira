@@ -7362,3 +7362,291 @@ textarea {
     width: 100%;
   }
 }
+
+
+/* Active rotating bosses */
+.event-boss-list {
+  display: grid;
+  gap: 12px;
+}
+
+.event-boss-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #493b30;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(157, 83, 39, .13), transparent 38%),
+    #10151b;
+  padding: 14px;
+}
+
+.event-boss-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.event-boss-card-head h3 {
+  margin: 4px 0 5px;
+  font-size: 18px;
+}
+
+.event-boss-card-head p {
+  max-width: 720px;
+  margin: 0;
+  color: #98a1aa;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.event-boss-deadline {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 2px;
+  border: 1px solid #513d2c;
+  border-radius: 10px;
+  background: rgba(137, 76, 39, .11);
+  padding: 7px 9px;
+  text-align: right;
+}
+
+.event-boss-deadline span {
+  color: #8f98a2;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.event-boss-deadline strong {
+  color: #dfbd8d;
+  font-size: 10px;
+}
+
+.event-boss-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.event-boss-stat-grid > span {
+  display: grid;
+  gap: 2px;
+  border: 1px solid #303842;
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+  padding: 8px;
+}
+
+.event-boss-stat-grid small {
+  color: #7f8994;
+  font-size: 8px;
+}
+
+.event-boss-stat-grid strong {
+  color: #dce0e4;
+  font-size: 11px;
+}
+
+.event-boss-resistances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.event-boss-resistances span {
+  border: 1px solid #363e47;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.event-boss-resistances .resist {
+  color: #bdc5cd;
+}
+
+.event-boss-resistances .weak {
+  border-color: #62403a;
+  background: rgba(133, 64, 54, .10);
+  color: #db9b91;
+}
+
+.event-boss-mechanics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.event-boss-mechanics > div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #39323d;
+  border-radius: 11px;
+  background: rgba(97, 64, 112, .06);
+  padding: 9px 10px;
+}
+
+.event-boss-mechanics strong {
+  color: #d4c0dc;
+  font-size: 10px;
+}
+
+.event-boss-mechanics span {
+  color: #9099a3;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.event-boss-reward {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #57472e;
+  border-radius: 13px;
+  background: rgba(169, 119, 48, .09);
+  padding: 11px 12px;
+}
+
+.event-boss-reward.claimed {
+  opacity: .72;
+}
+
+.event-boss-reward > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.event-boss-reward strong {
+  color: #e4c58f;
+  font-size: 12px;
+}
+
+.event-boss-reward p {
+  max-width: 650px;
+  margin: 0;
+  color: #9da5ae;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.event-boss-reward-values {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  color: #babfc5;
+  font-size: 9px;
+}
+
+.event-boss-repeat-reward {
+  color: #858f99;
+  font-size: 9px;
+}
+
+.event-boss-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.event-boss-actions button {
+  min-height: 40px;
+}
+
+.event-active-run-note {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #493b30;
+  border-radius: 12px;
+  background: rgba(151, 88, 43, .08);
+  padding: 11px 12px;
+}
+
+.event-active-run-note strong {
+  color: #dfc18f;
+  font-size: 11px;
+}
+
+.event-active-run-note span {
+  color: #969fa8;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.event-active-run-note button {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.blacksmith-special-material {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #584529;
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(176, 116, 42, .12), rgba(82, 53, 30, .04)),
+    #10151b;
+  padding: 10px 11px;
+}
+
+.blacksmith-special-material > div {
+  display: grid;
+  gap: 2px;
+}
+
+.blacksmith-special-material strong {
+  color: #e5c486;
+  font-size: 11px;
+}
+
+.blacksmith-special-material small {
+  color: #929ba5;
+  font-size: 9px;
+}
+
+.blacksmith-mark-button {
+  min-height: 36px;
+  border: 1px solid #72552e;
+  border-radius: 9px;
+  background: rgba(169, 111, 42, .15);
+  color: #e2bd7d;
+  padding: 7px 10px;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.blacksmith-mark-button:hover:not(:disabled) {
+  background: rgba(169, 111, 42, .22);
+}
+
+.blacksmith-mark-button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .event-boss-card-head,
+  .event-boss-reward {
+    flex-direction: column;
+  }
+
+  .event-boss-deadline,
+  .event-boss-reward-values {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .event-boss-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .event-boss-mechanics,
+  .event-boss-actions {
+    grid-template-columns: 1fr;
+  }
+}
