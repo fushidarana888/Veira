@@ -37,6 +37,7 @@ export type DerivedCombatStats = {
   /** @deprecated Legacy alias for physicalDefense. */
   defense: number
   initiative: number
+  criticalChancePercent: number
 }
 
 export function experienceForNextLevel(level: number): number {
@@ -76,6 +77,7 @@ export function calculateDerivedCombatStats(
     magicDefense,
     defense: physicalDefense,
     initiative: stats.agility * 2 + stats.luck,
+    criticalChancePercent: Math.min(60, Math.max(0, 1 + stats.luck * 0.3)),
   }
 }
 
