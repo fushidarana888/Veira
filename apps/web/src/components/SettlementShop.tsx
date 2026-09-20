@@ -97,7 +97,7 @@ export function SettlementShop({
   const [loading, setLoading] = useState(true)
   const [busyItemId, setBusyItemId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
-  const [service, setService] = useState<'shop' | 'blacksmith'>('shop')
+  const [service, setService] = useState<'shop' | 'blacksmith' | 'quests'>('shop')
 
   async function loadShop() {
     setLoading(true)
@@ -220,6 +220,15 @@ export function SettlementShop({
           onClick={() => setService('blacksmith')}
         >
           Кузнец
+        </button>
+        <button
+          className={service === 'quests' ? 'active' : ''}
+          type="button"
+          role="tab"
+          aria-selected={service === 'quests'}
+          onClick={() => setService('quests')}
+        >
+          Поручения
         </button>
       </div>
 
@@ -379,12 +388,19 @@ export function SettlementShop({
           ))}
         </div>
         </>
-      ) : (
+      ) : service === 'blacksmith' ? (
         <BlacksmithPanel
           characterId={characterId}
           sectorId={sectorId}
           settlementName={settlementName}
           settlementLevel={settlementLevel}
+          onProgressChanged={onProgressChanged}
+          onInventoryChanged={onInventoryChanged}
+        />
+      ) : (
+        <SettlementQuestsPanel
+          characterId={characterId}
+          sectorId={sectorId}
           onProgressChanged={onProgressChanged}
           onInventoryChanged={onInventoryChanged}
         />
