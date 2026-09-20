@@ -937,6 +937,7 @@ export function GmItemsAndSpells() {
                       <option value="dagger">Кинжал</option>
                       <option value="rapier">Рапира</option>
                       <option value="sword">Меч</option>
+                      <option value="katana">Катана</option>
                       <option value="spear">Копьё</option>
                       <option value="axe">Топор</option>
                       <option value="battleaxe">Секира</option>
@@ -962,7 +963,7 @@ export function GmItemsAndSpells() {
                   </label>
                 </div>
                 <p className="muted">
-                  Базовый урон добавляется к урону от характеристик и уровня. Семейства: кинжал ×0.80 после защиты; рапира игнорирует 10% Physical Defense; копьё учитывает 120% Physical Defense и компенсирует это повышенным base damage; топор/секира получают до +20% урона от Max HP цели; булава/молот имеют 8% шанс оглушения в соло/PvP и 5% в пати. Уникальные пассивки предмета считаются отдельно.
+                  Базовый урон добавляется к урону от характеристик и уровня. Семейства: кинжал ×0.80 после защиты; рапира игнорирует 10% Physical Defense; катана получает «Нарастающий ритм» (+8% за последовательную физическую атаку по той же цели, максимум +40%, любое своё другое действие сбрасывает); копьё учитывает 120% Physical Defense и компенсирует это повышенным base damage; топор/секира получают до +20% урона от Max HP цели; булава/молот имеют 8% шанс оглушения в соло/PvP и 5% в пати. Уникальные пассивки предмета считаются отдельно.
                 </p>
 
                 <div className="gm-editor-box">
