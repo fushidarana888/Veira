@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { DamageType, SettlementShopItem } from '../types'
+import type { DamageType, SettlementShopItem, WeaponFamily } from '../types'
 
 type Props = {
   characterId: string
@@ -45,11 +45,30 @@ const weaponScalingLabels: Record<'strength' | 'agility' | 'hybrid', string> = {
   hybrid: 'Гибридное',
 }
 
-const weaponFamilyLabels: Record<'short_bow' | 'long_bow' | 'dagger' | 'rapier', string> = {
+const weaponFamilyLabels: Record<WeaponFamily, string> = {
   short_bow: 'Короткий лук',
   long_bow: 'Длинный лук',
   dagger: 'Кинжал',
   rapier: 'Рапира',
+  sword: 'Меч',
+  spear: 'Копьё',
+  axe: 'Топор',
+  battleaxe: 'Секира',
+  mace: 'Булава',
+  hammer: 'Молот',
+  greatsword: 'Двуручный меч',
+  staff: 'Боевой посох',
+  wand: 'Магический жезл',
+}
+
+const weaponFamilyMechanicLabels: Partial<Record<WeaponFamily, string>> = {
+  dagger: '×0.80 урона после Physical Defense',
+  rapier: 'Игнорирует 10% Physical Defense',
+  spear: 'Учитывает 120% Physical Defense · повышенный базовый урон',
+  axe: 'До +20% урона против целей с большим Max HP',
+  battleaxe: 'До +20% урона против целей с большим Max HP',
+  mace: 'Оглушение: 8% соло/PvP · 5% пати',
+  hammer: 'Оглушение: 8% соло/PvP · 5% пати',
 }
 
 const statLabels: Record<string, string> = {
@@ -242,6 +261,9 @@ export function SettlementShop({
                         <span>{weaponScalingLabels[item.weapon_scaling ?? 'strength']}</span>
                         {item.weapon_family && (
                           <span>{weaponFamilyLabels[item.weapon_family]}</span>
+                        )}
+                        {item.weapon_family && weaponFamilyMechanicLabels[item.weapon_family] && (
+                          <span>{weaponFamilyMechanicLabels[item.weapon_family]}</span>
                         )}
                         {item.weapon_family && item.bow_full_draw_armor_penetration_percent > 0 && (
                           <span>Полный натяг · пробитие брони {item.bow_full_draw_armor_penetration_percent}%</span>
