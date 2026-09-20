@@ -88,6 +88,10 @@ const damageLabels: Record<string, string> = {
   air: 'воздух',
   lightning: 'молния',
   ice: 'лёд',
+  arcane: 'аркана',
+  star: 'звёзды',
+  gravity: 'гравитация',
+  moon: 'луна',
 }
 
 function bossError(raw: string) {
