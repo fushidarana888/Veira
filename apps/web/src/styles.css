@@ -7650,3 +7650,110 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Character customization */
+.character-customization-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.character-customization-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.character-customization-card {
+  display: grid;
+  align-content: start;
+  gap: 11px;
+  border: 1px solid #303842;
+  border-radius: 14px;
+  background: rgba(255,255,255,.018);
+  padding: 13px;
+}
+
+.character-customization-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.character-customization-card-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.character-customization-card-head strong {
+  color: #d8dde2;
+  font-size: 13px;
+}
+
+.character-customization-card p {
+  margin: 0;
+  color: #929ca6;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.character-customization-card label {
+  display: grid;
+  gap: 6px;
+}
+
+.character-customization-card label > span {
+  color: #aeb5bd;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.character-customization-card select,
+.character-customization-card textarea {
+  width: 100%;
+  border: 1px solid #353e47;
+  border-radius: 10px;
+  background: #0d1217;
+  color: #dce0e4;
+  padding: 9px 10px;
+  font: inherit;
+}
+
+.character-customization-card textarea {
+  min-height: 150px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.character-customization-preview {
+  color: #7f8994;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.customization-free-count {
+  flex: 0 0 auto;
+  border: 1px solid #414951;
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: #89929c;
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.customization-free-count.ready {
+  border-color: #3f5d4b;
+  background: rgba(73, 129, 91, .09);
+  color: #9bc9a9;
+}
+
+@media (max-width: 760px) {
+  .character-customization-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .character-customization-card-head {
+    flex-direction: column;
+  }
+}
