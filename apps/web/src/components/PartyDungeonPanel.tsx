@@ -220,7 +220,7 @@ function coopError(raw: string) {
   if (raw.includes('PARTY_MEMBER_DOWNED')) return 'Персонаж мёртв и не может действовать, пока его не воскресят.'
   if (raw.includes('PARTY_TARGET_LOST')) return 'Потерянного персонажа нельзя воскресить или выбрать целью поддержки до конца этого боя.'
   if (raw.includes('SACRIFICE_ALREADY_USED_THIS_RUN')) return '«Последняя жертва» уже была использована в этом бою-походе.'
-  if (raw.includes('SACRIFICE_REQUIRES_OVER_200_HP')) return 'Для «Последней жертвы» нужно больше 200 текущего HP.'
+  if (raw.includes('SACRIFICE_REQUIRES_OVER_200_HP')) return 'Для «Последней жертвы» нужно больше 200 текущего ОЗ.'
   if (raw.includes('SACRIFICE_SCROLL_NOT_AVAILABLE')) return 'Боевого свитка «Последняя жертва» больше нет в инвентаре.'
   if (raw.includes('SACRIFICE_NO_LIVING_ALLIES')) return 'Нет живых союзников, которых этот свиток мог бы спасти.'
   if (raw.includes('PARTY_NO_ACTIVE_MEMBERS')) return 'В отряде не осталось персонажей, способных продолжать бой.'
@@ -522,7 +522,7 @@ export function PartyDungeonPanel({
     if (!state.encounter || !state.run || !me) return
 
     if (!window.confirm(
-      'Использовать «Последнюю жертву»? Ты станешь Потерянным до конца всего похода и не сможешь быть воскрешён. Все остальные ЖИВЫЕ союзники полностью восстановят HP и получат −30% входящего урона на 3 раунда. Свиток исчезнет.',
+      'Использовать «Последнюю жертву»? Ты станешь Потерянным до конца всего похода и не сможешь быть воскрешён. Все остальные ЖИВЫЕ союзники полностью восстановят ОЗ и получат −30% входящего урона на 3 раунда. Свиток исчезнет.',
     )) return
 
     setBusy(true)
@@ -617,7 +617,7 @@ export function PartyDungeonPanel({
     if (!state.run) return
 
     if (!window.confirm(
-      'Попытаться вывести всю группу из подземелья? Шанс успеха — 80%. При провале HP ВСЕХ участников упадёт до 1, а повторить побег на этом этапе нельзя.',
+      'Попытаться вывести всю группу из подземелья? Шанс успеха — 80%. При провале ОЗ ВСЕХ участников упадёт до 1, а повторить побег на этом этапе нельзя.',
     )) return
 
     setBusy(true)
@@ -641,7 +641,7 @@ export function PartyDungeonPanel({
     setMessage(
       result?.escaped
         ? 'Групповой побег удался. Отряд покинул подземелье.'
-        : 'Побег провален. Все участники остаются внутри с 1 HP.',
+        : 'Побег провален. Все участники остаются внутри с 1 ОЗ.',
     )
     setBusy(false)
   }
@@ -829,9 +829,9 @@ export function PartyDungeonPanel({
                     : activeRun.reward_experience} опыта тебе
                 </strong>
                 {activeRun.danger_level === 0 ? (
-                  <small>XP: LVL 1 — 15 · LVL 2 — 11 · LVL 3 — 6 · LVL 4 — 2 · LVL 5+ — 1. Золото всегда 40.</small>
+                  <small>ОПЫТ: УР. 1 — 15 · УР. 2 — 11 · УР. 3 — 6 · УР. 4 — 2 · УР. 5+ — 1. Золото всегда 40.</small>
                 ) : (
-                  <small>Если перерасти данж, награда постепенно снижается, но не ниже 5% XP и 35% золота.</small>
+                  <small>Если перерасти данж, награда постепенно снижается, но не ниже 5% опыта и 35% золота.</small>
                 )}
               </div>
             </div>
@@ -869,13 +869,13 @@ export function PartyDungeonPanel({
                 </div>
 
                 <div className="party-resource-row">
-                  <span>HP {member.hp_current}/{member.hp_max}</span>
+                  <span>ОЗ {member.hp_current}/{member.hp_max}</span>
                   <div className="party-resource-meter hp">
                     <span style={{ width: hpPercent(member.hp_current, member.hp_max) + '%' }} />
                   </div>
                 </div>
                 <div className="party-resource-row">
-                  <span>MP {member.mana_current}/{member.mana_max}</span>
+                  <span>ОМ {member.mana_current}/{member.mana_max}</span>
                   <div className="party-resource-meter mana">
                     <span style={{ width: hpPercent(member.mana_current, member.mana_max) + '%' }} />
                   </div>
@@ -972,7 +972,7 @@ export function PartyDungeonPanel({
                       LVL {activeEncounter.enemy_level} · атака: {damageLabels[activeEncounter.enemy_damage_type] ?? activeEncounter.enemy_damage_type}
                     </p>
                   </div>
-                  <strong>{activeEncounter.enemy_hp_current} / {activeEncounter.enemy_hp_max} HP</strong>
+                  <strong>{activeEncounter.enemy_hp_current} / {activeEncounter.enemy_hp_max} ОЗ</strong>
                 </div>
                 <div className="party-enemy-hp-meter">
                   <span style={{ width: hpPercent(activeEncounter.enemy_hp_current, activeEncounter.enemy_hp_max) + '%' }} />
@@ -1130,7 +1130,7 @@ export function PartyDungeonPanel({
                           state.run?.sacrifice_scroll_used
                             ? 'Этот эффект уже использован в текущем бою-походе.'
                             : (me?.hp_current ?? 0) <= 200
-                              ? 'Нужно больше 200 текущего HP.'
+                              ? 'Нужно больше 200 текущего ОЗ.'
                               : 'Необратимо исключает твоего персонажа до конца текущего похода.'
                         }
                         onClick={() => void useLastSacrificeScroll()}
@@ -1138,7 +1138,7 @@ export function PartyDungeonPanel({
                         {state.run?.sacrifice_scroll_used
                           ? 'Уже использовано в этом бою'
                           : (me?.hp_current ?? 0) <= 200
-                            ? 'Нужно >200 HP'
+                            ? 'Нужно >200 ОЗ'
                             : 'Принести последнюю жертву'}
                       </button>
                     </div>
@@ -1227,7 +1227,7 @@ export function PartyDungeonPanel({
                             {noMana
                               ? 'Не хватает маны'
                               : fullHeal
-                                ? 'HP полное'
+                                ? 'ОЗ полностью восстановлено'
                                 : spell.spell_kind === 'damage'
                                   ? 'Применить'
                                   : 'На выбранного'}
