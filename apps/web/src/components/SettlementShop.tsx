@@ -51,6 +51,7 @@ const weaponFamilyLabels: Record<WeaponFamily, string> = {
   dagger: 'Кинжал',
   rapier: 'Рапира',
   sword: 'Меч',
+  katana: 'Катана',
   spear: 'Копьё',
   axe: 'Топор',
   battleaxe: 'Секира',
@@ -64,6 +65,7 @@ const weaponFamilyLabels: Record<WeaponFamily, string> = {
 const weaponFamilyMechanicLabels: Partial<Record<WeaponFamily, string>> = {
   dagger: '×0.80 урона после Physical Defense',
   rapier: 'Игнорирует 10% Physical Defense',
+  katana: 'Нарастающий ритм: +8% за подряд идущую физическую атаку по той же цели, максимум +40%',
   spear: 'Учитывает 120% Physical Defense · повышенный базовый урон',
   axe: 'До +20% урона против целей с большим Max HP',
   battleaxe: 'До +20% урона против целей с большим Max HP',
