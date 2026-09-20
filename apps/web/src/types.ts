@@ -196,6 +196,38 @@ export type ItemDefinition = {
   unique_property_description: string
   unique_effect_type: 'lifesteal' | 'mana_on_hit' | 'damage_vs_wounded' | 'guard_boost' | 'taunt' | null
   unique_effect_value: number
+  equipment_set_id: string | null
+}
+
+export type EquipmentSetPieceState = {
+  item_definition_id: string
+  name: string
+  slot: ItemEquipGroup
+  required_level: number
+  rarity: ItemRarity
+  owned: boolean
+  equipped: boolean
+}
+
+export type EquipmentSetBonusState = {
+  required_pieces: number
+  name: string
+  description: string
+  effect_type: string
+  active: boolean
+}
+
+export type EquipmentSetState = {
+  set_id: string
+  slug: string
+  name: string
+  description: string
+  total_pieces: number
+  owned_pieces: number
+  equipped_pieces: number
+  pieces: EquipmentSetPieceState[]
+  bonuses: EquipmentSetBonusState[]
+  current_low_hp_bonus: number
 }
 
 export type CharacterItem = {
