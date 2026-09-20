@@ -213,6 +213,7 @@ function statusDetail(status: PartyStatus) {
 function coopError(raw: string) {
   if (raw.includes('PARTY_NEEDS_TWO_MEMBERS')) return 'Для группового похода нужно минимум 2 персонажа.'
   if (raw.includes('PARTY_DUNGEON_NOT_AVAILABLE_TO_ALL')) return 'Не у всех участников открыт и разведан этот вход.'
+  if (raw.includes('PARTY_MEMBER_DUNGEON_EXHAUSTED')) return 'У одного из участников этот данж истощён после 30 попыток. Для него вход закрыт на 24 часа с момента 30-й попытки.'
   if (raw.includes('PARTY_MEMBER_BUSY')) return 'Один из участников занят другой тяжёлой активностью. Группа пока не может войти.'
   if (raw.includes('PARTY_DUNGEON_ALREADY_ACTIVE')) return 'У этой группы уже идёт совместный поход.'
   if (raw.includes('PARTY_LEADER_REQUIRED')) return 'Начинать зал и принимать решение о побеге может только лидер группы.'
