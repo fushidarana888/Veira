@@ -37,10 +37,6 @@ export function App() {
 
     setState((current) => ({ ...current, user, loading: true, error: '' }))
 
-    // If this session was created through an email OTP / magic-link flow,
-    // trust it as proof that the user controls the mailbox.
-    await supabase.rpc('mark_email_verified_from_otp')
-
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('user_id, display_name, avatar_url, account_type, email_verified, email_verified_at')
@@ -58,7 +54,20 @@ export function App() {
       return
     }
 
-    const profile = profileData as Profile
+    let profile = profileData as Profile
+
+    // Проверка OTP нужна только пока почта ещё не отмечена подтверждённой.
+    // У уже подтверждённых аккаунтов это убирает один сетевой запрос при каждом входе.
+    if (!profile.email_verified) {
+      const { data: markedVerified } = await supabase.rpc('mark_email_verified_from_otp')
+      if (markedVerified) {
+        profile = {
+          ...profile,
+          email_verified: true,
+          email_verified_at: profile.email_verified_at ?? new Date().toISOString(),
+        }
+      }
+    }
 
     if (profile.account_type === 'gm') {
       setState({ user, profile, character: null, loading: false, error: '' })
