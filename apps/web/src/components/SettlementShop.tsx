@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { BlacksmithPanel } from './BlacksmithPanel'
+import { SettlementQuestsPanel } from './SettlementQuestsPanel'
 import type { DamageType, SettlementShopItem, WeaponFamily } from '../types'
 
 type Props = {
