@@ -126,7 +126,7 @@ const statusLabels: Record<CombatStatusEffectType, string> = {
 }
 
 function duelError(raw: string) {
-  if (raw.includes('CHALLENGER_BUSY')) return 'Сначала заверши активное подземелье, PvE-бой или другую дуэль.'
+  if (raw.includes('CHALLENGER_BUSY')) return 'Сначала заверши активное подземелье, бой с противником или другую дуэль.'
   if (raw.includes('OPPONENT_BUSY')) return 'Этот персонаж сейчас в подземелье, PvE-бою или другой дуэли.'
   if (raw.includes('PLAYER_BUSY')) return 'Один из участников занят тяжёлым боем или другой дуэлью. Обнови список и попробуй позже.'
   if (raw.includes('DUEL_ALREADY_PENDING')) return 'Между вами уже есть необработанный вызов.'
@@ -396,7 +396,7 @@ export function DuelPanel({ characterId }: Props) {
       <section className="panel duel-intro">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">PVP · ДУЭЛИ</span>
+            <span className="eyebrow">ИГРОК ПРОТИВ ИГРОКА · ДУЭЛИ</span>
             <h2>Поединки между персонажами</h2>
             <p className="muted">
               Дуэль начинается только после согласия второго игрока. Используются текущие характеристики,
@@ -665,7 +665,7 @@ export function DuelPanel({ characterId }: Props) {
                   </div>
 
                   <div className="duel-player-meta">
-                    <span>LVL {player.level}</span>
+                    <span>УР. {player.level}</span>
                     <span className={player.busy ? 'busy' : 'ready'}>
                       {player.busy ? 'занят' : 'свободен'}
                     </span>
@@ -739,7 +739,7 @@ function DuelFighter({
       <div className="duel-fighter-name">
         <div>
           <strong>{participant.name}</strong>
-          <span>@{participant.display_name} · LVL {participant.level}</span>
+          <span>@{participant.display_name} · УР. {participant.level}</span>
         </div>
         {participant.counter_bonus_percent > 0 && (
           <span className="duel-counter">контратака +{participant.counter_bonus_percent}%</span>
@@ -747,12 +747,12 @@ function DuelFighter({
       </div>
 
       <div className="duel-resource">
-        <div><span>HP</span><strong>{participant.hp_current} / {participant.hp_max}</strong></div>
+        <div><span>ОЗ</span><strong>{participant.hp_current} / {participant.hp_max}</strong></div>
         <div className="meter"><span style={{ width: hpPercent(participant.hp_current, participant.hp_max) + '%' }} /></div>
       </div>
 
       <div className="duel-resource">
-        <div><span>MP</span><strong>{participant.mana_current} / {participant.mana_max}</strong></div>
+        <div><span>ОМ</span><strong>{participant.mana_current} / {participant.mana_max}</strong></div>
         <div className="meter mana-meter"><span style={{ width: hpPercent(participant.mana_current, participant.mana_max) + '%' }} /></div>
       </div>
 
