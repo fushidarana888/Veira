@@ -6918,3 +6918,144 @@ textarea {
     justify-self: stretch;
   }
 }
+
+
+/* Event bosses */
+.event-bosses-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.event-bosses-heading p {
+  max-width: 720px;
+  margin: 5px 0 0;
+}
+
+.event-boss-rules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.event-boss-rules > div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #333943;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .018);
+  padding: 10px 11px;
+}
+
+.event-boss-rules strong {
+  color: #d9dde2;
+  font-size: 11px;
+}
+
+.event-boss-rules span {
+  color: #909aa5;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.event-boss-tabs {
+  display: inline-flex;
+  justify-self: start;
+  gap: 5px;
+  border: 1px solid #343a43;
+  border-radius: 12px;
+  background: #0d1217;
+  padding: 4px;
+}
+
+.event-boss-tabs button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #98a1ab;
+  padding: 7px 13px;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.event-boss-tabs button:hover {
+  color: #e1e4e8;
+  background: rgba(255, 255, 255, .035);
+}
+
+.event-boss-tabs button.active {
+  background: rgba(126, 89, 151, .16);
+  color: #d8b8e9;
+  box-shadow: inset 0 0 0 1px rgba(161, 116, 190, .22);
+}
+
+.event-boss-empty {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  border: 1px solid #332f3d;
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(105, 65, 134, .12), transparent 44%),
+    #10151b;
+  padding: 28px 18px;
+  text-align: center;
+}
+
+.event-boss-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #50405d;
+  border-radius: 50%;
+  background: rgba(112, 70, 139, .12);
+  color: #c7a1da;
+  font-size: 15px;
+}
+
+.event-boss-empty h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.event-boss-empty > p {
+  max-width: 650px;
+  margin: 0;
+  color: #939ca6;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.event-boss-empty-state {
+  display: grid;
+  gap: 4px;
+  max-width: 620px;
+  margin-top: 5px;
+  border-top: 1px solid #292f37;
+  padding-top: 12px;
+}
+
+.event-boss-empty-state strong {
+  color: #d9dde1;
+  font-size: 11px;
+}
+
+.event-boss-empty-state span {
+  color: #858f9a;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .event-boss-rules {
+    grid-template-columns: 1fr;
+  }
+
+  .event-boss-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-self: stretch;
+  }
+}
