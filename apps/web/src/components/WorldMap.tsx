@@ -58,6 +58,8 @@ type WorldStrongEnemy = {
   }
   reward_name: string | null
   reward_description: string | null
+  reward_gold: number
+  reward_experience: number
   victories: number
   defeated: boolean
   solo_only: boolean
@@ -542,7 +544,7 @@ export function WorldMap({
       supabase.rpc('get_visible_death_spirits', {
         p_character_id: characterId,
       }),
-      supabase.rpc('get_visible_world_strong_enemies', {
+      supabase.rpc('get_visible_world_strong_enemies_v2', {
         p_character_id: characterId,
       }),
       supabase.rpc('get_character_hunting_state', {
@@ -1729,9 +1731,14 @@ export function WorldMap({
                       </div>
 
                       <div className="world-strong-enemy-reward">
-                        <span className="eyebrow">ГАРАНТИРОВАНО ЗА ПЕРВУЮ ПОБЕДУ</span>
-                        <strong>{enemy.reward_name ?? 'Особая награда'}</strong>
-                        {enemy.reward_description && <small>{enemy.reward_description}</small>}
+                        <span className="eyebrow">НАГРАДА ЗА ПОБЕДУ</span>
+                        <strong>{enemy.reward_experience} опыта · {enemy.reward_gold} золота</strong>
+                        {enemy.reward_name && (
+                          <>
+                            <small>Особая награда: {enemy.reward_name}</small>
+                            {enemy.reward_description && <small>{enemy.reward_description}</small>}
+                          </>
+                        )}
                       </div>
 
                       <button
