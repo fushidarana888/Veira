@@ -7757,3 +7757,47 @@ textarea {
     flex-direction: column;
   }
 }
+
+
+/* Expanded racial identity */
+.race-trait-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.race-trait-list span {
+  border: 1px solid #3a424b;
+  border-radius: 999px;
+  background: rgba(255,255,255,.025);
+  color: #bbc2c9;
+  padding: 4px 7px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.race-extra-traits {
+  display: grid;
+  gap: 7px;
+}
+
+.race-extra-traits > div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #343c45;
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+  padding: 8px 9px;
+}
+
+.race-extra-traits strong {
+  color: #d5dbe0;
+  font-size: 10px;
+}
+
+.race-extra-traits p {
+  margin: 0;
+  color: #8f99a3;
+  font-size: 9px;
+  line-height: 1.45;
+}
