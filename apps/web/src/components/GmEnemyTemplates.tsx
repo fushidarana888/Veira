@@ -548,7 +548,7 @@ export function GmEnemyTemplates() {
 
           <div className="gm-enemy-multipliers">
             <label>
-              <span>HP ×</span>
+              <span>ОЗ ×</span>
               <input type="number" min={0.25} max={5} step={0.05} value={draft.hp_multiplier}
                 onChange={(event) => setDraft({ ...draft, hp_multiplier: Number(event.target.value) })} />
             </label>
@@ -756,28 +756,28 @@ export function GmEnemyTemplates() {
 
                 <div className="gm-enemy-number-grid">
                   <label>
-                    <span>HP врага от %</span>
+                    <span>ОЗ врага от %</span>
                     <input type="number" min={0} max={100} value={ability.min_enemy_hp_percent}
                       onChange={(event) => updateAbility(index, {
                         min_enemy_hp_percent: Math.max(0, Math.min(100, Number(event.target.value))),
                       })} />
                   </label>
                   <label>
-                    <span>HP врага до %</span>
+                    <span>ОЗ врага до %</span>
                     <input type="number" min={0} max={100} value={ability.max_enemy_hp_percent}
                       onChange={(event) => updateAbility(index, {
                         max_enemy_hp_percent: Math.max(0, Math.min(100, Number(event.target.value))),
                       })} />
                   </label>
                   <label>
-                    <span>HP игрока от %</span>
+                    <span>ОЗ игрока от %</span>
                     <input type="number" min={0} max={100} value={ability.min_player_hp_percent}
                       onChange={(event) => updateAbility(index, {
                         min_player_hp_percent: Math.max(0, Math.min(100, Number(event.target.value))),
                       })} />
                   </label>
                   <label>
-                    <span>HP игрока до %</span>
+                    <span>ОЗ игрока до %</span>
                     <input type="number" min={0} max={100} value={ability.max_player_hp_percent}
                       onChange={(event) => updateAbility(index, {
                         max_player_hp_percent: Math.max(0, Math.min(100, Number(event.target.value))),
@@ -820,7 +820,7 @@ export function GmEnemyTemplates() {
                   ) : ability.kind !== 'cleanse' ? (
                     <label>
                       <span>
-                        {ability.kind === 'heal' ? 'Лечение % max HP'
+                        {ability.kind === 'heal' ? 'Лечение · % макс. ОЗ'
                           : ability.kind === 'guard' ? 'Снижение урона %'
                             : 'Бонус атаки %'}
                       </span>
@@ -988,7 +988,7 @@ export function GmEnemyTemplates() {
                 <label>
                   <span>
                     {draft.special_kind === 'heal'
-                      ? 'Лечение % max HP'
+                      ? 'Лечение · % макс. ОЗ'
                       : draft.special_kind === 'guard'
                         ? 'Снижение следующего урона %'
                         : 'Бонус атаки %'}
@@ -1132,7 +1132,7 @@ export function GmEnemyTemplates() {
 
             <div className="gm-enemy-resistance-grid">
               <label>
-                <span>Порог HP %</span>
+                <span>Порог ОЗ %</span>
                 <input
                   type="number"
                   min={0}
