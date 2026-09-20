@@ -2046,6 +2046,23 @@ export function AdventuresPanel({
 
       {adventureTab === 'locations' && (
         <div className="adventure-folder-content">
+          <article className="panel dungeon-fatigue-rule">
+            <span className="eyebrow">ИСТОЩЕНИЕ ПОДЗЕМЕЛЬЯ</span>
+            <h3>Одно место нельзя бесконечно фармить с полной наградой</h3>
+            <p className="muted">
+              Повторные зачистки одного и того же подземелья за последние 24 часа постепенно снижают опыт и золото.
+              Другие подземелья считаются отдельно, а спустя 24 часа старые прохождения перестают влиять на награду.
+            </p>
+            <div className="dungeon-fatigue-scale">
+              <span><b>1-я</b><small>100% XP · 100% золота</small></span>
+              <span><b>2-я</b><small>80% XP · 90% золота</small></span>
+              <span><b>3-я</b><small>55% XP · 75% золота</small></span>
+              <span><b>4-я</b><small>30% XP · 60% золота</small></span>
+              <span><b>5-я</b><small>15% XP · 45% золота</small></span>
+              <span><b>6+</b><small>0% XP · 30% золота</small></span>
+            </div>
+          </article>
+
           <div className="adventure-site-grid">
         <article className="panel">
           <div className="section-heading">
