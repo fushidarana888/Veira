@@ -48,6 +48,10 @@ const damageTypeLabels: Record<DamageType, string> = {
   air: 'Воздух',
   lightning: 'Молния',
   ice: 'Лёд',
+  arcane: 'Аркана',
+  star: 'Звёзды',
+  gravity: 'Гравитация',
+  moon: 'Луна',
 }
 
 const defaultStats: Record<InitialStatKey, number> = {
