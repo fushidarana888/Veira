@@ -90,6 +90,7 @@ const statLabels: Record<string, string> = {
   intellect: 'Интеллект',
   vitality: 'Живучесть',
   luck: 'Удача',
+  exploration_speed_percent: 'Скорость исследования',
 }
 
 export function SettlementShop({
@@ -345,7 +346,7 @@ export function SettlementShop({
                         <div className="modifier-list">
                           {modifiers.map(([key, value]) => (
                             <span key={key}>
-                              {statLabels[key] ?? key} {value >= 0 ? '+' : ''}{value}
+                              {statLabels[key] ?? key} {value >= 0 ? '+' : ''}{value}{key === 'exploration_speed_percent' ? '%' : ''}
                             </span>
                           ))}
                         </div>
