@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { PartyPanel } from './PartyPanel'
 import { PartyDungeonPanel } from './PartyDungeonPanel'
+import { EventBossesPanel } from './EventBossesPanel'
 import type {
   AutobattleGuardMode,
   BowDistance,
@@ -978,6 +979,8 @@ export function AdventuresPanel({
         onProgressChanged={onProgressChanged}
         onInventoryChanged={onInventoryChanged}
       />
+
+      <EventBossesPanel />
 
       {message && <p className="gm-notice" aria-live="polite">{message}</p>}
 
