@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
+import { scheduleIdle, useSmartRefresh } from '../lib/smartRefresh'
 
 const AdventuresPanel = lazy(() => import('./AdventuresPanel').then((module) => ({ default: module.AdventuresPanel })))
 const BattleCenterPanel = lazy(() => import('./BattleCenterPanel').then((module) => ({ default: module.BattleCenterPanel })))
@@ -467,9 +468,13 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   useEffect(() => {
     setInventoryHydrated(false)
     setEquipmentSets([])
-    void loadProgress()
     void loadEquippedState()
-    void loadRace()
+
+    const cancelIdle = scheduleIdle(() => {
+      void loadRace()
+    })
+
+    return cancelIdle
   }, [character.id])
 
   useEffect(() => {
@@ -487,6 +492,20 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     if (inventoryHydrated) return loadInventory()
     return loadEquippedState()
   }
+
+  async function refreshVisiblePlayerData() {
+    await Promise.all([
+      loadProgress(),
+      tab === 'character' && (characterTab === 'inventory' || characterTab === 'equipment')
+        ? loadInventory()
+        : loadEquippedState(),
+    ])
+  }
+
+  useSmartRefresh(
+    refreshVisiblePlayerData,
+    { enabled: true, minGapMs: 1800 },
+  )
 
   const itemById = useMemo(
     () => new Map(items.map((item) => [item.id, item])),
