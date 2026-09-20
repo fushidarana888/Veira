@@ -598,7 +598,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
   if (loading && sectors.length === 0) {
     return (
       <section className="panel">
-        <span className="eyebrow">GM · КАРТА МИРА</span>
+        <span className="eyebrow">ГМ · КАРТА МИРА</span>
         <h2>Загружаем 300 секторов…</h2>
       </section>
     )
@@ -619,7 +619,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
         <div className="gm-world-counters">
           <span><strong>{configuredCount}</strong><small>настроено</small></span>
           <span><strong>{expeditions.length}</strong><small>экспедиций</small></span>
-          <span><strong>{events.length}</strong><small>ждут GM</small></span>
+          <span><strong>{events.length}</strong><small>ждут ГМ</small></span>
         </div>
       </article>
 
@@ -740,7 +740,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
 
           <div className="gm-map-frame">
             <div className="gm-map-stage">
-              <img src={mapUrl} alt="Полная карта Эйлара для GM" draggable={false} />
+              <img src={mapUrl} alt="Полная карта Эйлара для ГМ" draggable={false} />
               <div className="gm-sector-grid">
                 {sectors.map((sector) => {
                   const selected = selectedSectorId === sector.id
@@ -940,7 +940,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                       checked={bulkApply.requiresGm}
                       onChange={(event) => setBulkApply({ ...bulkApply, requiresGm: event.target.checked })}
                     />
-                    <span>GM/RP-сцена</span>
+                    <span>ГМ/РП-сцена</span>
                   </label>
                   <select
                     value={bulkValues.requires_gm ? 'yes' : 'no'}
@@ -1051,7 +1051,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                           ...bulkValues,
                           event_gm_notes: event.target.value,
                         })}
-                        placeholder="Подсказка GM"
+                        placeholder="Подсказка ГМ"
                       />
                     </>
                   )}
@@ -1181,11 +1181,11 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                       requires_gm: event.target.checked,
                     })}
                   />
-                  <span>Сектор предполагает GM/RP-вмешательство</span>
+                  <span>Сектор предполагает ГМ/РП-вмешательство</span>
                 </label>
 
                 <label>
-                  <span>Секретные заметки GM</span>
+                  <span>Секретные заметки ГМ</span>
                   <textarea
                     rows={4}
                     value={form.gm_notes}
@@ -1235,7 +1235,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                       </label>
 
                       <label>
-                        <span>Подсказка GM</span>
+                        <span>Подсказка ГМ</span>
                         <textarea
                           rows={3}
                           value={form.event_gm_notes}
@@ -1350,7 +1350,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
 
             <div className="gm-event-template-fields">
               <label>
-                <span>Название шаблона для GM</span>
+                <span>Название шаблона для ГМ</span>
                 <input
                   value={eventTemplateDraft.name}
                   onChange={(event) => setEventTemplateDraft({
@@ -1470,7 +1470,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     requires_gm: event.target.checked,
                   })}
                 />
-                <span>Остановить экспедицию и передать событие GM</span>
+                <span>Остановить экспедицию и передать событие ГМ</span>
               </label>
 
               <label>
@@ -1514,7 +1514,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
               )}
 
               <label>
-                <span>Секретная подсказка GM</span>
+                <span>Секретная подсказка ГМ</span>
                 <textarea
                   rows={3}
                   value={eventTemplateDraft.gm_notes}
@@ -1633,7 +1633,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
       <article className="panel gm-event-queue">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">GM TASKS</span>
+            <span className="eyebrow">ЗАДАЧИ ГМ</span>
             <h2>События, ожидающие решения</h2>
           </div>
           <span className="badge">{events.length}</span>
@@ -1659,7 +1659,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                 <p>{event.player_prompt || 'Описание события для игрока не задано.'}</p>
                 {event.gm_notes && (
                   <p className="gm-event-secret-note">
-                    <strong>GM:</strong> {event.gm_notes}
+                    <strong>ГМ:</strong> {event.gm_notes}
                   </p>
                 )}
 
@@ -1670,7 +1670,7 @@ export function GmWorldEditor({ characters, profiles }: Props) {
                     ...eventResolutions,
                     [event.id]: changeEvent.target.value,
                   })}
-                  placeholder="Запиши итог сцены или решение GM…"
+                  placeholder="Запиши итог сцены или решение ГМ…"
                 />
 
                 <div className="gm-event-actions">
