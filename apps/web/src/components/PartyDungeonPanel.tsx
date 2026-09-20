@@ -593,7 +593,7 @@ export function PartyDungeonPanel({
     const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
     await Promise.all([
       loadDynamicState(true),
-      refreshPlayer(result?.status === 'victory'),
+      refreshPlayer(true),
     ])
 
     if (result?.status === 'defeat') {
