@@ -396,7 +396,7 @@ export function PartyDungeonPanel({
   useEffect(() => {
     setLoading(true)
     void Promise.all([
-      loadStaticCombatData(),
+      mode === 'management' ? Promise.resolve() : loadStaticCombatData(),
       loadDynamicState(true),
     ]).finally(() => setLoading(false))
   }, [characterId, mode])
