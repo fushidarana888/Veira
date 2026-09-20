@@ -936,6 +936,15 @@ export function GmItemsAndSpells() {
                       <option value="long_bow">Длинный лук</option>
                       <option value="dagger">Кинжал</option>
                       <option value="rapier">Рапира</option>
+                      <option value="sword">Меч</option>
+                      <option value="spear">Копьё</option>
+                      <option value="axe">Топор</option>
+                      <option value="battleaxe">Секира</option>
+                      <option value="mace">Булава</option>
+                      <option value="hammer">Молот</option>
+                      <option value="greatsword">Двуручный меч</option>
+                      <option value="staff">Боевой посох</option>
+                      <option value="wand">Магический жезл</option>
                     </select>
                   </label>
                   <label>
@@ -953,7 +962,7 @@ export function GmItemsAndSpells() {
                   </label>
                 </div>
                 <p className="muted">
-                  Базовый урон добавляется к урону от характеристик и уровня. Кинжал наносит ×0.80 после Physical Defense. «Эхо ударов» — пассивка конкретного предмета, а не всего семейства кинжалов.
+                  Базовый урон добавляется к урону от характеристик и уровня. Семейства: кинжал ×0.80 после защиты; рапира игнорирует 10% Physical Defense; копьё учитывает 120% Physical Defense и компенсирует это повышенным base damage; топор/секира получают до +20% урона от Max HP цели; булава/молот имеют 8% шанс оглушения в соло/PvP и 5% в пати. Уникальные пассивки предмета считаются отдельно.
                 </p>
 
                 <div className="gm-editor-box">
