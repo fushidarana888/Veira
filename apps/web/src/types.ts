@@ -61,7 +61,7 @@ export type RaceDefinition = {
   playable: boolean
   stat_modifiers: Record<string, number>
   traits: RaceTrait[]
-  innate_magic_damage_type: ElementalDamageType
+  innate_magic_damage_type: MagicDamageType
   access_mode: 'open' | 'gm_only'
   hp_bonus: number
   mana_bonus: number
@@ -114,9 +114,14 @@ export type DamageType =
   | 'air'
   | 'lightning'
   | 'ice'
+  | 'arcane'
+  | 'star'
+  | 'gravity'
+  | 'moon'
 
 export type PhysicalDamageType = Extract<DamageType, 'slashing' | 'piercing' | 'blunt'>
 export type ElementalDamageType = Extract<DamageType, 'fire' | 'water' | 'earth' | 'air' | 'lightning' | 'ice'>
+export type MagicDamageType = Exclude<DamageType, PhysicalDamageType>
 export type WeaponScaling = 'strength' | 'agility' | 'hybrid'
 export type BowWeaponFamily = 'short_bow' | 'long_bow'
 export type WeaponFamily = BowWeaponFamily | 'dagger' | 'rapier' | 'sword' | 'blade' | 'katana' | 'spear' | 'axe' | 'battleaxe' | 'mace' | 'hammer' | 'club' | 'greatsword' | 'staff' | 'wand'
@@ -713,7 +718,7 @@ export type SpellDefinition = {
   description: string
   enabled: boolean
   spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice'
-  damage_type: ElementalDamageType | null
+  damage_type: MagicDamageType | null
   mana_cost: number
   required_level: number
   power_multiplier: number
@@ -737,7 +742,7 @@ export type CharacterSpell = {
   name: string
   description: string
   spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice'
-  damage_type: ElementalDamageType | null
+  damage_type: MagicDamageType | null
   mana_cost: number
   required_level: number
   power_multiplier: number
