@@ -97,6 +97,7 @@ const weaponFamilyMechanicLabels: Partial<Record<NonNullable<ItemDefinition['wea
   mace: 'Оглушение 8% соло/PvP · 5% пати',
   hammer: 'Оглушение 8% соло/PvP · 5% пати',
   club: 'Blunt: уязвимость ×1.5 · сопротивление учитывается на 50%',
+  greatsword: 'Некритический физический удар: +5 п.п. Crit Chance · крит сбрасывает накопление · общий кап 60%',
 }
 
 const statLabels: Record<StatKey, string> = {
