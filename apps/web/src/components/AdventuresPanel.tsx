@@ -2055,11 +2055,14 @@ export function AdventuresPanel({
             </p>
             <div className="dungeon-fatigue-scale">
               <span><b>1-я</b><small>100% XP · 100% золота</small></span>
-              <span><b>2-я</b><small>80% XP · 90% золота</small></span>
-              <span><b>3-я</b><small>55% XP · 75% золота</small></span>
-              <span><b>4-я</b><small>30% XP · 60% золота</small></span>
-              <span><b>5-я</b><small>15% XP · 45% золота</small></span>
-              <span><b>6+</b><small>0% XP · 30% золота</small></span>
+              <span><b>2-я</b><small>90% XP · 95% золота</small></span>
+              <span><b>3-я</b><small>80% XP · 90% золота</small></span>
+              <span><b>4-я</b><small>65% XP · 80% золота</small></span>
+              <span><b>5-я</b><small>50% XP · 70% золота</small></span>
+              <span><b>6-я</b><small>35% XP · 60% золота</small></span>
+              <span><b>7-я</b><small>20% XP · 45% золота</small></span>
+              <span><b>8-я</b><small>10% XP · 35% золота</small></span>
+              <span><b>9+</b><small>0% XP · 25% золота</small></span>
             </div>
           </article>
 
