@@ -22,6 +22,7 @@ type SettlementQuest = {
   target_item_name: string | null
   reward_gold: number
   reward_experience: number
+  reward_reputation: number
   min_level: number
   repeatable: boolean
   cooldown_hours: number
@@ -36,6 +37,27 @@ type SettlementQuest = {
   active_quest_count: number
 }
 
+type SettlementReputation = {
+  sector_id: number
+  settlement_name: string
+  reputation_points: number
+  reputation_level: number
+  current_level_points: number
+  next_level_points: number
+  daily_earned: number
+  daily_cap: number
+  daily_remaining: number
+  shop_discount_percent: number
+  quest_gold_bonus_percent: number
+  quest_experience_bonus_percent: number
+  current_perk_text: string
+  next_perk_text: string
+  level10_reward_item_id: string | null
+  level10_reward_item_name: string | null
+  level10_reward_item_description: string | null
+  level10_reward_claimed: boolean
+}
+
 const themeLabels: Record<SettlementQuest['theme'], string> = {
   general: 'Обычное',
   protection: 'Защита',
@@ -48,16 +70,11 @@ const themeLabels: Record<SettlementQuest['theme'], string> = {
 
 function objectiveText(quest: SettlementQuest) {
   switch (quest.objective_type) {
-    case 'discover_sectors':
-      return `Открыть новых секторов: ${quest.objective_target}`
-    case 'complete_expeditions':
-      return `Завершить экспедиций: ${quest.objective_target}`
-    case 'complete_dungeons':
-      return `Завершить подземелий: ${quest.objective_target}`
-    case 'defeat_enemies':
-      return `Победить противников: ${quest.objective_target}`
-    case 'deliver_item':
-      return `Принести: ${quest.target_item_name ?? 'предмет'} ×${quest.objective_target}`
+    case 'discover_sectors': return `Открыть новых секторов: ${quest.objective_target}`
+    case 'complete_expeditions': return `Завершить экспедиций: ${quest.objective_target}`
+    case 'complete_dungeons': return `Завершить подземелий: ${quest.objective_target}`
+    case 'defeat_enemies': return `Победить противников: ${quest.objective_target}`
+    case 'deliver_item': return `Принести: ${quest.target_item_name ?? 'предмет'} ×${quest.objective_target}`
   }
 }
 
@@ -86,25 +103,36 @@ export function SettlementQuestsPanel({
   onInventoryChanged,
 }: Props) {
   const [quests, setQuests] = useState<SettlementQuest[]>([])
+  const [reputation, setReputation] = useState<SettlementReputation | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
   async function loadQuests() {
     setLoading(true)
-    const { data, error } = await supabase.rpc('get_settlement_quests', {
-      p_character_id: characterId,
-      p_sector_id: sectorId,
-    })
 
+    const [questResult, reputationResult] = await Promise.all([
+      supabase.rpc('get_settlement_quests_v2', {
+        p_character_id: characterId,
+        p_sector_id: sectorId,
+      }),
+      supabase.rpc('get_settlement_reputation', {
+        p_character_id: characterId,
+        p_sector_id: sectorId,
+      }),
+    ])
+
+    const error = questResult.error ?? reputationResult.error
     if (error) {
       setMessage(errorMessage(error.message))
       setQuests([])
+      setReputation(null)
       setLoading(false)
       return
     }
 
-    setQuests((data as SettlementQuest[] | null) ?? [])
+    setQuests((questResult.data as SettlementQuest[] | null) ?? [])
+    setReputation(((reputationResult.data as SettlementReputation[] | null) ?? [])[0] ?? null)
     setLoading(false)
   }
 
@@ -114,7 +142,7 @@ export function SettlementQuestsPanel({
   }, [characterId, sectorId])
 
   const activeCount = quests[0]?.active_quest_count ?? 0
-  const settlementName = quests[0]?.settlement_name ?? 'Поселение'
+  const settlementName = reputation?.settlement_name ?? quests[0]?.settlement_name ?? 'Поселение'
   const active = useMemo(() => quests.filter((quest) => quest.assignment_id), [quests])
   const available = useMemo(() => quests.filter((quest) => !quest.assignment_id), [quests])
 
@@ -133,8 +161,8 @@ export function SettlementQuestsPanel({
       return
     }
 
-    setMessage(`Поручение «${quest.title}» принято.`)
     await loadQuests()
+    setMessage(`Поручение «${quest.title}» принято.`)
     setBusyId(null)
   }
 
@@ -156,13 +184,16 @@ export function SettlementQuestsPanel({
       return
     }
 
-    setMessage(`Поручение «${quest.title}» отменено.`)
     await loadQuests()
+    setMessage(`Поручение «${quest.title}» отменено.`)
     setBusyId(null)
   }
 
   async function complete(quest: SettlementQuest) {
     if (!quest.assignment_id) return
+
+    const previousReputation = reputation?.reputation_points ?? 0
+    const previousLevel = reputation?.reputation_level ?? 1
 
     setBusyId(quest.quest_id)
     setMessage('')
@@ -183,20 +214,38 @@ export function SettlementQuestsPanel({
       Promise.resolve(onInventoryChanged?.()),
     ])
 
-    setMessage(
-      `Поручение выполнено. Награда: ${quest.reward_gold.toLocaleString('ru-RU')} золота · ${quest.reward_experience.toLocaleString('ru-RU')} опыта.`,
-    )
     await loadQuests()
+
+    const { data: repData } = await supabase.rpc('get_settlement_reputation', {
+      p_character_id: characterId,
+      p_sector_id: sectorId,
+    })
+    const nextReputation = ((repData as SettlementReputation[] | null) ?? [])[0] ?? null
+    if (nextReputation) setReputation(nextReputation)
+
+    const repGain = Math.max(0, (nextReputation?.reputation_points ?? previousReputation) - previousReputation)
+    const levelUp = (nextReputation?.reputation_level ?? previousLevel) > previousLevel
+
+    setMessage(
+      levelUp
+        ? `Поручение выполнено. Репутация +${repGain}. Новый уровень репутации: ${nextReputation?.reputation_level}/10.`
+        : `Поручение выполнено. Репутация +${repGain}. Награды начислены с учётом бонусов города.`,
+    )
     setBusyId(null)
   }
 
   if (loading) {
-    return (
-      <section className="settlement-quests">
-        <p className="muted">Проверяем доску поручений…</p>
-      </section>
-    )
+    return <section className="settlement-quests"><p className="muted">Проверяем доску поручений…</p></section>
   }
+
+  const reputationSpan = reputation
+    ? Math.max(1, reputation.next_level_points - reputation.current_level_points)
+    : 1
+  const reputationProgress = reputation
+    ? Math.min(100, Math.max(0, Math.round(
+        ((reputation.reputation_points - reputation.current_level_points) / reputationSpan) * 100,
+      )))
+    : 0
 
   return (
     <section className="settlement-quests">
@@ -209,6 +258,57 @@ export function SettlementQuestsPanel({
         <span className="badge">{activeCount}/3 активно</span>
       </div>
 
+      {reputation && (
+        <article className="settlement-reputation-card">
+          <div className="reputation-heading">
+            <div>
+              <span className="eyebrow">РЕПУТАЦИЯ ГОРОДА</span>
+              <h5>Уровень {reputation.reputation_level}/10</h5>
+            </div>
+            <strong>{reputation.reputation_points}/2700</strong>
+          </div>
+
+          <div className="reputation-progress">
+            <span style={{ width: `${reputation.reputation_level >= 10 ? 100 : reputationProgress}%` }} />
+          </div>
+
+          <div className="reputation-progress-labels">
+            <span>
+              {reputation.reputation_level >= 10
+                ? 'Максимальная репутация'
+                : `До следующего уровня: ${reputation.next_level_points - reputation.reputation_points}`}
+            </span>
+            <span>Сегодня {reputation.daily_earned}/{reputation.daily_cap}</span>
+          </div>
+
+          <div className="reputation-perks">
+            <span>Магазин <strong>−{reputation.shop_discount_percent}%</strong></span>
+            <span>Золото поручений <strong>+{reputation.quest_gold_bonus_percent}%</strong></span>
+            <span>Опыт поручений <strong>+{reputation.quest_experience_bonus_percent}%</strong></span>
+          </div>
+
+          <p className="reputation-current-perk">{reputation.current_perk_text}</p>
+
+          {reputation.reputation_level < 10 && (
+            <p className="reputation-next-perk">
+              <strong>Следующий уровень:</strong> {reputation.next_perk_text}
+            </p>
+          )}
+
+          {reputation.level10_reward_item_name && (
+            <div className="reputation-final-reward">
+              <span>НАГРАДА 10 УРОВНЯ</span>
+              <strong>{reputation.level10_reward_item_name}</strong>
+              <small>
+                {reputation.level10_reward_claimed
+                  ? 'Получено.'
+                  : reputation.level10_reward_item_description ?? 'Уникальная награда города.'}
+              </small>
+            </div>
+          )}
+        </article>
+      )}
+
       {message && <p className="form-message" aria-live="polite">{message}</p>}
 
       {quests.length === 0 ? (
@@ -220,11 +320,7 @@ export function SettlementQuestsPanel({
         <>
           {active.length > 0 && (
             <div className="quest-section">
-              <div className="quest-section-title">
-                <h5>Активные</h5>
-                <span>{active.length}</span>
-              </div>
-
+              <div className="quest-section-title"><h5>Активные</h5><span>{active.length}</span></div>
               <div className="quest-grid">
                 {active.map((quest) => {
                   const percent = Math.min(100, Math.round((quest.progress / quest.objective_target) * 100))
@@ -237,9 +333,7 @@ export function SettlementQuestsPanel({
                         </div>
                         <span className="quest-level">УР. {quest.min_level}+</span>
                       </div>
-
                       <p>{quest.description}</p>
-
                       <div className="quest-objective">
                         <strong>{objectiveText(quest)}</strong>
                         <span>{quest.progress}/{quest.objective_target}</span>
@@ -247,12 +341,11 @@ export function SettlementQuestsPanel({
                       <div className="quest-progress" aria-label={`Прогресс ${percent}%`}>
                         <span style={{ width: `${percent}%` }} />
                       </div>
-
                       <div className="quest-reward-row">
                         <span>Золото <strong>{quest.reward_gold.toLocaleString('ru-RU')}</strong></span>
                         <span>Опыт <strong>{quest.reward_experience.toLocaleString('ru-RU')}</strong></span>
+                        <span>Репутация <strong>+{quest.reward_reputation}</strong></span>
                       </div>
-
                       <div className="quest-actions">
                         <button
                           className="primary-button"
@@ -283,11 +376,7 @@ export function SettlementQuestsPanel({
           )}
 
           <div className="quest-section">
-            <div className="quest-section-title">
-              <h5>Доступные поручения</h5>
-              <span>{available.length}</span>
-            </div>
-
+            <div className="quest-section-title"><h5>Доступные поручения</h5><span>{available.length}</span></div>
             {available.length === 0 ? (
               <p className="muted">Других поручений сейчас нет.</p>
             ) : (
@@ -295,7 +384,6 @@ export function SettlementQuestsPanel({
                 {available.map((quest) => {
                   const cooldown = formatCooldown(quest.cooldown_remaining_seconds)
                   const permanentlyDone = quest.cooldown_remaining_seconds < 0
-
                   return (
                     <article className="quest-card" key={quest.quest_id}>
                       <div className="quest-card-top">
@@ -305,15 +393,13 @@ export function SettlementQuestsPanel({
                         </div>
                         <span className="quest-level">УР. {quest.min_level}+</span>
                       </div>
-
                       <p>{quest.description}</p>
                       <div className="quest-objective"><strong>{objectiveText(quest)}</strong></div>
-
                       <div className="quest-reward-row">
                         <span>Золото <strong>{quest.reward_gold.toLocaleString('ru-RU')}</strong></span>
                         <span>Опыт <strong>{quest.reward_experience.toLocaleString('ru-RU')}</strong></span>
+                        <span>Репутация <strong>+{quest.reward_reputation}</strong></span>
                       </div>
-
                       <button
                         className="primary-button quest-accept"
                         type="button"
