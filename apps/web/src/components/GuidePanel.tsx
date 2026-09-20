@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 type GuideSection =
   | 'start'
+  | 'races'
   | 'mechanics'
   | 'weapons'
   | 'armor'
@@ -41,6 +42,45 @@ type GuideItem = {
   unique_effect_value: number
 }
 
+type GuideMagicFamily = {
+  slug: string
+  name: string
+  kind: 'element' | 'school' | 'function'
+  description: string
+  spell_count: number
+}
+
+type GuideRaceTrait = {
+  name: string
+  type: string
+  value?: number
+  description: string
+  damage_type?: string
+  threshold?: number
+  families?: string[]
+  effect_type?: string
+}
+
+type GuideRace = {
+  id: string
+  slug: string
+  name: string
+  category: string
+  description: string
+  stat_modifiers: Record<string, number>
+  traits: GuideRaceTrait[]
+  innate_magic_damage_type: string | null
+  hp_bonus: number
+  mana_bonus: number
+  hp_regen_per_hour: number
+  mana_regen_per_hour: number
+  damage_resistances: Record<string, number>
+  passive_type: string | null
+  passive_value: number
+  passive_name: string | null
+  passive_description: string
+}
+
 type GuideSpell = {
   id: string
   slug: string
@@ -59,6 +99,7 @@ type GuideSpell = {
   support_effect_type: string | null
   support_value: number
   support_turns: number
+  families: Array<Pick<GuideMagicFamily, 'slug' | 'name' | 'kind'>>
 }
 
 type GuideAffix = {
@@ -83,12 +124,15 @@ type GuideMechanics = {
   critical_cap_percent: number
   physical_critical_multiplier: number
   magic_critical_multiplier: number
+  loot_quality_luck_relative_percent_per_point: number
   affix_slots: Record<string, number>
 }
 
 type GuideCatalog = {
   items: GuideItem[]
   spells: GuideSpell[]
+  magic_families: GuideMagicFamily[]
+  races: GuideRace[]
   affixes: GuideAffix[]
   mechanics: GuideMechanics
 }
@@ -99,6 +143,7 @@ type Props = {
 
 const sections: Array<{ id: GuideSection; label: string; description: string }> = [
   { id: 'start', label: 'Начало', description: 'Карта всего справочника' },
+  { id: 'races', label: 'Расы', description: 'Все игровые расы и их особенности' },
   { id: 'mechanics', label: 'Основы', description: 'Характеристики, урон и крит' },
   { id: 'weapons', label: 'Оружие', description: 'Семейства и весь каталог' },
   { id: 'armor', label: 'Броня', description: 'Броня, защиты и свойства' },
@@ -138,6 +183,10 @@ const damageLabels: Record<string, string> = {
   air: 'воздух',
   lightning: 'молния',
   ice: 'лёд',
+  arcane: 'арканный',
+  star: 'звёздный',
+  gravity: 'гравитационный',
+  moon: 'лунный',
 }
 
 const statLabels: Record<string, string> = {
@@ -191,22 +240,27 @@ const familyMechanics: Array<{ family: string; title: string; text: string }> = 
   {
     family: 'short_bow',
     title: 'Короткий лук',
-    text: 'Может быстро стрелять каждый ход или готовить полный натяг. Полный натяг занимает ход подготовки и следующий выстрел пробивает часть брони.',
+    text: 'Может быстро стрелять каждый ход или готовить полный натяг. Полный натяг занимает ход подготовки, а следующий выстрел получает усиленный урон и пробитие брони.',
   },
   {
     family: 'long_bow',
     title: 'Длинный лук',
-    text: 'Ориентирован на полный натяг. Подготовка занимает ход, зато следующий выстрел получает пробитие брони конкретного лука.',
+    text: 'Стреляет через полный натяг: ход подготовки, затем усиленный выстрел. Вклад Силы у длинных луков заметнее, чем у коротких.',
   },
   {
     family: 'dagger',
     title: 'Кинжал',
-    text: 'Прямой удар после защиты умножается на ×0,80. Отдельные кинжалы компенсируют это Эхом ударов — цепочкой дополнительных попаданий.',
+    text: 'После расчёта защиты итог обычного физического удара умножается на ×0,80. Сильные кинжалы компенсируют это особыми механиками вроде Эха или Разрыва.',
   },
   {
     family: 'rapier',
     title: 'Рапира',
-    text: 'Физическая атака игнорирует 10% физической защиты цели.',
+    text: 'Перед расчётом физического урона эффективная физическая защита цели уменьшается на 10%.',
+  },
+  {
+    family: 'sword',
+    title: 'Меч',
+    text: 'У семейства нет отдельного общего скрытого эффекта: сила определяется базовым уроном, скейлингом и свойствами конкретного меча.',
   },
   {
     family: 'blade',
@@ -216,27 +270,37 @@ const familyMechanics: Array<{ family: string; title: string; text: string }> = 
   {
     family: 'katana',
     title: 'Катана',
-    text: 'Нарастающий ритм: последовательные физические атаки по одной цели дают +8% урона за стак, максимум +40%. Некоторые катаны имеют отдельную механику первого удара.',
+    text: 'Последовательные физические атаки по одной цели дают +8% урона за стак, максимум +40%. Смена цели сбрасывает ритм.',
   },
   {
     family: 'spear',
     title: 'Копьё',
-    text: 'Семейство построено вокруг повышенной базовой силы удара и собственной обработки физической защиты цели.',
+    text: 'При расчёте удара учитывает 120% физической защиты цели, зато сами копья балансируются более высокой базовой силой и особыми свойствами.',
   },
   {
     family: 'axe',
-    title: 'Топоры и секиры',
-    text: 'Получают до +20% дополнительного урона против целей с большим запасом максимального здоровья.',
+    title: 'Топор',
+    text: 'Получает до +20% дополнительного физического урона в зависимости от максимального ОЗ цели: чем крупнее противник, тем сильнее бонус.',
+  },
+  {
+    family: 'battleaxe',
+    title: 'Секира',
+    text: 'Использует ту же механику охоты на крупные цели, что и топор: до +20% дополнительного физического урона от максимального ОЗ врага.',
   },
   {
     family: 'mace',
-    title: 'Булавы и молоты',
+    title: 'Булава',
+    text: 'Физические удары могут оглушить: базово 8% в соло/дуэли и 5% в групповом бою.',
+  },
+  {
+    family: 'hammer',
+    title: 'Молот',
     text: 'Физические удары могут оглушить: базово 8% в соло/дуэли и 5% в групповом бою.',
   },
   {
     family: 'club',
     title: 'Дубина',
-    text: 'Специализация на дробящем уроне: положительное сопротивление цели учитывается только наполовину, а дробящая уязвимость усиливается в ×1,5.',
+    text: 'Специализация на дробящем уроне: положительное сопротивление дробящему учитывается только наполовину, а уязвимость усиливается в ×1,5.',
   },
   {
     family: 'greatsword',
@@ -244,9 +308,14 @@ const familyMechanics: Array<{ family: string; title: string; text: string }> = 
     text: 'Каждый некритический физический удар добавляет +5 п.п. к следующему шансу крита. Крит сбрасывает накопление; общий шанс крита ограничен 60%.',
   },
   {
-    family: 'sword',
-    title: 'Меч, посох и жезл',
-    text: 'У этих семейств нет одной общей скрытой механики для всех экземпляров: основную роль играют база, скейлинг, уникальные свойства и аффиксы конкретного предмета.',
+    family: 'staff',
+    title: 'Боевой посох',
+    text: 'У семейства нет единой скрытой механики: характеристики боя задаются базой, скейлингом и свойствами конкретного посоха.',
+  },
+  {
+    family: 'wand',
+    title: 'Магический жезл',
+    text: 'У семейства нет единой скрытой механики: основную роль играют параметры и магические свойства конкретного жезла.',
   },
 ]
 
@@ -327,6 +396,19 @@ export function GuidePanel({ onBack }: Props) {
     void loadGuide()
   }, [])
 
+  const filteredRaces = useMemo(() => {
+    if (!catalog) return []
+    if (!search.trim()) return catalog.races
+    return catalog.races.filter((race) => matchesSearch([
+      race.name,
+      race.category,
+      race.description,
+      race.passive_name ?? '',
+      race.passive_description,
+      ...race.traits.map((trait) => [trait.name, trait.description].join(' ')),
+    ].join(' '), search))
+  }, [catalog, search])
+
   const filteredItems = useMemo(() => {
     if (!catalog) return []
     if (!search.trim()) return catalog.items
@@ -361,6 +443,7 @@ export function GuidePanel({ onBack }: Props) {
     ].join(' '), search))
   }, [catalog, search])
 
+  const raceCount = catalog?.races.length ?? 0
   const itemCount = catalog?.items.length ?? 0
   const spellCount = catalog?.spells.length ?? 0
   const affixCount = catalog?.affixes.length ?? 0
@@ -376,11 +459,12 @@ export function GuidePanel({ onBack }: Props) {
           <h1>Гид по механикам и контенту</h1>
           <p className="muted">
             Здесь собраны реальные правила боевой системы и актуальные каталоги из базы игры.
-            Оружие, броня, заклинания и аффиксы обновляются вместе с игровыми данными.
+            Расы, оружие, броня, заклинания, магические семейства и аффиксы обновляются вместе с игровыми данными.
           </p>
         </div>
 
         <div className="guide-hero-stats">
+          <span><b>{raceCount}</b><small>игровых рас</small></span>
           <span><b>{itemCount}</b><small>предметов экипировки</small></span>
           <span><b>{spellCount}</b><small>заклинаний</small></span>
           <span><b>{affixCount}</b><small>аффиксов</small></span>
@@ -429,8 +513,8 @@ export function GuidePanel({ onBack }: Props) {
                 <span className="eyebrow">С ЧЕГО НАЧАТЬ</span>
                 <h2>Всё важное в одном месте</h2>
                 <p className="muted">
-                  Гид не привязан к уровню персонажа. Можно заранее посмотреть будущие заклинания,
-                  сравнить оружие и понять, зачем нужны заточка, пробуждение и аффиксы.
+                  Гид не привязан к уровню персонажа. Можно сравнить все расы, заранее посмотреть будущие заклинания,
+                  изучить семейства магии и оружия и понять, зачем нужны заточка, пробуждение и аффиксы.
                 </p>
               </article>
 
@@ -462,6 +546,44 @@ export function GuidePanel({ onBack }: Props) {
             </>
           )}
 
+          {!loading && catalog && section === 'races' && (
+            <>
+              <GuideHeading
+                eyebrow="РАСЫ"
+                title="Все игровые расы"
+                text="Здесь показаны текущие расовые характеристики, сопротивления, регенерация, врождённая магия, пассивка и дополнительные черты прямо из базы."
+              />
+
+              <article className="panel guide-callout">
+                <span className="eyebrow">КАК ЧИТАТЬ БОНУСЫ</span>
+                <h3>Раса влияет на бой с первого уровня</h3>
+                <p>
+                  Расовые модификаторы добавляются поверх распределённых характеристик персонажа.
+                  Бонусы ОЗ и маны меняют базовые запасы, регенерация работает каждый час, а отрицательное сопротивление означает уязвимость.
+                </p>
+              </article>
+
+              <GuideSearch value={search} onChange={setSearch} placeholder="Найти расу, пассивку или категорию…" />
+
+              {Array.from(new Set(filteredRaces.map((race) => race.category))).map((category) => (
+                <article className="panel guide-subsection" key={category}>
+                  <div className="section-heading">
+                    <div>
+                      <span className="eyebrow">КАТЕГОРИЯ</span>
+                      <h3>{category}</h3>
+                    </div>
+                    <span className="badge">{filteredRaces.filter((race) => race.category === category).length}</span>
+                  </div>
+                  <div className="guide-catalog-grid">
+                    {filteredRaces
+                      .filter((race) => race.category === category)
+                      .map((race) => <RaceCard race={race} key={race.id} />)}
+                  </div>
+                </article>
+              ))}
+            </>
+          )}
+
           {!loading && catalog && section === 'mechanics' && (
             <>
               <GuideHeading
@@ -487,14 +609,19 @@ export function GuidePanel({ onBack }: Props) {
                   Базово <b>1% + УДА ×0,3%</b>, затем добавляются специальные бонусы.
                   Общий предел — <b>{catalog.mechanics.critical_cap_percent}%</b>.
                 </GuideRule>
+                <GuideRule title="Удача и качественный лут">
+                  Каждая единица УДА даёт <b>+{catalog.mechanics.loot_quality_luck_relative_percent_per_point}% относительного шанса</b>
+                  на выпадение экипировки Rare+ в подземельях. Это влияет на оружие, броню и аксессуары, но не на материалы и расходники.
+                </GuideRule>
                 <GuideRule title="Критический урон">
                   Физический крит: <b>×{catalog.mechanics.physical_critical_multiplier}</b>.
                   Магический крит: <b>×{catalog.mechanics.magic_critical_multiplier}</b>.
                   Процентный урон от максимального здоровья не критует.
                 </GuideRule>
                 <GuideRule title="Типы урона">
-                  Физические: режущий, колющий, дробящий. Стихийные: огонь, вода, земля, воздух,
-                  молния и лёд. Сопротивление уменьшает урон, отрицательное сопротивление означает уязвимость.
+                  Физические: режущий, колющий, дробящий. Магические каналы: огонь, вода, земля, воздух,
+                  молния, лёд, арканный, звёздный, гравитационный и лунный.
+                  Сопротивление уменьшает урон, отрицательное сопротивление означает уязвимость.
                 </GuideRule>
               </div>
 
@@ -570,10 +697,37 @@ export function GuidePanel({ onBack }: Props) {
             <>
               <GuideHeading
                 eyebrow="МАГИЯ"
-                title="Все заклинания"
-                text="Каталог показывает текущие требования, стоимость маны, тип урона, статусы и поддержку прямо из базы."
+                title="Заклинания и семейства"
+                text="Каталог показывает текущие требования, стоимость маны, тип урона, семейства, статусы и поддержку прямо из базы."
               />
-              <GuideSearch value={search} onChange={setSearch} placeholder="Найти заклинание, стихию или эффект…" />
+
+              <article className="panel guide-subsection">
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">СЕМЕЙСТВА МАГИИ</span>
+                    <h3>Стихии, школы и функции</h3>
+                  </div>
+                  <span className="badge">{catalog.magic_families.length}</span>
+                </div>
+                <p className="muted">
+                  Семейство и тип урона — разные вещи. Одно заклинание может одновременно относиться к нескольким семействам:
+                  например к магической школе и к функции вроде Защитной или Лечебной.
+                </p>
+                <div className="guide-effect-grid">
+                  {catalog.magic_families.map((family) => (
+                    <div className="guide-effect-card" key={family.slug}>
+                      <strong>{family.name}</strong>
+                      <p>{family.description}</p>
+                      <div className="guide-chip-list">
+                        <span>{family.kind === 'element' ? 'стихия' : family.kind === 'school' ? 'школа' : 'функция'}</span>
+                        <span>{family.spell_count} закл.</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <GuideSearch value={search} onChange={setSearch} placeholder="Найти заклинание, семейство, стихию или эффект…" />
               <div className="guide-catalog-grid">
                 {filteredSpells.map((spell) => (
                   <SpellCard spell={spell} key={spell.id} />
@@ -846,6 +1000,11 @@ export function GuidePanel({ onBack }: Props) {
                   Награда дополнительно масштабируется относительно уровня персонажа и сложности,
                   поэтому старые слабые данжи остаются запасным вариантом, а не лучшим способом прокачки.
                 </GuideRule>
+                <GuideRule title="Качество экипировки">
+                  Удача немного повышает шанс получить оружие, броню или аксессуар Rare+.
+                  Бонус относительный: каждая единица УДА добавляет <b>+{catalog.mechanics.loot_quality_luck_relative_percent_per_point}%</b>
+                  к базовому шансу подходящей награды.
+                </GuideRule>
               </div>
             </>
           )}
@@ -893,6 +1052,62 @@ function GuideSearch({
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
+  )
+}
+
+function RaceCard({ race }: { race: GuideRace }) {
+  const modifiers = objectEntries(race.stat_modifiers)
+  const resistances = objectEntries(race.damage_resistances)
+
+  return (
+    <article className="guide-catalog-card race">
+      <div className="guide-catalog-card-head">
+        <div>
+          <span className="eyebrow">{race.category}</span>
+          <strong>{race.name}</strong>
+        </div>
+        {race.innate_magic_damage_type && (
+          <span className="badge">{damageLabels[race.innate_magic_damage_type] ?? race.innate_magic_damage_type}</span>
+        )}
+      </div>
+
+      <p>{race.description}</p>
+
+      {modifiers.length > 0 && (
+        <div className="guide-chip-list">
+          {modifiers.map(([key, value]) => <span key={key}>{formatModifier(key, value)}</span>)}
+        </div>
+      )}
+
+      <div className="guide-chip-list">
+        {race.hp_bonus !== 0 && <span>ОЗ {race.hp_bonus > 0 ? '+' : ''}{race.hp_bonus}</span>}
+        {race.mana_bonus !== 0 && <span>Мана {race.mana_bonus > 0 ? '+' : ''}{race.mana_bonus}</span>}
+        <span>Реген ОЗ +{race.hp_regen_per_hour}/ч</span>
+        <span>Реген маны +{race.mana_regen_per_hour}/ч</span>
+        {race.innate_magic_damage_type && (
+          <span>Врождённая магия: {damageLabels[race.innate_magic_damage_type] ?? race.innate_magic_damage_type}</span>
+        )}
+      </div>
+
+      {resistances.length > 0 && (
+        <div className="guide-chip-list resistance">
+          {resistances.map(([key, value]) => <span key={key}>{formatResistance(key, value)}</span>)}
+        </div>
+      )}
+
+      {race.passive_name && (
+        <div className="guide-unique-block">
+          <b>{race.passive_name}</b>
+          <span>{race.passive_description}</span>
+        </div>
+      )}
+
+      {race.traits.map((trait, index) => (
+        <div className="guide-special-line" key={trait.name + index}>
+          <b>{trait.name}</b>{trait.description ? ' · ' + trait.description : ''}
+        </div>
+      ))}
+    </article>
   )
 }
 
@@ -1004,6 +1219,9 @@ function SpellCard({ spell }: { spell: GuideSpell }) {
       <div className="guide-chip-list">
         <span>{spell.mana_cost} маны</span>
         {spell.damage_type && <span>{damageLabels[spell.damage_type] ?? spell.damage_type}</span>}
+        {spell.families.map((family) => (
+          <span key={family.slug}>{family.name}</span>
+        ))}
         {spell.spell_kind === 'damage' && <span>множитель ×{Number(spell.power_multiplier).toFixed(2)}</span>}
         {spell.flat_power !== 0 && <span>плоская сила {spell.flat_power >= 0 ? '+' : ''}{spell.flat_power}</span>}
       </div>
