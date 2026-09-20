@@ -56,7 +56,7 @@ const effectOptions: Array<{ value: EquipmentAffixEffectType; label: string }> =
   { value: 'physical_damage_bonus', label: 'Физический урон · %' },
   { value: 'magic_damage_bonus', label: 'Магический урон · %' },
   { value: 'all_damage_bonus', label: 'Весь прямой урон · %' },
-  { value: 'low_hp_damage_reduction', label: 'Защита при низком HP · %' },
+  { value: 'low_hp_damage_reduction', label: 'Защита при низком ОЗ · %' },
   { value: 'boss_damage_bonus', label: 'Урон боссам · %' },
 ]
 
