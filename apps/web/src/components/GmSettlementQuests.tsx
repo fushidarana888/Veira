@@ -106,7 +106,9 @@ export function GmSettlementQuests() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
-  async function loadData(clearMessage = true) {\n    setLoading(true)\n    if (clearMessage) setMessage('')
+  async function loadData(clearMessage = true) {
+    setLoading(true)
+    if (clearMessage) setMessage('')
 
     const [questResult, worldResult, itemResult] = await Promise.all([
       supabase.rpc('gm_list_settlement_quests'),
@@ -218,7 +220,10 @@ export function GmSettlementQuests() {
       return
     }
 
-    const successMessage = draft.id ? 'Поручение обновлено.' : 'Поручение создано.'\n    await loadData(false)\n    setMessage(successMessage)\n    setBusy(false)
+    const successMessage = draft.id ? 'Поручение обновлено.' : 'Поручение создано.'
+    await loadData(false)
+    setMessage(successMessage)
+    setBusy(false)
   }
 
   async function toggleQuest(quest: GmQuest) {
