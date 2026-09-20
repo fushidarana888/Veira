@@ -9212,3 +9212,94 @@ textarea {
     transition-duration: 0.001ms !important;
   }
 }
+
+
+/* Death spirits */
+.fog-sector.has-death-spirit {
+  outline: 1px solid rgba(214, 226, 255, 0.42);
+  outline-offset: -2px;
+}
+
+.sector-death-spirit-mark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid rgba(231, 235, 255, 0.72);
+  border-radius: 999px;
+  background: rgba(24, 20, 36, 0.9);
+  color: #f3f0ff;
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: 0 0 12px rgba(170, 145, 255, 0.42);
+  pointer-events: none;
+}
+
+.death-spirit-sector-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.death-spirit-sector-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid rgba(190, 184, 224, 0.2);
+  border-radius: 14px;
+  background: rgba(24, 21, 34, 0.62);
+}
+
+.death-spirit-sector-card.own {
+  border-color: rgba(221, 214, 255, 0.38);
+}
+
+.death-spirit-sector-card > div {
+  display: grid;
+  gap: 4px;
+}
+
+.death-spirit-sector-card strong {
+  font-size: 1.05rem;
+}
+
+.death-spirit-sector-card small,
+.death-spirit-sector-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.death-spirit-fight-button {
+  flex: 0 0 auto;
+}
+
+.death-spirit-battle-note {
+  border-color: rgba(212, 204, 255, 0.3);
+}
+
+@media (max-width: 760px) {
+  .sector-death-spirit-mark {
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
+    box-shadow: none;
+  }
+
+  .death-spirit-sector-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .death-spirit-fight-button {
+    width: 100%;
+  }
+}
