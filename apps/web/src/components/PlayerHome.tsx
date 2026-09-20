@@ -1079,6 +1079,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           {characterTab === 'equipment' && (
             <EquipmentPanel
               equipment={equipment}
+              equipmentSets={equipmentSets}
               itemById={itemById}
               busy={inventoryBusy}
               message={inventoryMessage}
@@ -1536,12 +1537,14 @@ function InventoryPanel({
 
 function EquipmentPanel({
   equipment,
+  equipmentSets,
   itemById,
   busy,
   message,
   onUnequip,
 }: {
   equipment: CharacterEquipment[]
+  equipmentSets: EquipmentSetState[]
   itemById: Map<string, CharacterItem>
   busy: boolean
   message: string
@@ -1559,6 +1562,49 @@ function EquipmentPanel({
       </div>
 
       {message && <p className="form-message" aria-live="polite">{message}</p>}
+
+      {equipmentSets.length > 0 && (
+        <div className="equipment-set-list">
+          {equipmentSets.map((set) => (
+            <article className="equipment-set-card" key={set.set_id}>
+              <div className="equipment-set-heading">
+                <div>
+                  <span className="eyebrow">КОМПЛЕКТ</span>
+                  <strong>{set.name}</strong>
+                  <p>{set.description}</p>
+                </div>
+                <span className="badge">{set.equipped_pieces}/{set.total_pieces}</span>
+              </div>
+
+              <div className="equipment-set-pieces">
+                {set.pieces.map((piece) => (
+                  <span
+                    className={piece.equipped ? 'equipped' : piece.owned ? 'owned' : ''}
+                    key={piece.item_definition_id}
+                  >
+                    {piece.name} · ур. {piece.required_level}
+                  </span>
+                ))}
+              </div>
+
+              <div className="equipment-set-bonuses">
+                {set.bonuses.map((bonus) => (
+                  <div className={bonus.active ? 'active' : ''} key={bonus.required_pieces + ':' + bonus.effect_type}>
+                    <strong>{bonus.required_pieces}/{set.total_pieces} · {bonus.name}</strong>
+                    <span>{bonus.description}</span>
+                  </div>
+                ))}
+              </div>
+
+              {set.current_low_hp_bonus > 0 && (
+                <div className="equipment-set-current-bonus">
+                  Текущая Ярость Берсерка: <strong>+{set.current_low_hp_bonus}% прямого урона</strong>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
 
       <div className="equipment-grid">
         {(Object.keys(equipmentLabels) as EquipmentSlot[]).map((slot) => {
