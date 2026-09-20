@@ -28,6 +28,7 @@ export function useSmartRefresh(
     if (!enabled) return
 
     let disposed = false
+    let timer: number | null = null
 
     const run = async () => {
       if (disposed || runningRef.current || document.visibilityState === 'hidden') return
@@ -43,8 +44,27 @@ export function useSmartRefresh(
       }
     }
 
+    const stopTimer = () => {
+      if (timer !== null) {
+        window.clearInterval(timer)
+        timer = null
+      }
+    }
+
+    const startTimer = () => {
+      stopTimer()
+      if (intervalMs > 0 && document.visibilityState === 'visible') {
+        timer = window.setInterval(() => void run(), intervalMs)
+      }
+    }
+
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void run()
+      if (document.visibilityState === 'visible') {
+        startTimer()
+        void run()
+      } else {
+        stopTimer()
+      }
     }
     const onFocus = () => void run()
     const onOnline = () => void run()
@@ -57,13 +77,11 @@ export function useSmartRefresh(
       window.addEventListener('pageshow', onPageShow)
     }
 
-    const timer = intervalMs > 0
-      ? window.setInterval(() => void run(), intervalMs)
-      : null
+    startTimer()
 
     return () => {
       disposed = true
-      if (timer !== null) window.clearInterval(timer)
+      stopTimer()
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('online', onOnline)
