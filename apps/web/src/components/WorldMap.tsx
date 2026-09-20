@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 import { SettlementShop } from './SettlementShop'
@@ -157,6 +157,77 @@ function SectorContentIcon({ type }: { type: VisibleSectorContent }) {
     </svg>
   )
 }
+
+const MapSectorButton = memo(function MapSectorButton({
+  sector,
+  active,
+  awaitingEvent,
+  selected,
+  showGameplayOverlay,
+  onSelect,
+}: {
+  sector: CharacterMapSector
+  active: boolean
+  awaitingEvent: boolean
+  selected: boolean
+  showGameplayOverlay: boolean
+  onSelect: (sectorId: number) => void
+}) {
+  const contentType =
+    sector.is_discovered
+    && sector.content_type
+    && sector.content_type !== 'unassigned'
+    && sector.content_type !== 'wilderness'
+      ? sector.content_type
+      : null
+
+  const classNames = [
+    'fog-sector',
+    sector.is_discovered ? 'discovered' : 'hidden',
+    sector.is_explorable ? 'explorable' : '',
+    contentType ? sectorContentClass(contentType) : '',
+    active ? 'active-expedition' : '',
+    awaitingEvent && active ? 'awaiting-event' : '',
+    selected ? 'selected' : '',
+  ].filter(Boolean).join(' ')
+
+  return (
+    <button
+      type="button"
+      className={classNames}
+      title={
+        sector.is_discovered
+          ? sector.title ?? `Открытый сектор ${sector.grid_col}:${sector.grid_row}`
+          : sector.is_explorable
+            ? `Исследовать сектор ${sector.grid_col}:${sector.grid_row}`
+            : 'Неизведанная территория'
+      }
+      aria-label={
+        sector.is_discovered
+          ? sector.title ?? `Открытый сектор ${sector.grid_col}:${sector.grid_row}`
+          : `Неизведанный сектор ${sector.grid_col}:${sector.grid_row}`
+      }
+      onClick={() => onSelect(sector.id)}
+    >
+      {active && (
+        <span className="sector-expedition-mark">
+          {awaitingEvent ? '!' : '⌛'}
+        </span>
+      )}
+      {showGameplayOverlay && contentType && (
+        <span
+          className="sector-content-mark"
+          title={contentLabels[contentType]}
+        >
+          <SectorContentIcon type={contentType} />
+        </span>
+      )}
+      {!showGameplayOverlay && sector.is_discovered && sector.title && (
+        <span className="sector-location-mark">◆</span>
+      )}
+    </button>
+  )
+})
 
 function formatRemaining(milliseconds: number) {
   const safe = Math.max(0, milliseconds)
@@ -415,6 +486,10 @@ export function WorldMap({
   const selectedSector = selectedSectorId
     ? sectorById.get(selectedSectorId) ?? null
     : null
+
+  const selectSector = useCallback((sectorId: number) => {
+    setSelectedSectorId(sectorId)
+  }, [])
 
   useEffect(() => {
     const activeTimedAction = activeExpedition ?? activeSiteAction
@@ -831,67 +906,17 @@ export function WorldMap({
             className={`fog-grid ${showGameplayOverlay ? 'gameplay-overlay' : 'clean-overlay'}`}
             aria-label="Сектора карты Эйлара"
           >
-            {sectors.map((sector) => {
-              const active = openExpedition?.sector_id === sector.id
-              const selected = selectedSectorId === sector.id
-
-              const contentType =
-                sector.is_discovered
-                && sector.content_type
-                && sector.content_type !== 'unassigned'
-                && sector.content_type !== 'wilderness'
-                  ? sector.content_type
-                  : null
-
-              const classNames = [
-                'fog-sector',
-                sector.is_discovered ? 'discovered' : 'hidden',
-                sector.is_explorable ? 'explorable' : '',
-                contentType ? sectorContentClass(contentType) : '',
-                active ? 'active-expedition' : '',
-                waitingExpedition && active ? 'awaiting-event' : '',
-                selected ? 'selected' : '',
-              ].filter(Boolean).join(' ')
-
-              return (
-                <button
-                  key={sector.id}
-                  type="button"
-                  className={classNames}
-                  title={
-                    sector.is_discovered
-                      ? sector.title ?? `Открытый сектор ${sector.grid_col}:${sector.grid_row}`
-                      : sector.is_explorable
-                        ? `Исследовать сектор ${sector.grid_col}:${sector.grid_row}`
-                        : 'Неизведанная территория'
-                  }
-                  aria-label={
-                    sector.is_discovered
-                      ? sector.title ?? `Открытый сектор ${sector.grid_col}:${sector.grid_row}`
-                      : `Неизведанный сектор ${sector.grid_col}:${sector.grid_row}`
-                  }
-                  onClick={() => setSelectedSectorId(sector.id)}
-                >
-                  {active && (
-                    <span className="sector-expedition-mark">
-                      {waitingExpedition ? '!' : '⌛'}
-                    </span>
-                  )}
-                  {showGameplayOverlay && contentType && (
-                    <span
-                      className="sector-content-mark"
-                      title={contentLabels[contentType]}
-                    >
-                      <SectorContentIcon type={contentType} />
-                    </span>
-                  )}
-
-                  {!showGameplayOverlay && sector.is_discovered && sector.title && (
-                    <span className="sector-location-mark">◆</span>
-                  )}
-                </button>
-              )
-            })}
+            {sectors.map((sector) => (
+              <MapSectorButton
+                key={sector.id}
+                sector={sector}
+                active={openExpedition?.sector_id === sector.id}
+                awaitingEvent={Boolean(waitingExpedition)}
+                selected={selectedSectorId === sector.id}
+                showGameplayOverlay={showGameplayOverlay}
+                onSelect={selectSector}
+              />
+            ))}
           </div>
         </div>
       </div>
