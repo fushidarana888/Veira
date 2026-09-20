@@ -8758,3 +8758,346 @@ textarea {
     padding: 11px;
   }
 }
+
+
+/* Battle center */
+.battle-center-section {
+  display: grid;
+  gap: 14px;
+}
+
+.battle-center-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  background:
+    radial-gradient(circle at 92% 20%, rgba(151, 73, 62, .11), transparent 34%),
+    var(--panel);
+}
+
+.battle-center-header h2,
+.battle-history-list h3,
+.battle-history-detail h3,
+.battle-center-empty h3,
+.battle-moved-panel h3 {
+  margin: 5px 0 6px;
+}
+
+.battle-live-indicator {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  min-width: 120px;
+  color: #727c86;
+}
+
+.battle-live-indicator strong {
+  font-size: 20px;
+  letter-spacing: .12em;
+}
+
+.battle-live-indicator span {
+  font-size: 9px;
+}
+
+.battle-live-indicator.active strong {
+  color: #d98b78;
+}
+
+.battle-live-indicator.active span {
+  color: #c4a095;
+}
+
+.battle-center-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.battle-center-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  border: 1px solid #303842;
+  border-radius: 12px;
+  background: #0e1318;
+  color: #8f99a4;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.battle-center-tabs button.active {
+  border-color: rgba(188, 143, 83, .5);
+  background: rgba(177, 128, 65, .09);
+  color: #e3e7ea;
+}
+
+.battle-center-tabs b {
+  min-width: 20px;
+  border-radius: 999px;
+  background: #222a32;
+  padding: 2px 5px;
+  color: #c8d0d7;
+  font-size: 8px;
+}
+
+.battle-center-loading,
+.battle-center-empty,
+.lazy-panel-fallback {
+  min-height: 180px;
+  display: grid;
+  align-content: center;
+}
+
+.battle-moved-panel {
+  display: grid;
+  gap: 10px;
+  border-color: rgba(183, 132, 70, .42);
+  background:
+    linear-gradient(135deg, rgba(181, 132, 66, .08), transparent 58%),
+    var(--panel);
+}
+
+.battle-moved-panel .primary-button {
+  justify-self: start;
+}
+
+.battle-history-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, .72fr) minmax(0, 1.28fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.battle-history-list,
+.battle-history-detail {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.battle-history-detail {
+  position: sticky;
+  top: 12px;
+}
+
+.battle-history-cards {
+  display: grid;
+  gap: 7px;
+}
+
+.battle-history-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid #2f3740;
+  border-radius: 12px;
+  background: #0f1419;
+  color: #d7dde2;
+  padding: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.battle-history-card:hover,
+.battle-history-card.selected {
+  border-color: rgba(193, 151, 91, .52);
+  background: rgba(166, 119, 59, .065);
+}
+
+.battle-history-card > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.battle-history-card span,
+.battle-history-card small {
+  color: #87929d;
+  font-size: 8px;
+}
+
+.battle-history-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.battle-history-card > b {
+  align-self: start;
+  color: #bfa982;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.battle-participant-list {
+  display: grid;
+  gap: 10px;
+}
+
+.battle-participant-card {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #303842;
+  border-radius: 13px;
+  background: #0f1419;
+  padding: 12px;
+}
+
+.battle-participant-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.battle-participant-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.battle-participant-head strong {
+  color: #e2e6e9;
+  font-size: 12px;
+}
+
+.battle-participant-head span,
+.battle-participant-head b {
+  color: #98a2ac;
+  font-size: 9px;
+}
+
+.battle-equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.battle-equipment-item {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border: 1px solid #313943;
+  border-radius: 9px;
+  background: rgba(255,255,255,.018);
+  padding: 8px;
+}
+
+.battle-equipment-item > span,
+.battle-equipment-item small {
+  color: #818c97;
+  font-size: 8px;
+}
+
+.battle-equipment-item strong {
+  overflow: hidden;
+  color: #d5dbe0;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battle-equipment-item.rarity-uncommon { border-color: rgba(75, 125, 87, .45); }
+.battle-equipment-item.rarity-rare { border-color: rgba(72, 103, 157, .5); }
+.battle-equipment-item.rarity-epic { border-color: rgba(122, 78, 157, .5); }
+.battle-equipment-item.rarity-legendary { border-color: rgba(181, 133, 62, .56); }
+.battle-equipment-item.rarity-unique { border-color: rgba(177, 87, 78, .56); }
+
+.battle-old-snapshot,
+.battle-effect-damage {
+  margin: 0;
+  border: 1px dashed #39414b;
+  border-radius: 9px;
+  color: #88939e;
+  padding: 8px 9px;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.battle-state-chip {
+  width: fit-content;
+  border: 1px solid #4a4141;
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: #b89791;
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.battle-encounter-list {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid #2a3139;
+  padding-top: 11px;
+}
+
+.battle-encounter-list > strong {
+  color: #d7dde2;
+  font-size: 10px;
+}
+
+.battle-encounter-list > span {
+  color: #8f99a4;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+@media (max-width: 760px) {
+  .battle-center-header,
+  .battle-history-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-live-indicator {
+    justify-items: start;
+    min-width: 0;
+  }
+
+  .battle-history-detail {
+    position: static;
+  }
+
+  .battle-equipment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-participant-head {
+    flex-direction: column;
+  }
+
+  .battle-moved-panel .primary-button {
+    width: 100%;
+  }
+
+  /* Performance: fixed blur and 300 backdrop-filtered fog cells are expensive on mobile GPUs. */
+  .bottom-nav {
+    background: #0e1116;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .fog-sector.hidden {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .panel,
+  .auth-card {
+    box-shadow: none;
+  }
+
+  .battle-history-card,
+  .battle-participant-card,
+  .guide-catalog-card,
+  .adventure-site-row {
+    content-visibility: auto;
+    contain-intrinsic-size: 90px;
+  }
+}
