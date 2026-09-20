@@ -209,7 +209,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
       } else if (raw.includes('CHARACTER_ALREADY_EXISTS')) {
         setMessage('На этом аккаунте уже есть персонаж.')
       } else if (raw.includes('RACE_REQUIRES_GM_ACCESS')) {
-        setMessage('Эта раса доступна только после разрешения GM.')
+        setMessage('Эта раса доступна только после разрешения ГМ.')
       } else if (raw.includes('BIOGRAPHY_REQUIRED')) {
         setMessage('Короткая биография обязательна.')
       } else {
@@ -229,7 +229,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
     setGmMessage('')
 
     if (!code) {
-      setGmMessage('Введи одноразовый код GM.')
+      setGmMessage('Введи одноразовый код ГМ.')
       return
     }
 
@@ -247,14 +247,14 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
         if (raw.includes('INVALID_OR_EXPIRED_GM_CODE')) {
           setGmMessage('Код неверный, уже использован или истёк.')
         } else if (raw.includes('GM_ACCOUNT_MUST_NOT_HAVE_CHARACTER')) {
-          setGmMessage('GM-аккаунт должен быть отдельным и не иметь игрового персонажа.')
+          setGmMessage('ГМ-аккаунт должен быть отдельным и не иметь игрового персонажа.')
         } else {
           setGmMessage(raw)
         }
         return
       }
 
-      setGmMessage('GM-доступ активирован.')
+      setGmMessage('ГМ-доступ активирован.')
       await onCreated()
     } finally {
       setGmBusy(false)
@@ -294,7 +294,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
               <div className="race-picker-heading">
                 <div>
                   <span className="form-label">Раса</span>
-                  <p className="muted">Раса влияет на характеристики, HP/MP, восстановление, сопротивления, стихию и собственные боевые особенности.</p>
+                  <p className="muted">Раса влияет на характеристики, ОЗ/ОМ, восстановление, сопротивления, стихию и собственные боевые особенности.</p>
                 </div>
                 {selectedRace && <span className="selected-race-badge">Выбрано: {selectedRace.name}</span>}
               </div>
@@ -348,8 +348,8 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
                       <p>{race.description}</p>
                       <div className="race-card-mechanics">
                         <span>{damageTypeLabels[race.innate_magic_damage_type]} · врождённая магия</span>
-                        {race.hp_bonus !== 0 && <span>HP {race.hp_bonus > 0 ? '+' : ''}{race.hp_bonus}</span>}
-                        {race.mana_bonus !== 0 && <span>MP {race.mana_bonus > 0 ? '+' : ''}{race.mana_bonus}</span>}
+                        {race.hp_bonus !== 0 && <span>ОЗ {race.hp_bonus > 0 ? '+' : ''}{race.hp_bonus}</span>}
+                        {race.mana_bonus !== 0 && <span>ОМ {race.mana_bonus > 0 ? '+' : ''}{race.mana_bonus}</span>}
                         {race.passive_name && <span>{race.passive_name}</span>}
                       </div>
                     </button>
@@ -378,10 +378,10 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
                 </div>
 
                 <div className="race-mechanic-grid">
-                  <span><small>Макс. HP</small><strong>{selectedRace.hp_bonus >= 0 ? '+' : ''}{selectedRace.hp_bonus}</strong></span>
-                  <span><small>Макс. MP</small><strong>{selectedRace.mana_bonus >= 0 ? '+' : ''}{selectedRace.mana_bonus}</strong></span>
-                  <span><small>Реген HP/ч</small><strong>{selectedRace.hp_regen_per_hour}</strong></span>
-                  <span><small>Реген MP/ч</small><strong>{selectedRace.mana_regen_per_hour}</strong></span>
+                  <span><small>Макс. ОЗ</small><strong>{selectedRace.hp_bonus >= 0 ? '+' : ''}{selectedRace.hp_bonus}</strong></span>
+                  <span><small>Макс. ОМ</small><strong>{selectedRace.mana_bonus >= 0 ? '+' : ''}{selectedRace.mana_bonus}</strong></span>
+                  <span><small>Реген ОЗ/ч</small><strong>{selectedRace.hp_regen_per_hour}</strong></span>
+                  <span><small>Реген ОМ/ч</small><strong>{selectedRace.mana_regen_per_hour}</strong></span>
                 </div>
 
                 {Object.entries(selectedRace.damage_resistances ?? {})
@@ -512,7 +512,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
         </section>
 
         <aside className="panel gm-claim-card">
-          <span className="eyebrow">ОТДЕЛЬНЫЙ GM-АККАУНТ</span>
+          <span className="eyebrow">ОТДЕЛЬНЫЙ ГМ-АККАУНТ</span>
           <h2>Вход для Game Master</h2>
           <p className="muted">
             Используй это только на отдельном аккаунте без персонажа. Код одноразовый и после активации больше не сработает.
@@ -523,7 +523,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
             <input
               value={gmCode}
               onChange={(event) => setGmCode(event.target.value)}
-              placeholder="Вставь GM-код"
+              placeholder="Вставь код ГМ"
               autoComplete="off"
             />
           </label>
@@ -534,7 +534,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
             disabled={gmBusy}
             onClick={() => void claimGm()}
           >
-            {gmBusy ? 'Проверяем…' : 'Активировать GM'}
+            {gmBusy ? 'Проверяем…' : 'Активировать ГМ'}
           </button>
 
           {gmMessage && <p className="form-message" aria-live="polite">{gmMessage}</p>}
