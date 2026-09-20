@@ -438,8 +438,12 @@ export function GmItemsAndSpells() {
     setItemDraft({ ...itemDraft, stat_modifiers: next })
   }
 
-  function updatePercentStat(key: 'max_hp_percent' | 'defense_percent', raw: string) {
-    const limits = key === 'max_hp_percent' ? [-80, 200] : [-75, 100]
+  function updatePercentStat(key: 'max_hp_percent' | 'defense_percent' | 'exploration_speed_percent', raw: string) {
+    const limits = key === 'max_hp_percent'
+      ? [-80, 200]
+      : key === 'defense_percent'
+        ? [-75, 100]
+        : [0, 200]
     const value = Math.max(limits[0], Math.min(limits[1], Number(raw) || 0))
     const next = { ...itemDraft.stat_modifiers }
     if (value === 0) delete next[key]
@@ -939,9 +943,9 @@ export function GmItemsAndSpells() {
               <div className="gm-editor-box">
                 <div>
                   <strong>Процентные модификаторы</strong>
-                  <small>Меняют итоговый максимум ОЗ и обе защиты персонажа</small>
+                  <small>Боевые параметры и специальные бонусы экипировки</small>
                 </div>
-                <div className="gm-form-grid two">
+                <div className="gm-form-grid three">
                   <label>
                     <span>Максимум ОЗ · %</span>
                     <input
@@ -962,9 +966,21 @@ export function GmItemsAndSpells() {
                       onChange={(e) => updatePercentStat('defense_percent', e.target.value)}
                     />
                   </label>
+                  {itemDraft.category === 'accessory' && (
+                    <label>
+                      <span>Скорость исследования · %</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={200}
+                        value={itemDraft.stat_modifiers.exploration_speed_percent ?? 0}
+                        onChange={(e) => updatePercentStat('exploration_speed_percent', e.target.value)}
+                      />
+                    </label>
+                  )}
                 </div>
                 <p className="muted">
-                  «Вся защита» одинаково масштабирует физическую и магическую защиту. Отрицательное значение является штрафом.
+                  «Вся защита» одинаково масштабирует физическую и магическую защиту. Бонус скорости исследования работает только у надетых аксессуаров и складывается с религией.
                 </p>
               </div>
             )}
