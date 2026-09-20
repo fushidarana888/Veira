@@ -436,7 +436,7 @@ export type DungeonRun = {
 export type CharacterAdventureSite = {
   sector_id: number
   title: string
-  content_type: 'ruins' | 'dungeon' | 'event_boss'
+  content_type: 'ruins' | 'dungeon' | 'event_boss' | 'hunting'
   site_status: 'explored' | 'scouted' | 'cleared' | 'active' | 'completed' | 'abandoned' | null
   active_run_id: string | null
   run_status: 'active' | 'completed' | 'abandoned' | null
