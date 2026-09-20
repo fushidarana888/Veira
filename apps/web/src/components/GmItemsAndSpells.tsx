@@ -7,6 +7,7 @@ import type {
   CombatStatusEffectType,
   DamageType,
   ElementalDamageType,
+  MagicDamageType,
   ItemCategory,
   ItemDefinition,
   ItemEquipGroup,
@@ -21,10 +22,12 @@ import type {
 const damageTypes: DamageType[] = [
   'slashing', 'piercing', 'blunt',
   'fire', 'water', 'earth', 'air', 'lightning', 'ice',
+  'arcane', 'star', 'gravity', 'moon',
 ]
 
-const elementalTypes: ElementalDamageType[] = [
+const magicDamageTypes: MagicDamageType[] = [
   'fire', 'water', 'earth', 'air', 'lightning', 'ice',
+  'arcane', 'star', 'gravity', 'moon',
 ]
 
 const statusEffectOptions: Array<{ value: CombatStatusEffectType; label: string }> = [
@@ -47,6 +50,10 @@ const damageLabels: Record<DamageType, string> = {
   air: 'Воздушный',
   lightning: 'Электрический',
   ice: 'Ледяной',
+  arcane: 'Арканный',
+  star: 'Звёздный',
+  gravity: 'Гравитационный',
+  moon: 'Лунный',
 }
 
 const spellKindLabels: Record<SpellDefinition['spell_kind'], string> = {
@@ -200,7 +207,7 @@ type SpellDraft = {
   description: string
   enabled: boolean
   spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice'
-  damage_type: ElementalDamageType | null
+  damage_type: MagicDamageType | null
   mana_cost: number
   required_level: number
   power_multiplier: number
@@ -252,7 +259,7 @@ function emptyItem(): ItemDraft {
 
 function defaultFamilySlugs(
   kind: SpellDraft['spell_kind'],
-  damageType: ElementalDamageType | null,
+  damageType: MagicDamageType | null,
 ): string[] {
   if (kind === 'damage' && damageType) return [damageType]
   if (kind === 'heal') return ['healing']
@@ -1371,23 +1378,16 @@ export function GmItemsAndSpells() {
                 </select>
               </label>
               <label>
-                <span>Стихия</span>
+                <span>Тип магического урона</span>
                 <select
                   disabled={spellDraft.spell_kind !== 'damage'}
                   value={spellDraft.damage_type ?? ''}
-                  onChange={(e) => {
-                    const damageType = e.target.value as ElementalDamageType
-                    setSpellDraft((current) => ({
-                      ...current,
-                      damage_type: damageType,
-                      family_slugs: [
-                        ...current.family_slugs.filter((slug) => !elementalTypes.includes(slug as ElementalDamageType)),
-                        damageType,
-                      ],
-                    }))
-                  }}
+                  onChange={(e) => setSpellDraft({
+                    ...spellDraft,
+                    damage_type: e.target.value as MagicDamageType,
+                  })}
                 >
-                  {elementalTypes.map((type) => <option key={type} value={type}>{damageLabels[type]}</option>)}
+                  {magicDamageTypes.map((type) => <option key={type} value={type}>{damageLabels[type]}</option>)}
                 </select>
               </label>
               <label><span>Мана</span><input type="number" min={0} value={spellDraft.mana_cost} onChange={(e) => setSpellDraft({ ...spellDraft, mana_cost: Math.max(0, Number(e.target.value)) })} /></label>
