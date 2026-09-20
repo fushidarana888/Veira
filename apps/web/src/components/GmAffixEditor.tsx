@@ -250,7 +250,7 @@ export function GmAffixEditor() {
 
         <div className="gm-form-grid two">
           <label><span>Название</span><input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
-          <label><span>Slug</span><input value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} /></label>
+          <label><span>Служебный код</span><input value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} /></label>
         </div>
 
         <label><span>Описание</span><textarea rows={3} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></label>
