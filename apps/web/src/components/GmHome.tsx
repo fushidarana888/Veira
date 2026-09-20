@@ -274,7 +274,7 @@ export function GmHome({ profile, onSignOut }: Props) {
           <p className="muted">{profile.display_name}</p>
         </div>
         <div className="top-actions">
-          <span className="badge gm-badge">GM</span>
+          <span className="badge gm-badge">ГМ</span>
           <button className="ghost-button" type="button" onClick={() => void loadData()}>
             Обновить
           </button>
@@ -351,10 +351,10 @@ export function GmHome({ profile, onSignOut }: Props) {
                   </div>
 
                   <div className="gm-stat-strip">
-                    <span><small>LVL</small><strong>{selectedProgress.level}</strong></span>
-                    <span><small>EXP</small><strong>{selectedProgress.experience}</strong></span>
-                    <span><small>HP</small><strong>{selectedProgress.hp_current}/{selectedProgress.hp_max}</strong></span>
-                    <span><small>MP</small><strong>{selectedProgress.mana_current}/{selectedProgress.mana_max}</strong></span>
+                    <span><small>УР.</small><strong>{selectedProgress.level}</strong></span>
+                    <span><small>ОПЫТ</small><strong>{selectedProgress.experience}</strong></span>
+                    <span><small>ОЗ</small><strong>{selectedProgress.hp_current}/{selectedProgress.hp_max}</strong></span>
+                    <span><small>ОМ</small><strong>{selectedProgress.mana_current}/{selectedProgress.mana_max}</strong></span>
                     <span><small>Золото</small><strong>{selectedProgress.gold}</strong></span>
                   </div>
                 </article>
@@ -370,7 +370,7 @@ export function GmHome({ profile, onSignOut }: Props) {
                       disabled={busy}
                       onClick={() => void mutateProgress(
                         { experience: selectedProgress.experience + 100 },
-                        'Добавлено 100 EXP.',
+                        'Добавлено 100 опыта.',
                       )}
                     >
                       +100 EXP
@@ -524,7 +524,7 @@ export function GmHome({ profile, onSignOut }: Props) {
           <div className="section-heading">
             <div>
               <span className="eyebrow">AUDIT LOG</span>
-              <h2>Последние действия GM</h2>
+              <h2>Последние действия ГМ</h2>
             </div>
             <span className="badge">{audit.length}</span>
           </div>
