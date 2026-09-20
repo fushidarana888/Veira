@@ -278,8 +278,11 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     setInventoryBusy(true)
     setInventoryMessage('')
 
-    const [{ data: itemData, error: itemError }, { data: equipmentData, error: equipmentError }] =
-      await Promise.all([
+    const [
+      { data: itemData, error: itemError },
+      { data: equipmentData, error: equipmentError },
+      { data: setData, error: setError },
+    ] = await Promise.all([
         supabase
           .from('character_items')
           .select(`
@@ -324,7 +327,8 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               unique_property_name,
               unique_property_description,
               unique_effect_type,
-              unique_effect_value
+              unique_effect_value,
+              equipment_set_id
             )
           `)
           .eq('character_id', character.id)
@@ -333,16 +337,20 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           .from('character_equipment')
           .select('character_id, slot, character_item_id, equipped_at')
           .eq('character_id', character.id),
+        supabase.rpc('get_character_equipment_sets', {
+          p_character_id: character.id,
+        }),
       ])
 
-    if (itemError || equipmentError) {
-      setInventoryMessage(itemError?.message ?? equipmentError?.message ?? 'Не удалось загрузить инвентарь.')
+    if (itemError || equipmentError || setError) {
+      setInventoryMessage(itemError?.message ?? equipmentError?.message ?? setError?.message ?? 'Не удалось загрузить инвентарь.')
       setInventoryBusy(false)
       return
     }
 
     setItems((itemData as CharacterItem[] | null) ?? [])
     setEquipment((equipmentData as CharacterEquipment[] | null) ?? [])
+    setEquipmentSets((setData as EquipmentSetState[] | null) ?? [])
     setInventoryBusy(false)
   }
 
