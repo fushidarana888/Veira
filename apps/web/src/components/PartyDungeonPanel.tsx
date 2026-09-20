@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSmartRefresh } from '../lib/smartRefresh'
 import type { BowDistance, BowProfile } from '../types'
 
 type PartySummary = {
@@ -302,19 +303,21 @@ export function PartyDungeonPanel({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
-  async function loadState(silent = false) {
-    if (!silent) setLoading(true)
+  function normalizeState(raw: Partial<PartyDungeonState> | null): PartyDungeonState {
+    const value = raw ?? {}
+    return {
+      run: value.run ?? null,
+      encounter: value.encounter ?? null,
+      members: Array.isArray(value.members) ? value.members : [],
+      statuses: Array.isArray(value.statuses) ? value.statuses : [],
+      turns: Array.isArray(value.turns) ? value.turns : [],
+      loot: Array.isArray(value.loot) ? value.loot : [],
+      sacrifice_scroll_count: Number(value.sacrifice_scroll_count ?? 0),
+    }
+  }
 
-    const [partyResult, optionResult, dungeonResult, spellResult, bowProfileResult] = await Promise.all([
-      supabase.rpc('get_party_overview', {
-        p_character_id: characterId,
-      }),
-      supabase.rpc('get_party_dungeon_options', {
-        p_character_id: characterId,
-      }),
-      supabase.rpc('get_party_dungeon_state', {
-        p_character_id: characterId,
-      }),
+  async function loadStaticCombatData() {
+    const [spellResult, bowProfileResult] = await Promise.all([
       supabase.rpc('get_character_spells', {
         p_character_id: characterId,
       }),
@@ -323,34 +326,62 @@ export function PartyDungeonPanel({
       }),
     ])
 
-    const error = partyResult.error ?? optionResult.error ?? dungeonResult.error ?? spellResult.error ?? bowProfileResult.error
+    const error = spellResult.error ?? bowProfileResult.error
+    if (error) {
+      setMessage(coopError(error.message))
+      return
+    }
+
+    setSpells(
+      ((spellResult.data as PartySpell[] | null) ?? [])
+        .filter((spell) => spell.combat_slot !== null && ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt'].includes(spell.spell_kind)),
+    )
+    setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
+  }
+
+  async function loadDynamicState(silent = false) {
+    if (!silent) setLoading(true)
+
+    const dungeonPromise = supabase.rpc('get_party_dungeon_state', {
+      p_character_id: characterId,
+    })
+
+    if (mode === 'combat') {
+      const dungeonResult = await dungeonPromise
+      if (dungeonResult.error) {
+        if (!silent) setMessage(coopError(dungeonResult.error.message))
+        if (!silent) setLoading(false)
+        return
+      }
+
+      setState(normalizeState(dungeonResult.data as Partial<PartyDungeonState> | null))
+      if (!silent) setLoading(false)
+      return
+    }
+
+    const [partyResult, optionResult, dungeonResult] = await Promise.all([
+      supabase.rpc('get_party_overview', {
+        p_character_id: characterId,
+      }),
+      supabase.rpc('get_party_dungeon_options', {
+        p_character_id: characterId,
+      }),
+      dungeonPromise,
+    ])
+
+    const error = partyResult.error ?? optionResult.error ?? dungeonResult.error
     if (error) {
       if (!silent) setMessage(coopError(error.message))
       if (!silent) setLoading(false)
       return
     }
 
-    const overview = (partyResult.data as PartyOverview | null)
+    const overview = partyResult.data as PartyOverview | null
     const nextOptions = (optionResult.data as DungeonOption[] | null) ?? []
-    const rawState = (dungeonResult.data as Partial<PartyDungeonState> | null) ?? {}
-    const nextState: PartyDungeonState = {
-      run: rawState.run ?? null,
-      encounter: rawState.encounter ?? null,
-      members: Array.isArray(rawState.members) ? rawState.members : [],
-      statuses: Array.isArray(rawState.statuses) ? rawState.statuses : [],
-      turns: Array.isArray(rawState.turns) ? rawState.turns : [],
-      loot: Array.isArray(rawState.loot) ? rawState.loot : [],
-      sacrifice_scroll_count: Number(rawState.sacrifice_scroll_count ?? 0),
-    }
 
     setParty(overview?.party ?? null)
     setOptions(nextOptions)
-    setState(nextState)
-    setSpells(
-      ((spellResult.data as PartySpell[] | null) ?? [])
-        .filter((spell) => spell.combat_slot !== null && ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt'].includes(spell.spell_kind)),
-    )
-    setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
+    setState(normalizeState(dungeonResult.data as Partial<PartyDungeonState> | null))
 
     if (
       selectedSectorId == null
@@ -363,18 +394,23 @@ export function PartyDungeonPanel({
   }
 
   useEffect(() => {
-    void loadState()
-  }, [characterId])
+    setLoading(true)
+    void Promise.all([
+      loadStaticCombatData(),
+      loadDynamicState(true),
+    ]).finally(() => setLoading(false))
+  }, [characterId, mode])
 
-  useEffect(() => {
-    if (state.run?.status !== 'active') return
-
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void loadState(true)
-    }, mode === 'combat' ? 4500 : 8000)
-
-    return () => window.clearInterval(timer)
-  }, [characterId, mode, state.run?.id, state.run?.status])
+  useSmartRefresh(
+    () => loadDynamicState(true),
+    {
+      enabled: true,
+      intervalMs: state.run?.status === 'active'
+        ? (mode === 'combat' ? 3000 : 10000)
+        : 0,
+      minGapMs: mode === 'combat' ? 800 : 1500,
+    },
+  )
 
   async function refreshPlayer() {
     await Promise.all([
@@ -400,7 +436,7 @@ export function PartyDungeonPanel({
       return
     }
 
-    await Promise.all([loadState(true), refreshPlayer()])
+    await Promise.all([loadDynamicState(true), refreshPlayer()])
     setMessage('Группа вошла в подземелье. Лидер может открыть первый зал.')
     setBusy(false)
   }
@@ -422,7 +458,7 @@ export function PartyDungeonPanel({
       return
     }
 
-    await Promise.all([loadState(true), refreshPlayer()])
+    await Promise.all([loadDynamicState(true), refreshPlayer()])
     setMessage('Битва началась. Каждый живой участник получает одно действие в раунде.')
     setBusy(false)
   }
@@ -442,13 +478,13 @@ export function PartyDungeonPanel({
     if (error) {
       setMessage(coopError(error.message))
       setBusy(false)
-      await loadState(true)
+      await loadDynamicState(true)
       return
     }
 
     const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
 
-    await Promise.all([loadState(true), refreshPlayer()])
+    await Promise.all([loadDynamicState(true), refreshPlayer()])
 
     if (result?.status === 'victory') {
       setMessage(
@@ -477,7 +513,7 @@ export function PartyDungeonPanel({
       p_distance: distance,
     })
     if (error) setMessage(coopError(error.message))
-    await loadState(true)
+    await loadDynamicState(true)
     setBusy(false)
   }
 
@@ -502,12 +538,12 @@ export function PartyDungeonPanel({
     if (error) {
       setMessage(coopError(error.message))
       setBusy(false)
-      await loadState(true)
+      await loadDynamicState(true)
       return
     }
 
     const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
-    await Promise.all([loadState(true), refreshPlayer()])
+    await Promise.all([loadDynamicState(true), refreshPlayer()])
 
     if (result?.status === 'victory') {
       setMessage(
@@ -544,12 +580,12 @@ export function PartyDungeonPanel({
     if (error) {
       setMessage(coopError(error.message))
       setBusy(false)
-      await loadState(true)
+      await loadDynamicState(true)
       return
     }
 
     const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
-    await Promise.all([loadState(true), refreshPlayer()])
+    await Promise.all([loadDynamicState(true), refreshPlayer()])
 
     if (result?.status === 'defeat') {
       setMessage('Последняя жертва была принесена, но оставшиеся участники погибли. Бой завершён поражением.')
@@ -576,12 +612,12 @@ export function PartyDungeonPanel({
     if (error) {
       setMessage(coopError(error.message))
       setBusy(false)
-      await loadState(true)
+      await loadDynamicState(true)
       return
     }
 
     const result = data as { status?: string; enemy_acted?: boolean; enemy_stunned?: boolean } | null
-    await Promise.all([loadState(true), refreshPlayer()])
+    await Promise.all([loadDynamicState(true), refreshPlayer()])
 
     if (result?.status === 'defeat') {
       setMessage('После пропущенного хода группа потерпела поражение.')
@@ -614,7 +650,7 @@ export function PartyDungeonPanel({
     }
 
     await Promise.all([
-      loadState(true),
+      loadDynamicState(true),
       Promise.resolve(onProgressChanged?.()),
     ])
     setMessage('Группа отступила. До конца ротации Пепельного Кузнеца можно вызвать снова.')
@@ -639,12 +675,12 @@ export function PartyDungeonPanel({
     if (error) {
       setMessage(coopError(error.message))
       setBusy(false)
-      await loadState(true)
+      await loadDynamicState(true)
       return
     }
 
     const result = data as { escaped?: boolean; message?: string } | null
-    await Promise.all([loadState(true), refreshPlayer()])
+    await Promise.all([loadDynamicState(true), refreshPlayer()])
 
     setMessage(
       result?.escaped
