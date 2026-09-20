@@ -378,6 +378,8 @@ export function AdventuresPanel({
       const raw = error.message
       if (raw.includes('PVP_DUEL_ACTIVE')) {
         setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('DUNGEON_EXHAUSTED_UNTIL')) {
+        setMessage('Этот данж полностью истощён после 30 попыток. Вход закрыт на 24 часа с момента 30-й попытки.')
       } else if (raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
         setMessage('У персонажа уже есть активное прохождение подземелья.')
       } else if (raw.includes('DUNGEON_NOT_SCOUTED')) {
@@ -2052,6 +2054,7 @@ export function AdventuresPanel({
             <p className="muted">
               Повторные зачистки одного и того же подземелья за последние 24 часа постепенно снижают опыт и золото.
               Другие подземелья считаются отдельно, а спустя 24 часа старые прохождения перестают влиять на награду.
+              После 30-й попытки этот конкретный данж полностью закрывается для персонажа на 24 часа.
             </p>
             <div className="dungeon-fatigue-scale">
               <span><b>1-я</b><small>100% XP · 100% золота</small></span>
