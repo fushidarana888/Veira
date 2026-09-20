@@ -31,6 +31,8 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
 }
 
+type AdventureTab = 'current' | 'locations' | 'party' | 'bosses'
+
 type CombatScroll = {
   id: string
   quantity: number
@@ -180,6 +182,7 @@ export function AdventuresPanel({
   const [autobattleSpellRules, setAutobattleSpellRules] = useState<AutobattleSpellRule[]>([])
   const [combatStyleProfiles, setCombatStyleProfiles] = useState<CombatStyleProfile[]>([])
   const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
+  const [adventureTab, setAdventureTab] = useState<AdventureTab>('locations')
   const [autobattleEditorMode, setAutobattleEditorMode] = useState<'normal' | 'boss'>('normal')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -392,6 +395,7 @@ export function AdventuresPanel({
     }
 
     await loadAdventures()
+    setAdventureTab('current')
     setMessage('Прохождение начато.')
     setBusy(false)
   }
@@ -991,9 +995,9 @@ export function AdventuresPanel({
       <article className="panel adventures-header">
         <div>
           <span className="eyebrow">ПРИКЛЮЧЕНИЯ</span>
-          <h2>Руины и подземелья</h2>
+          <h2>Центр приключений</h2>
           <p className="muted">
-            Открытие сектора только обнаруживает место. Руины нужно исследовать отдельно, а вход в подземелье — сначала разведать.
+            Разделы теперь разнесены по папкам: текущий поход, найденные места, группа и временные боссы.
           </p>
         </div>
         <div className="adventure-counters">
@@ -1002,17 +1006,57 @@ export function AdventuresPanel({
         </div>
       </article>
 
-      <PartyPanel characterId={characterId} />
-
-      <PartyDungeonPanel
-        characterId={characterId}
-        onProgressChanged={onProgressChanged}
-        onInventoryChanged={onInventoryChanged}
-      />
-
-      <EventBossesPanel characterId={characterId} onChanged={loadAdventures} />
+      <div className="adventure-folder-tabs" role="tablist" aria-label="Разделы приключений">
+        <button className={adventureTab === 'current' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'current'} onClick={() => setAdventureTab('current')}>
+          <span>Сейчас</span>
+          {activeDungeon && <b>1</b>}
+        </button>
+        <button className={adventureTab === 'locations' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'locations'} onClick={() => setAdventureTab('locations')}>
+          <span>Места</span>
+          <b>{ruins.length + dungeons.length}</b>
+        </button>
+        <button className={adventureTab === 'party' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'party'} onClick={() => setAdventureTab('party')}>
+          <span>Группа</span>
+        </button>
+        <button className={adventureTab === 'bosses' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'bosses'} onClick={() => setAdventureTab('bosses')}>
+          <span>Боссы</span>
+        </button>
+      </div>
 
       {message && <p className="gm-notice" aria-live="polite">{message}</p>}
+
+      {adventureTab === 'party' && (
+        <div className="adventure-folder-content">
+          <PartyPanel characterId={characterId} />
+          <PartyDungeonPanel
+            characterId={characterId}
+            onProgressChanged={onProgressChanged}
+            onInventoryChanged={onInventoryChanged}
+          />
+        </div>
+      )}
+
+      {adventureTab === 'bosses' && (
+        <div className="adventure-folder-content">
+          <EventBossesPanel
+            characterId={characterId}
+            onChanged={async () => {
+              await loadAdventures()
+              setAdventureTab('current')
+            }}
+          />
+        </div>
+      )}
+
+      {adventureTab === 'current' && (
+        <div className="adventure-folder-content">
+          {!activeDungeon && !latestCombat && (
+            <article className="panel adventure-empty-folder">
+              <span className="eyebrow">СЕЙЧАС</span>
+              <h3>Активного приключения нет</h3>
+              <p className="muted">Выбери найденное подземелье во вкладке «Места» или событие во вкладке «Боссы».</p>
+            </article>
+          )}
 
       {activeDungeon && activeDungeon.active_run_id && (
         <article className="panel active-dungeon-panel">
@@ -1997,8 +2041,12 @@ export function AdventuresPanel({
           )}
         </article>
       )}
+        </div>
+      )}
 
-      <div className="adventure-site-grid">
+      {adventureTab === 'locations' && (
+        <div className="adventure-folder-content">
+          <div className="adventure-site-grid">
         <article className="panel">
           <div className="section-heading">
             <div>
@@ -2097,7 +2145,9 @@ export function AdventuresPanel({
             })}
           </div>
         </article>
-      </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
