@@ -149,7 +149,7 @@ export function MagicPanel({ characterId, progress }: Props) {
             <div className="spell-stats">
               <span>Концентрация <strong>активна</strong></span>
               <span>Урон и лечение <strong>+30%</strong></span>
-              <span>DoT <strong>+20%</strong></span>
+              <span>Урон со временем <strong>+20%</strong></span>
               <span>Щиты и % баффы <strong>+15%</strong></span>
               <span>Мягкие дебаффы <strong>+10%</strong></span>
             </div>
