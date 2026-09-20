@@ -486,7 +486,7 @@ export function PartyDungeonPanel({
 
     await Promise.all([
       loadDynamicState(true),
-      refreshPlayer(result?.status === 'victory'),
+      refreshPlayer(result?.status === 'victory' || result?.status === 'defeat'),
     ])
 
     if (result?.status === 'victory') {
@@ -548,7 +548,7 @@ export function PartyDungeonPanel({
     const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
     await Promise.all([
       loadDynamicState(true),
-      refreshPlayer(result?.status === 'victory'),
+      refreshPlayer(result?.status === 'victory' || result?.status === 'defeat'),
     ])
 
     if (result?.status === 'victory') {
@@ -628,7 +628,7 @@ export function PartyDungeonPanel({
     const result = data as { status?: string; enemy_acted?: boolean; enemy_stunned?: boolean } | null
     await Promise.all([
       loadDynamicState(true),
-      refreshPlayer(result?.status === 'victory'),
+      refreshPlayer(result?.status === 'victory' || result?.status === 'defeat'),
     ])
 
     if (result?.status === 'defeat') {
