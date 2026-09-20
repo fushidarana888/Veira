@@ -336,3 +336,193 @@
     justify-content: flex-start;
   }
 }
+
+
+.settlement-reputation-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #51452f;
+  border-radius: 15px;
+  background:
+    linear-gradient(145deg, rgba(190, 147, 82, .12), transparent 50%),
+    #10151b;
+  padding: 14px;
+}
+
+.reputation-heading,
+.reputation-progress-labels,
+.reputation-perks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reputation-heading h5 {
+  margin: 4px 0 0;
+  font-size: 16px;
+}
+
+.reputation-heading > strong {
+  color: #e1c18c;
+  font-size: 13px;
+}
+
+.reputation-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #222831;
+}
+
+.reputation-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8d7048, #d0ac70);
+}
+
+.reputation-progress-labels {
+  color: #8f98a3;
+  font-size: 10px;
+}
+
+.reputation-perks {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.reputation-perks span {
+  border: 1px solid #343c46;
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #aab2bc;
+  font-size: 9px;
+}
+
+.reputation-perks strong {
+  color: #e3c28e;
+}
+
+.reputation-current-perk,
+.reputation-next-perk {
+  margin: 0;
+  color: #aeb5be;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.reputation-next-perk strong {
+  color: #d8c29e;
+}
+
+.reputation-final-reward {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #5a4831;
+  border-radius: 12px;
+  background: rgba(153, 111, 55, .09);
+  padding: 10px;
+}
+
+.reputation-final-reward > span {
+  color: #a58c66;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.reputation-final-reward > strong {
+  color: #ead0a5;
+  font-size: 12px;
+}
+
+.reputation-final-reward > small {
+  color: #969faa;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.gm-reputation-config {
+  display: grid;
+  gap: 14px;
+}
+
+.gm-reputation-config > p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.gm-reputation-config-list {
+  display: grid;
+  gap: 9px;
+}
+
+.gm-reputation-config-row {
+  display: grid;
+  grid-template-columns: minmax(130px, .8fr) 110px minmax(220px, 1.4fr) auto;
+  align-items: end;
+  gap: 9px;
+  border: 1px solid #303741;
+  border-radius: 13px;
+  background: #10151b;
+  padding: 11px;
+}
+
+.gm-reputation-config-row > div {
+  display: grid;
+  gap: 3px;
+  align-self: center;
+}
+
+.gm-reputation-config-row > div strong {
+  font-size: 12px;
+}
+
+.gm-reputation-config-row > div small {
+  color: #858e98;
+  font-size: 9px;
+}
+
+.gm-reputation-config-row label {
+  display: grid;
+  gap: 5px;
+  color: #aeb5be;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.gm-reputation-config-row input,
+.gm-reputation-config-row select {
+  min-height: 39px;
+}
+
+@media (max-width: 760px) {
+  .reputation-heading,
+  .reputation-progress-labels {
+    align-items: flex-start;
+  }
+
+  .gm-reputation-config-row {
+    grid-template-columns: 1fr 100px;
+  }
+
+  .gm-reputation-config-row .reward-select {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .reputation-heading,
+  .reputation-progress-labels {
+    display: grid;
+  }
+
+  .gm-reputation-config-row {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-reputation-config-row .reward-select {
+    grid-column: auto;
+  }
+}
