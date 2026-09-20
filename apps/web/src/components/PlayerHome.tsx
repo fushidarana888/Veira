@@ -806,6 +806,11 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                   <CombatStat label="Физ. защита" value={effectivePhysicalDefense} />
                   <CombatStat label="Маг. защита" value={effectiveMagicDefense} />
                   <CombatStat label="Инициатива" value={derivedCombatStats.initiative} />
+                  <CombatStat
+                    label="Шанс крита"
+                    value={derivedCombatStats.criticalChancePercent.toFixed(1) + '%'}
+                  />
+                  <CombatStat label="Крит. урон" value="Физ. ×1.5 · Маг. ×1.4" />
                 </div>
               </section>
 
@@ -1282,7 +1287,7 @@ function Stat({ label, value, base }: { label: string; value: number; base: numb
   )
 }
 
-function CombatStat({ label, value }: { label: string; value: number }) {
+function CombatStat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="combat-stat-tile">
       <span>{label}</span>
