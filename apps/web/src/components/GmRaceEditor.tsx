@@ -259,7 +259,7 @@ export function GmRaceEditor() {
               <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             </label>
             <label>
-              <span>Slug</span>
+              <span>Служебный код</span>
               <input value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} />
             </label>
             <label>
