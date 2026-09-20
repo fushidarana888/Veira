@@ -515,14 +515,15 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     await loadInventory()
   }
 
-  async function useResourceItem(item: CharacterItem) {
+  async function useResourceItem(item: CharacterItem, fillToMax = false) {
     const definition = normalizeDefinition(item.item_definitions)
     if (!definition) return
 
     setInventoryBusy(true)
     setInventoryMessage('')
 
-    const { data, error } = await supabase.rpc('use_resource_consumable', {
+    const rpcName = fillToMax ? 'use_resource_consumable_to_full' : 'use_resource_consumable'
+    const { data, error } = await supabase.rpc(rpcName, {
       p_character_item_id: item.id,
     })
 
@@ -544,6 +545,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     const row = Array.isArray(data) ? data[0] : data
     const healed = Number(row?.healed ?? 0)
     const manaRestored = Number(row?.mana_restored ?? 0)
+    const itemsUsed = Number(row?.items_used ?? 1)
     await Promise.all([loadInventory(), loadProgress()])
 
     const restored = [
@@ -551,7 +553,11 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       manaRestored > 0 ? `+${manaRestored} маны` : '',
     ].filter(Boolean).join(' · ')
 
-    setInventoryMessage(restored ? `Восстановлено: ${restored}.` : 'Расходник использован.')
+    setInventoryMessage(
+      restored
+        ? `Восстановлено: ${restored}.${itemsUsed > 1 ? ` Использовано: ${itemsUsed} шт.` : ''}`
+        : 'Расходник использован.',
+    )
     setInventoryBusy(false)
   }
 
@@ -1315,6 +1321,8 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   )
 }
 
+type InventoryFilter = 'all' | 'weapon' | 'armor' | 'accessory' | 'consumable' | 'other'
+
 function InventoryPanel({
   items,
   equippedItemIds,
@@ -1329,9 +1337,53 @@ function InventoryPanel({
   busy: boolean
   message: string
   onEquip: (item: CharacterItem) => Promise<void>
-  onUseResource: (item: CharacterItem) => Promise<void>
+  onUseResource: (item: CharacterItem, fillToMax?: boolean) => Promise<void>
   onLearnScroll: (item: CharacterItem) => Promise<void>
 }) {
+  const [filter, setFilter] = useState<InventoryFilter>('all')
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<InventoryFilter, number> = {
+      all: items.length,
+      weapon: 0,
+      armor: 0,
+      accessory: 0,
+      consumable: 0,
+      other: 0,
+    }
+
+    for (const item of items) {
+      const definition = normalizeDefinition(item.item_definitions)
+      if (!definition) continue
+      if (definition.category === 'weapon') counts.weapon += 1
+      else if (definition.category === 'armor') counts.armor += 1
+      else if (definition.category === 'accessory') counts.accessory += 1
+      else if (definition.category === 'consumable') counts.consumable += 1
+      else counts.other += 1
+    }
+
+    return counts
+  }, [items])
+
+  const visibleItems = useMemo(() => items.filter((item) => {
+    if (filter === 'all') return true
+    const definition = normalizeDefinition(item.item_definitions)
+    if (!definition) return false
+    if (filter === 'other') {
+      return !['weapon', 'armor', 'accessory', 'consumable'].includes(definition.category)
+    }
+    return definition.category === filter
+  }), [filter, items])
+
+  const filters: Array<[InventoryFilter, string]> = [
+    ['all', 'Все'],
+    ['weapon', 'Оружие'],
+    ['armor', 'Броня'],
+    ['accessory', 'Аксессуары'],
+    ['consumable', 'Расходники'],
+    ['other', 'Прочее'],
+  ]
+
   return (
     <section className="panel">
       <div className="section-heading">
@@ -1344,11 +1396,29 @@ function InventoryPanel({
 
       {message && <p className="form-message" aria-live="polite">{message}</p>}
 
+      <div className="inventory-filter-tabs" role="tablist" aria-label="Фильтр инвентаря">
+        {filters.map(([key, label]) => (
+          <button
+            className={filter === key ? 'active' : ''}
+            type="button"
+            role="tab"
+            aria-selected={filter === key}
+            key={key}
+            onClick={() => setFilter(key)}
+          >
+            <span>{label}</span>
+            <b>{categoryCounts[key]}</b>
+          </button>
+        ))}
+      </div>
+
       {items.length === 0 ? (
         <p className="muted">Инвентарь пуст.</p>
+      ) : visibleItems.length === 0 ? (
+        <p className="muted">В этой категории пока ничего нет.</p>
       ) : (
         <div className="inventory-grid">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const definition = normalizeDefinition(item.item_definitions)
             if (!definition) return null
 
@@ -1510,16 +1580,28 @@ function InventoryPanel({
                       Боевой свиток · используется во время боя
                     </span>
                   ) : resourceAmounts.heal > 0 || resourceAmounts.mana > 0 ? (
-                    <button
-                      className="primary-button"
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void onUseResource(item)}
-                    >
-                      Использовать
-                      {resourceAmounts.heal > 0 ? ' · +' + resourceAmounts.heal + ' ОЗ' : ''}
-                      {resourceAmounts.mana > 0 ? ' · +' + resourceAmounts.mana + ' ОМ' : ''}
-                    </button>
+                    <div className="resource-item-actions">
+                      <button
+                        className="primary-button"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void onUseResource(item)}
+                      >
+                        Использовать
+                        {resourceAmounts.heal > 0 ? ' · +' + resourceAmounts.heal + ' ОЗ' : ''}
+                        {resourceAmounts.mana > 0 ? ' · +' + resourceAmounts.mana + ' ОМ' : ''}
+                      </button>
+                      {resourceAmounts.heal > 0 && item.quantity > 1 && (
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void onUseResource(item, true)}
+                        >
+                          Восстановить до максимума
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <span className="muted item-state">
                       {definition.category === 'consumable' ? 'Расходник' : 'Не экипируется'}
