@@ -45,9 +45,10 @@ const weaponScalingLabels: Record<'strength' | 'agility' | 'hybrid', string> = {
   hybrid: 'Гибридное',
 }
 
-const bowFamilyLabels: Record<'short_bow' | 'long_bow', string> = {
+const weaponFamilyLabels: Record<'short_bow' | 'long_bow' | 'dagger', string> = {
   short_bow: 'Короткий лук',
   long_bow: 'Длинный лук',
+  dagger: 'Кинжал',
 }
 
 const statLabels: Record<string, string> = {
@@ -239,7 +240,7 @@ export function SettlementShop({
                         <span>Базовый урон +{item.weapon_base_damage ?? 0}</span>
                         <span>{weaponScalingLabels[item.weapon_scaling ?? 'strength']}</span>
                         {item.weapon_family && (
-                          <span>{bowFamilyLabels[item.weapon_family]}</span>
+                          <span>{weaponFamilyLabels[item.weapon_family]}</span>
                         )}
                         {item.weapon_family && item.bow_full_draw_armor_penetration_percent > 0 && (
                           <span>Полный натяг · пробитие брони {item.bow_full_draw_armor_penetration_percent}%</span>
