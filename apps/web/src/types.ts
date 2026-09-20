@@ -40,6 +40,17 @@ export type RacePassiveType =
   | 'low_hp_damage_reduction'
   | 'boss_damage_bonus'
 
+export type RaceTrait = {
+  type: string
+  name?: string
+  description?: string
+  value?: number
+  threshold?: number
+  damage_type?: DamageType
+  effect_type?: CombatStatusEffectType
+  families?: WeaponFamily[]
+}
+
 export type RaceDefinition = {
   id: string
   slug: string
@@ -49,7 +60,7 @@ export type RaceDefinition = {
   sort_order: number
   playable: boolean
   stat_modifiers: Record<string, number>
-  traits: unknown[]
+  traits: RaceTrait[]
   innate_magic_damage_type: ElementalDamageType
   access_mode: 'open' | 'gm_only'
   hp_bonus: number
