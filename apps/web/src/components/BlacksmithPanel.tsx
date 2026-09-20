@@ -86,6 +86,8 @@ function blacksmithError(raw: string) {
   if (raw.includes('ITEMS_NOT_IDENTICAL')) return 'Для пробуждения нужна точно такая же модель оружия.'
   if (raw.includes('MAX_AWAKENING_REACHED')) return 'Оружие уже пробуждено до V ступени.'
   if (raw.includes('MAX_ENHANCEMENT_REACHED')) return 'Оружие уже заточено до +20.'
+  if (raw.includes('TEMPERING_MARK_NOT_AVAILABLE')) return 'Клеймо закалки III не найдено в инвентаре.'
+  if (raw.includes('MARK_NOT_NEEDED')) return 'Клеймо можно применить только к оружию ниже +3.'
   return raw
 }
 
@@ -134,24 +136,33 @@ export function BlacksmithPanel({
   const [loading, setLoading] = useState(true)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [temperingMarks, setTemperingMarks] = useState(0)
   const [awakeningSources, setAwakeningSources] = useState<Record<string, string>>({})
 
   async function loadWeapons(silent = false) {
     if (!silent) setLoading(true)
 
-    const { data, error } = await supabase.rpc('get_settlement_blacksmith_v2', {
-      p_character_id: characterId,
-      p_sector_id: sectorId,
-    })
+    const [weaponResult, markResult] = await Promise.all([
+      supabase.rpc('get_settlement_blacksmith_v2', {
+        p_character_id: characterId,
+        p_sector_id: sectorId,
+      }),
+      supabase.rpc('get_tempering_mark_iii_count', {
+        p_character_id: characterId,
+      }),
+    ])
 
-    if (error) {
-      setMessage(blacksmithError(error.message))
+    if (weaponResult.error) {
+      setMessage(blacksmithError(weaponResult.error.message))
       setWeapons([])
       if (!silent) setLoading(false)
       return
     }
 
-    setWeapons((data as BlacksmithWeapon[] | null) ?? [])
+    setWeapons((weaponResult.data as BlacksmithWeapon[] | null) ?? [])
+    if (!markResult.error) {
+      setTemperingMarks(Number(markResult.data ?? 0))
+    }
     if (!silent) setLoading(false)
   }
 
@@ -295,6 +306,33 @@ export function BlacksmithPanel({
     )
   }
 
+  async function useTemperingMark(weapon: BlacksmithWeapon) {
+    if (weapon.enhancement_level >= 3) return
+    if (!window.confirm(
+      `Использовать «Клеймо закалки III» на «${weapon.custom_name || weapon.item_name}»? Оружие сразу станет +3, золото не расходуется.`,
+    )) return
+
+    const key = `mark:${weapon.character_item_id}`
+    setBusyKey(key)
+    setMessage('')
+
+    const { error } = await supabase.rpc('use_tempering_mark_iii_at_blacksmith', {
+      p_character_id: characterId,
+      p_sector_id: sectorId,
+      p_character_item_id: weapon.character_item_id,
+    })
+
+    if (error) {
+      setMessage(blacksmithError(error.message))
+      setBusyKey(null)
+      return
+    }
+
+    await refreshAfterMutation(
+      `Клеймо закалки III использовано: ${weapon.custom_name || weapon.item_name} теперь +3 без затрат золота.`,
+    )
+  }
+
   async function awaken(weapon: BlacksmithWeapon) {
     const sourceId = awakeningSources[weapon.character_item_id]
       ?? weapon.duplicate_candidates[0]?.id
@@ -397,6 +435,17 @@ export function BlacksmithPanel({
             <span>Максимум +20. Высокие уровни заточки становятся заметно дороже и требуют сильного кузнеца.</span>
           </div>
 
+          {temperingMarks > 0 && (
+            <div className="blacksmith-special-material">
+              <div>
+                <span className="eyebrow">ОСОБАЯ НАГРАДА</span>
+                <strong>Клеймо закалки III ×{temperingMarks}</strong>
+                <small>Поднимает любое выбранное оружие ниже +3 сразу до +3 без золота.</small>
+              </div>
+              <span className="badge">weekly</span>
+            </div>
+          )}
+
           <div className="blacksmith-grid">
             {weapons.map((weapon) => {
               const globalMax = weapon.enhancement_level >= 20
@@ -461,6 +510,17 @@ export function BlacksmithPanel({
                         </button>
                       )}
                     </div>
+
+                    {temperingMarks > 0 && weapon.enhancement_level < 3 && (
+                      <button
+                        className="blacksmith-mark-button"
+                        type="button"
+                        disabled={busyKey !== null}
+                        onClick={() => void useTemperingMark(weapon)}
+                      >
+                        {busyKey === `mark:${weapon.character_item_id}` ? 'Ставим клеймо…' : 'Клеймо закалки III → +3 бесплатно'}
+                      </button>
+                    )}
                   </div>
                 </article>
               )
