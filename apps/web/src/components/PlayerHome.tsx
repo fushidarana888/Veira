@@ -73,6 +73,23 @@ const materialExchangeValues: Record<ItemDefinition['rarity'], number> = {
   unique: 100,
 }
 
+const equipmentExchangeValues: Record<ItemDefinition['rarity'], number> = {
+  common: 5,
+  uncommon: 12,
+  rare: 30,
+  epic: 70,
+  legendary: 160,
+  unique: 350,
+}
+
+function itemExchangeValue(definition: ItemDefinition) {
+  if (definition.category === 'material') return materialExchangeValues[definition.rarity]
+  if (['weapon', 'armor', 'accessory'].includes(definition.category)) {
+    return equipmentExchangeValues[definition.rarity]
+  }
+  return 0
+}
+
 const damageTypeLabels: Record<DamageType, string> = {
   slashing: 'Режущий',
   piercing: 'Колющий',
@@ -570,26 +587,38 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     setInventoryBusy(false)
   }
 
-  async function exchangeMaterial(item: CharacterItem, quantity: number) {
+  async function exchangeItem(item: CharacterItem, quantity: number) {
     const definition = normalizeDefinition(item.item_definitions)
-    if (!definition || definition.category !== 'material') return
+    if (!definition || itemExchangeValue(definition) <= 0) return
+
+    const isEquipment = ['weapon', 'armor', 'accessory'].includes(definition.category)
+    if (
+      isEquipment
+      && !window.confirm(`Обменять «${item.custom_name || definition.name}» на ${itemExchangeValue(definition)} золота? Вещь исчезнет без возможности восстановления.`)
+    ) {
+      return
+    }
 
     setInventoryBusy(true)
     setInventoryMessage('')
 
-    const { data, error } = await supabase.rpc('exchange_inventory_material', {
+    const { data, error } = await supabase.rpc('exchange_inventory_item', {
       p_character_item_id: item.id,
       p_quantity: quantity,
     })
 
     if (error) {
       const raw = error.message
-      if (raw.includes('PROTECTED_MATERIAL')) {
-        setInventoryMessage('Этот особый ресурс нельзя обменять на золото.')
+      if (raw.includes('PROTECTED_ITEM')) {
+        setInventoryMessage('Этот особый предмет нельзя обменять на золото.')
+      } else if (raw.includes('ITEM_IS_EQUIPPED')) {
+        setInventoryMessage('Сначала сними вещь с персонажа.')
       } else if (raw.includes('COMBAT_ACTIVE')) {
-        setInventoryMessage('Во время боя обменивать ресурсы нельзя.')
+        setInventoryMessage('Во время боя обменивать предметы нельзя.')
       } else if (raw.includes('NOT_ENOUGH_ITEMS')) {
-        setInventoryMessage('В инвентаре уже нет такого количества ресурса.')
+        setInventoryMessage('В инвентаре уже нет такого количества предметов.')
+      } else if (raw.includes('ITEM_IS_NOT_EXCHANGEABLE')) {
+        setInventoryMessage('Этот предмет нельзя обменять на золото.')
       } else {
         setInventoryMessage(raw)
       }
@@ -1123,7 +1152,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               message={inventoryMessage}
               onEquip={equipItem}
               onUseResource={useResourceItem}
-              onExchangeMaterial={exchangeMaterial}
+              onExchangeItem={exchangeItem}
               onLearnScroll={learnSpellFromScroll}
             />
           )}
@@ -1376,7 +1405,7 @@ function InventoryPanel({
   message,
   onEquip,
   onUseResource,
-  onExchangeMaterial,
+  onExchangeItem,
   onLearnScroll,
 }: {
   items: CharacterItem[]
@@ -1385,7 +1414,7 @@ function InventoryPanel({
   message: string
   onEquip: (item: CharacterItem) => Promise<void>
   onUseResource: (item: CharacterItem, fillToMax?: boolean) => Promise<void>
-  onExchangeMaterial: (item: CharacterItem, quantity: number) => Promise<void>
+  onExchangeItem: (item: CharacterItem, quantity: number) => Promise<void>
   onLearnScroll: (item: CharacterItem) => Promise<void>
 }) {
   const [filter, setFilter] = useState<InventoryFilter>('all')
@@ -1607,7 +1636,11 @@ function InventoryPanel({
                 <div className="item-actions">
                   {definition.equip_group ? (
                     <>
-                      <span className="muted item-state">Требуется ур. {definition.required_level}</span>
+                      <span className="muted item-state">
+                        {equipped
+                          ? 'Надето · сними для обмена'
+                          : `Требуется ур. ${definition.required_level} · обмен ${itemExchangeValue(definition)} золота`}
+                      </span>
                       <button
                         className={equipped ? 'ghost-button' : 'primary-button'}
                         type="button"
@@ -1616,6 +1649,16 @@ function InventoryPanel({
                       >
                         {equipped ? 'Надето' : 'Экипировать'}
                       </button>
+                      {!equipped && ['weapon', 'armor', 'accessory'].includes(definition.category) && (
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void onExchangeItem(item, 1)}
+                        >
+                          Обменять · {itemExchangeValue(definition)}
+                        </button>
+                      )}
                     </>
                   ) : definition.scroll_mode === 'learn' ? (
                     <button
@@ -1642,7 +1685,7 @@ function InventoryPanel({
                           className="ghost-button"
                           type="button"
                           disabled={busy}
-                          onClick={() => void onExchangeMaterial(item, 1)}
+                          onClick={() => void onExchangeItem(item, 1)}
                         >
                           Обменять 1
                         </button>
@@ -1651,7 +1694,7 @@ function InventoryPanel({
                             className="ghost-button"
                             type="button"
                             disabled={busy}
-                            onClick={() => void onExchangeMaterial(item, item.quantity)}
+                            onClick={() => void onExchangeItem(item, item.quantity)}
                           >
                             Обменять всё · {materialExchangeValues[definition.rarity] * item.quantity}
                           </button>
