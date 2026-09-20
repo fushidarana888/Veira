@@ -219,8 +219,8 @@ export function DuelPanel({ characterId }: Props) {
     void load()
 
     const timer = window.setInterval(() => {
-      void load(true)
-    }, 3500)
+      if (document.visibilityState === 'visible') void load(true)
+    }, 7000)
 
     return () => window.clearInterval(timer)
   }, [characterId])
