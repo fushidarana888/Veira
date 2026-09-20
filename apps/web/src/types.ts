@@ -511,6 +511,8 @@ export type CombatEncounter = {
   enemy_phase2_attack_bonus_percent: number
   enemy_phase2_defense_bonus_percent: number
   enemy_phase2_special_every_n: number
+  player_wound_stacks: number
+  enemy_rage_hunt_stacks: number
   created_at: string
   ended_at: string | null
 }
