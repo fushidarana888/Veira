@@ -18,6 +18,7 @@ type GmQuest = {
   target_item_name: string | null
   reward_gold: number
   reward_experience: number
+  reward_reputation: number
   min_level: number
   repeatable: boolean
   cooldown_hours: number
@@ -41,6 +42,21 @@ type DeliveryItem = {
   stackable: boolean
 }
 
+type RewardItem = {
+  id: string
+  name: string
+  category: string
+  rarity: string
+}
+
+type ReputationConfig = {
+  sector_id: number
+  settlement_name: string
+  daily_cap: number
+  level10_reward_item_id: string | null
+  level10_reward_item_name: string | null
+}
+
 type Draft = {
   id: string | null
   sectorId: number
@@ -52,6 +68,7 @@ type Draft = {
   targetItemId: string
   rewardGold: number
   rewardExperience: number
+  rewardReputation: number
   minLevel: number
   repeatable: boolean
   cooldownHours: number
@@ -89,6 +106,7 @@ function emptyDraft(settlementId = 0): Draft {
     targetItemId: '',
     rewardGold: 25,
     rewardExperience: 20,
+    rewardReputation: 5,
     minLevel: 1,
     repeatable: true,
     cooldownHours: 12,
@@ -101,17 +119,20 @@ export function GmSettlementQuests() {
   const [quests, setQuests] = useState<GmQuest[]>([])
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [deliveryItems, setDeliveryItems] = useState<DeliveryItem[]>([])
+  const [rewardItems, setRewardItems] = useState<RewardItem[]>([])
+  const [reputationConfigs, setReputationConfigs] = useState<ReputationConfig[]>([])
   const [draft, setDraft] = useState<Draft>(() => emptyDraft())
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [configBusySector, setConfigBusySector] = useState<number | null>(null)
   const [message, setMessage] = useState('')
 
   async function loadData(clearMessage = true) {
     setLoading(true)
     if (clearMessage) setMessage('')
 
-    const [questResult, worldResult, itemResult] = await Promise.all([
-      supabase.rpc('gm_list_settlement_quests'),
+    const [questResult, worldResult, itemResult, configResult, rewardItemResult] = await Promise.all([
+      supabase.rpc('gm_list_settlement_quests_v2'),
       supabase.rpc('get_gm_map_state'),
       supabase
         .from('item_definitions')
@@ -119,9 +140,21 @@ export function GmSettlementQuests() {
         .eq('stackable', true)
         .in('category', ['material', 'consumable', 'quest'])
         .order('name', { ascending: true }),
+      supabase.rpc('gm_list_settlement_reputation_configs'),
+      supabase
+        .from('item_definitions')
+        .select('id, name, category, rarity')
+        .in('category', ['weapon', 'armor', 'accessory'])
+        .order('name', { ascending: true }),
     ])
 
-    const error = questResult.error ?? worldResult.error ?? itemResult.error
+    const error =
+      questResult.error ??
+      worldResult.error ??
+      itemResult.error ??
+      configResult.error ??
+      rewardItemResult.error
+
     if (error) {
       setMessage(error.message)
       setLoading(false)
@@ -135,6 +168,8 @@ export function GmSettlementQuests() {
     setQuests((questResult.data as GmQuest[] | null) ?? [])
     setSettlements(nextSettlements)
     setDeliveryItems((itemResult.data as DeliveryItem[] | null) ?? [])
+    setRewardItems((rewardItemResult.data as RewardItem[] | null) ?? [])
+    setReputationConfigs((configResult.data as ReputationConfig[] | null) ?? [])
 
     setDraft((current) => current.sectorId
       ? current
@@ -164,6 +199,7 @@ export function GmSettlementQuests() {
       targetItemId: quest.target_item_definition_id ?? '',
       rewardGold: quest.reward_gold,
       rewardExperience: quest.reward_experience,
+      rewardReputation: quest.reward_reputation,
       minLevel: quest.min_level,
       repeatable: quest.repeatable,
       cooldownHours: quest.cooldown_hours,
@@ -196,7 +232,7 @@ export function GmSettlementQuests() {
     setBusy(true)
     setMessage('')
 
-    const { error } = await supabase.rpc('gm_save_settlement_quest', {
+    const { error } = await supabase.rpc('gm_save_settlement_quest_v2', {
       p_id: draft.id,
       p_sector_id: draft.sectorId,
       p_title: draft.title.trim(),
@@ -207,6 +243,7 @@ export function GmSettlementQuests() {
       p_target_item_definition_id: draft.objectiveType === 'deliver_item' ? draft.targetItemId : null,
       p_reward_gold: Math.max(0, Math.floor(draft.rewardGold)),
       p_reward_experience: Math.max(0, Math.floor(draft.rewardExperience)),
+      p_reward_reputation: Math.max(0, Math.min(15, Math.floor(draft.rewardReputation))),
       p_min_level: Math.max(1, Math.floor(draft.minLevel)),
       p_repeatable: draft.repeatable,
       p_cooldown_hours: Math.max(0, Math.floor(draft.cooldownHours)),
@@ -241,16 +278,109 @@ export function GmSettlementQuests() {
       return
     }
 
-    await loadData()
+    await loadData(false)
+    setMessage(quest.enabled ? 'Поручение скрыто.' : 'Поручение включено.')
     setBusy(false)
   }
 
+  function updateReputationConfig(sectorId: number, patch: Partial<ReputationConfig>) {
+    setReputationConfigs((current) => current.map((entry) =>
+      entry.sector_id === sectorId ? { ...entry, ...patch } : entry))
+  }
+
+  async function saveReputationConfig(config: ReputationConfig) {
+    setConfigBusySector(config.sector_id)
+    setMessage('')
+
+    const { error } = await supabase.rpc('gm_save_settlement_reputation_config', {
+      p_sector_id: config.sector_id,
+      p_daily_cap: Math.max(1, Math.min(100, Math.floor(config.daily_cap))),
+      p_level10_reward_item_id: config.level10_reward_item_id || null,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      setConfigBusySector(null)
+      return
+    }
+
+    await loadData(false)
+    setMessage(`Настройки репутации «${config.settlement_name}» сохранены.`)
+    setConfigBusySector(null)
+  }
+
   if (loading) {
-    return <section className="panel"><p className="muted">Загружаем поручения поселений…</p></section>
+    return <section className="panel"><p className="muted">Загружаем поручения и репутацию поселений…</p></section>
   }
 
   return (
     <div className="gm-quest-layout">
+      <section className="panel gm-reputation-config">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">РЕПУТАЦИЯ ПОСЕЛЕНИЙ</span>
+            <h2>Долгая городская прогрессия</h2>
+          </div>
+          <span className="badge">10 уровней · 2700 максимум</span>
+        </div>
+
+        <p className="muted">
+          По умолчанию поручение даёт 5 репутации, а в одном городе за сутки можно получить максимум 15.
+          Даже при идеальном ежедневном фарме 10 уровень занимает минимум 180 дней.
+        </p>
+
+        <div className="gm-reputation-config-list">
+          {reputationConfigs.map((config) => (
+            <article className="gm-reputation-config-row" key={config.sector_id}>
+              <div>
+                <strong>{config.settlement_name}</strong>
+                <small>Сектор {config.sector_id}</small>
+              </div>
+
+              <label>
+                <span>Лимит/сутки</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={config.daily_cap}
+                  onChange={(event) => updateReputationConfig(config.sector_id, {
+                    daily_cap: Number(event.target.value),
+                  })}
+                />
+              </label>
+
+              <label className="reward-select">
+                <span>Награда 10 уровня</span>
+                <select
+                  value={config.level10_reward_item_id ?? ''}
+                  onChange={(event) => updateReputationConfig(config.sector_id, {
+                    level10_reward_item_id: event.target.value || null,
+                    level10_reward_item_name: rewardItems.find((item) => item.id === event.target.value)?.name ?? null,
+                  })}
+                >
+                  <option value="">Не назначена</option>
+                  {rewardItems.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} · {item.rarity}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                className="ghost-button"
+                type="button"
+                disabled={configBusySector !== null}
+                onClick={() => void saveReputationConfig(config)}
+              >
+                {configBusySector === config.sector_id ? 'Сохраняем…' : 'Сохранить'}
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="panel gm-quest-editor">
         <div className="section-heading">
           <div>
@@ -261,8 +391,7 @@ export function GmSettlementQuests() {
         </div>
 
         <p className="muted">
-          Темы уже готовы для религий: природа, исследование, магия, защита и другие.
-          Прогресс считается сервером по реальным действиям игрока после принятия поручения.
+          Темы готовы для религий, а репутация начисляется только при реальной серверной сдаче поручения.
         </p>
 
         {message && <p className="gm-notice" aria-live="polite">{message}</p>}
@@ -387,6 +516,17 @@ export function GmSettlementQuests() {
           </label>
 
           <label>
+            <span>Репутация</span>
+            <input
+              type="number"
+              min={0}
+              max={15}
+              value={draft.rewardReputation}
+              onChange={(event) => setDraft((current) => ({ ...current, rewardReputation: Number(event.target.value) }))}
+            />
+          </label>
+
+          <label>
             <span>Кулдаун, часов</span>
             <input
               type="number"
@@ -465,6 +605,7 @@ export function GmSettlementQuests() {
                 {quest.target_item_name && <span>{quest.target_item_name}</span>}
                 <span>{quest.reward_gold} золота</span>
                 <span>{quest.reward_experience} опыта</span>
+                <span>+{quest.reward_reputation} репутации</span>
                 <span>УР. {quest.min_level}+</span>
                 <span>{quest.repeatable ? `повтор · ${quest.cooldown_hours} ч` : 'одноразовое'}</span>
               </div>
