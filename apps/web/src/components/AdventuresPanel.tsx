@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { PartyPanel } from './PartyPanel'
-import { PartyDungeonPanel } from './PartyDungeonPanel'
 import { EventBossesPanel } from './EventBossesPanel'
 import type {
   AutobattleGuardMode,
@@ -33,7 +31,7 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
 }
 
-type AdventureTab = 'current' | 'locations' | 'party' | 'bosses'
+type AdventureTab = 'current' | 'locations' | 'bosses'
 
 type CombatScroll = {
   id: string
@@ -1023,9 +1021,6 @@ export function AdventuresPanel({
               <span>Места</span>
               <b>{ruins.length + dungeons.length}</b>
             </button>
-            <button className={adventureTab === 'party' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'party'} onClick={() => setAdventureTab('party')}>
-              <span>Группа</span>
-            </button>
             <button className={adventureTab === 'bosses' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'bosses'} onClick={() => setAdventureTab('bosses')}>
               <span>Боссы</span>
             </button>
@@ -1034,19 +1029,6 @@ export function AdventuresPanel({
       )}
 
       {message && <p className="gm-notice" aria-live="polite">{message}</p>}
-
-      {mode === 'adventures' && adventureTab === 'party' && (
-        <div className="adventure-folder-content">
-          <PartyPanel characterId={characterId} />
-          <PartyDungeonPanel
-            characterId={characterId}
-            mode="management"
-            onOpenBattles={onOpenBattles}
-            onProgressChanged={onProgressChanged}
-            onInventoryChanged={onInventoryChanged}
-          />
-        </div>
-      )}
 
       {mode === 'adventures' && adventureTab === 'bosses' && (
         <div className="adventure-folder-content">
