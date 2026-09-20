@@ -64,6 +64,15 @@ const rarityLabels: Record<ItemDefinition['rarity'], string> = {
   unique: 'Уникальный',
 }
 
+const materialExchangeValues: Record<ItemDefinition['rarity'], number> = {
+  common: 2,
+  uncommon: 5,
+  rare: 12,
+  epic: 25,
+  legendary: 50,
+  unique: 100,
+}
+
 const damageTypeLabels: Record<DamageType, string> = {
   slashing: 'Режущий',
   piercing: 'Колющий',
@@ -558,6 +567,42 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         ? `Восстановлено: ${restored}.${itemsUsed > 1 ? ` Использовано: ${itemsUsed} шт.` : ''}`
         : 'Расходник использован.',
     )
+    setInventoryBusy(false)
+  }
+
+  async function exchangeMaterial(item: CharacterItem, quantity: number) {
+    const definition = normalizeDefinition(item.item_definitions)
+    if (!definition || definition.category !== 'material') return
+
+    setInventoryBusy(true)
+    setInventoryMessage('')
+
+    const { data, error } = await supabase.rpc('exchange_inventory_material', {
+      p_character_item_id: item.id,
+      p_quantity: quantity,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('PROTECTED_MATERIAL')) {
+        setInventoryMessage('Этот особый ресурс нельзя обменять на золото.')
+      } else if (raw.includes('COMBAT_ACTIVE')) {
+        setInventoryMessage('Во время боя обменивать ресурсы нельзя.')
+      } else if (raw.includes('NOT_ENOUGH_ITEMS')) {
+        setInventoryMessage('В инвентаре уже нет такого количества ресурса.')
+      } else {
+        setInventoryMessage(raw)
+      }
+      setInventoryBusy(false)
+      return
+    }
+
+    const row = Array.isArray(data) ? data[0] : data
+    const exchanged = Number(row?.quantity_exchanged ?? quantity)
+    const gold = Number(row?.gold_received ?? 0)
+
+    await Promise.all([loadInventory(), loadProgress()])
+    setInventoryMessage(`Обменено: ${definition.name} ×${exchanged} · получено ${gold} золота.`)
     setInventoryBusy(false)
   }
 
@@ -1078,6 +1123,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               message={inventoryMessage}
               onEquip={equipItem}
               onUseResource={useResourceItem}
+              onExchangeMaterial={exchangeMaterial}
               onLearnScroll={learnSpellFromScroll}
             />
           )}
@@ -1321,7 +1367,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   )
 }
 
-type InventoryFilter = 'all' | 'weapon' | 'armor' | 'accessory' | 'consumable' | 'other'
+type InventoryFilter = 'all' | 'weapon' | 'armor' | 'accessory' | 'consumable' | 'material' | 'other'
 
 function InventoryPanel({
   items,
@@ -1330,6 +1376,7 @@ function InventoryPanel({
   message,
   onEquip,
   onUseResource,
+  onExchangeMaterial,
   onLearnScroll,
 }: {
   items: CharacterItem[]
@@ -1338,6 +1385,7 @@ function InventoryPanel({
   message: string
   onEquip: (item: CharacterItem) => Promise<void>
   onUseResource: (item: CharacterItem, fillToMax?: boolean) => Promise<void>
+  onExchangeMaterial: (item: CharacterItem, quantity: number) => Promise<void>
   onLearnScroll: (item: CharacterItem) => Promise<void>
 }) {
   const [filter, setFilter] = useState<InventoryFilter>('all')
@@ -1349,6 +1397,7 @@ function InventoryPanel({
       armor: 0,
       accessory: 0,
       consumable: 0,
+      material: 0,
       other: 0,
     }
 
@@ -1359,6 +1408,7 @@ function InventoryPanel({
       else if (definition.category === 'armor') counts.armor += 1
       else if (definition.category === 'accessory') counts.accessory += 1
       else if (definition.category === 'consumable') counts.consumable += 1
+      else if (definition.category === 'material') counts.material += 1
       else counts.other += 1
     }
 
@@ -1370,7 +1420,7 @@ function InventoryPanel({
     const definition = normalizeDefinition(item.item_definitions)
     if (!definition) return false
     if (filter === 'other') {
-      return !['weapon', 'armor', 'accessory', 'consumable'].includes(definition.category)
+      return !['weapon', 'armor', 'accessory', 'consumable', 'material'].includes(definition.category)
     }
     return definition.category === filter
   }), [filter, items])
@@ -1381,6 +1431,7 @@ function InventoryPanel({
     ['armor', 'Броня'],
     ['accessory', 'Аксессуары'],
     ['consumable', 'Расходники'],
+    ['material', 'Ресурсы'],
     ['other', 'Прочее'],
   ]
 
@@ -1579,6 +1630,34 @@ function InventoryPanel({
                     <span className="muted item-state">
                       Боевой свиток · используется во время боя
                     </span>
+                  ) : definition.category === 'material' ? (
+                    definition.slug === 'tempering_mark_iii' ? (
+                      <span className="muted item-state">Особый ресурс · обмен недоступен</span>
+                    ) : (
+                      <div className="resource-item-actions material-exchange-actions">
+                        <span className="material-exchange-value">
+                          Обмен · {materialExchangeValues[definition.rarity]} золота за 1
+                        </span>
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void onExchangeMaterial(item, 1)}
+                        >
+                          Обменять 1
+                        </button>
+                        {item.quantity > 1 && (
+                          <button
+                            className="ghost-button"
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void onExchangeMaterial(item, item.quantity)}
+                          >
+                            Обменять всё · {materialExchangeValues[definition.rarity] * item.quantity}
+                          </button>
+                        )}
+                      </div>
+                    )
                   ) : resourceAmounts.heal > 0 || resourceAmounts.mana > 0 ? (
                     <div className="resource-item-actions">
                       <button
