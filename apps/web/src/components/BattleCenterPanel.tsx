@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSmartRefresh } from '../lib/smartRefresh'
 
 const AdventuresPanel = lazy(() => import('./AdventuresPanel').then((module) => ({ default: module.AdventuresPanel })))
 const PartyPanel = lazy(() => import('./PartyPanel').then((module) => ({ default: module.PartyPanel })))
@@ -211,15 +212,14 @@ export function BattleCenterPanel({
     void loadOverview()
   }, [characterId])
 
-  useEffect(() => {
-    if (tab !== 'current') return
-
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void loadOverview(true)
-    }, 8000)
-
-    return () => window.clearInterval(timer)
-  }, [characterId, tab])
+  useSmartRefresh(
+    () => loadOverview(true),
+    {
+      enabled: tab === 'current' || tab === 'group',
+      intervalMs: overview.active_kind ? 6000 : 0,
+      minGapMs: 1200,
+    },
+  )
 
   useEffect(() => {
     if (tab === 'history' && history.length === 0) void loadHistory()
