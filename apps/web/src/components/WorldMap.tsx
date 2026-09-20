@@ -818,6 +818,8 @@ export function WorldMap({
           <img
             src={mapSrc}
             alt="Карта Эйлара"
+            decoding="async"
+            fetchPriority="high"
             draggable={false}
             onError={() => {
               const fallback = import.meta.env.BASE_URL + 'eilar-map.webp?v=20260919-2'
