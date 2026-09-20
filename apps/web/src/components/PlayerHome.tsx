@@ -12,6 +12,7 @@ import type {
   CharacterItem,
   CharacterProgress,
   EquipmentSlot,
+  EquipmentSetState,
   DamageType,
   ItemDefinition,
   Profile,
@@ -206,6 +207,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   const [characterTab, setCharacterTab] = useState<CharacterTab>('overview')
   const [items, setItems] = useState<CharacterItem[]>([])
   const [equipment, setEquipment] = useState<CharacterEquipment[]>([])
+  const [equipmentSets, setEquipmentSets] = useState<EquipmentSetState[]>([])
   const [inventoryBusy, setInventoryBusy] = useState(false)
   const [raceDefinition, setRaceDefinition] = useState<RaceDefinition | null>(null)
   const [inventoryMessage, setInventoryMessage] = useState('')
