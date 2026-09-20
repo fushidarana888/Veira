@@ -47,7 +47,7 @@ type WorldMapCacheEntry = {
 const worldMapCache = new Map<string, WorldMapCacheEntry>()
 
 const TOTAL_SECTORS = 300
-const EXPLORATION_HOURS = 6
+const EXPLORATION_HOURS = 4
 const MAP_BASE_WIDTH = 1100
 const MAP_MIN_ZOOM = 0.35
 const MAP_MAX_ZOOM = 1.75
