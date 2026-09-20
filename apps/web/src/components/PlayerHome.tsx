@@ -713,7 +713,15 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   const expPercent = Math.min(100, Math.round((progress.experience / nextLevel) * 100))
   const effectiveHpMax = Math.max(
     1,
-    Math.round(progress.hp_max * (100 + equipmentPercentModifiers.maxHpPercent) / 100),
+    Math.round(
+      progress.hp_max
+        * (
+          100
+          + equipmentPercentModifiers.maxHpPercent
+          + Number(religionCombatModifiers.max_hp_percent ?? 0)
+        )
+        / 100,
+    ),
   )
   const effectiveHpCurrent = Math.min(
     effectiveHpMax,
