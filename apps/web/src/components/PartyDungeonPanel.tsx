@@ -287,9 +287,44 @@ function dungeonRewardMultiplier(danger: number, level: number, kind: 'xp' | 'go
   return 35
 }
 
-function scaledPartyDungeonReward(base: number, danger: number, level: number, kind: 'xp' | 'gold') {
-  if (danger === 0) return kind === 'xp' ? dungeonZeroExperience(level) : 40
-  return Math.max(1, Math.round(base * dungeonRewardMultiplier(danger, level, kind) / 100))
+function dungeonRepeatRewardMultiplier(attemptNumber: number, kind: 'xp' | 'gold') {
+  const attempt = Math.max(1, attemptNumber || 1)
+  if (kind === 'xp') {
+    if (attempt === 1) return 100
+    if (attempt === 2) return 90
+    if (attempt === 3) return 80
+    if (attempt === 4) return 65
+    if (attempt === 5) return 50
+    if (attempt === 6) return 35
+    if (attempt === 7) return 20
+    if (attempt === 8) return 10
+    return 0
+  }
+  if (attempt === 1) return 100
+  if (attempt === 2) return 75
+  if (attempt === 3) return 55
+  if (attempt === 4) return 40
+  if (attempt === 5) return 30
+  if (attempt === 6) return 20
+  if (attempt === 7) return 15
+  if (attempt === 8) return 10
+  return 5
+}
+
+function scaledPartyDungeonReward(
+  base: number,
+  danger: number,
+  level: number,
+  kind: 'xp' | 'gold',
+  attemptNumber = 1,
+) {
+  const levelScaled = danger === 0
+    ? (kind === 'xp' ? dungeonZeroExperience(level) : base)
+    : Math.max(1, Math.round(base * dungeonRewardMultiplier(danger, level, kind) / 100))
+  const repeatMultiplier = dungeonRepeatRewardMultiplier(attemptNumber, kind)
+  return kind === 'xp'
+    ? Math.max(0, Math.round(levelScaled * repeatMultiplier / 100))
+    : Math.max(1, Math.round(levelScaled * repeatMultiplier / 100))
 }
 
 export function PartyDungeonPanel({
@@ -911,19 +946,19 @@ export function PartyDungeonPanel({
                   {me?.reward_exhausted
                     ? 0
                     : me
-                      ? scaledPartyDungeonReward(activeRun.reward_gold, activeRun.danger_level, me.level, 'gold')
+                      ? scaledPartyDungeonReward(activeRun.reward_gold, activeRun.danger_level, me.level, 'gold', me.reward_attempt_number ?? 1)
                       : activeRun.reward_gold} золота · {me?.reward_exhausted
                     ? 0
                     : me
-                      ? scaledPartyDungeonReward(activeRun.reward_experience, activeRun.danger_level, me.level, 'xp')
+                      ? scaledPartyDungeonReward(activeRun.reward_experience, activeRun.danger_level, me.level, 'xp', me.reward_attempt_number ?? 1)
                       : activeRun.reward_experience} опыта тебе
                 </strong>
                 {me?.reward_exhausted ? (
                   <small>Личный лимит наград исчерпан: это попытка №{me.reward_attempt_number ?? 26} текущего 18-часового цикла. Вход и прохождение доступны, награда — 0.</small>
                 ) : activeRun.danger_level === 0 ? (
-                  <small>ОПЫТ: УР. 1 — 15 · УР. 2 — 11 · УР. 3 — 6 · УР. 4 — 2 · УР. 5+ — 1. Золото всегда 40.</small>
+                  <small>ОПЫТ: УР. 1 — 15 · УР. 2 — 11 · УР. 3 — 6 · УР. 4 — 2 · УР. 5+ — 1. Базовое золото — 12, повторные зачистки снижают его.</small>
                 ) : (
-                  <small>Если перерасти данж, награда постепенно снижается, но не ниже 5% опыта и 35% золота.</small>
+                  <small>Переросший персонаж получает меньше базовой награды; поверх этого отдельно действует снижение за повторные зачистки текущего 18-часового цикла.</small>
                 )}
               </div>
             </div>
