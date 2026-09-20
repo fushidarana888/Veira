@@ -297,7 +297,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, enemy_bloodshed_stacks, created_at, ended_at')
+        .select('id, dungeon_run_id, death_spirit_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, enemy_bloodshed_stacks, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(6),
@@ -393,12 +393,31 @@ export function AdventuresPanel({
     },
   )
 
+  const latestCombat = encounters[0] ?? null
+  const activeCombat = latestCombat?.status === 'active' ? latestCombat : null
+  const activeDeathSpirit = activeCombat?.death_spirit_id ? activeCombat : null
+
   const activeDungeon = useMemo(
     () => sites.find(
       (site) => (site.content_type === 'dungeon' || site.content_type === 'event_boss')
         && site.run_status === 'active',
-    ) ?? null,
-    [sites],
+    ) ?? (activeDeathSpirit ? ({
+      sector_id: activeDeathSpirit.sector_id,
+      title: activeDeathSpirit.enemy_name,
+      content_type: 'dungeon',
+      site_status: 'active',
+      active_run_id: activeDeathSpirit.id,
+      run_status: 'active',
+      run_stage: 'death_spirit',
+      run_started_at: activeDeathSpirit.created_at,
+      run_rooms_cleared: 0,
+      run_total_rooms: 1,
+      run_reward_gold: 0,
+      run_reward_experience: 0,
+      run_escape_attempt_stage: null,
+      is_event_boss: false,
+    } as CharacterAdventureSite) : null),
+    [sites, activeDeathSpirit],
   )
 
   const ruins = useMemo(
@@ -410,9 +429,6 @@ export function AdventuresPanel({
     () => sites.filter((site) => site.content_type === 'dungeon'),
     [sites],
   )
-
-  const latestCombat = encounters[0] ?? null
-  const activeCombat = latestCombat?.status === 'active' ? latestCombat : null
   const playerStatusEffects = statusEffects.filter((effect) => effect.target === 'player')
   const enemyStatusEffects = statusEffects.filter((effect) => effect.target === 'enemy')
   const latestCombatSite = latestCombat
@@ -1170,13 +1186,18 @@ export function AdventuresPanel({
         <article className="panel active-dungeon-panel">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">{activeEventBoss ? 'НЕДЕЛЬНЫЙ БОСС' : 'АКТИВНОЕ ПРОХОЖДЕНИЕ'}</span>
+              <span className="eyebrow">{activeDeathSpirit ? 'ДУХ ПОГИБШЕГО' : activeEventBoss ? 'НЕДЕЛЬНЫЙ БОСС' : 'АКТИВНОЕ ПРОХОЖДЕНИЕ'}</span>
               <h2>{activeDungeon.title}</h2>
             </div>
-            <span className="badge">{activeEventBoss ? 'особая угроза' : `сектор #${activeDungeon.sector_id}`}</span>
+            <span className="badge">{activeDeathSpirit ? 'бой за снаряжение' : activeEventBoss ? 'особая угроза' : `сектор #${activeDungeon.sector_id}`}</span>
           </div>
 
-          {activeEventBoss ? (
+          {activeDeathSpirit ? (
+            <div className="event-active-run-note death-spirit-battle-note">
+              <strong>Это дух погибшего персонажа.</strong>
+              <span>Если это твой дух, он ослаблен на 30% и победа вернёт потерянную вещь. Чужой дух усилен на 30%, а его трофей перейдёт победителю.</span>
+            </div>
+          ) : activeEventBoss ? (
             <div className="event-active-run-note">
               <strong>Пепельный Кузнец не связан с картой и не имеет залов.</strong>
               <span>Победи босса в одном бою. Клеймо закалки III выдаётся только за первую победу этой недельной ротации.</span>
