@@ -1968,7 +1968,7 @@ function InventoryPanel({
                   <div className="modifier-list">
                     {modifiers.map(([key, value]) => (
                       <span key={key}>
-                        {statLabels[key as StatKey] ?? key} {value >= 0 ? '+' : ''}{value}
+                        {key === 'exploration_speed_percent' ? 'Скорость исследования' : statLabels[key as StatKey] ?? key} {value >= 0 ? '+' : ''}{value}{key === 'exploration_speed_percent' ? '%' : ''}
                       </span>
                     ))}
                   </div>
@@ -1978,7 +1978,7 @@ function InventoryPanel({
                   <div className="modifier-list affix-modifiers">
                     {affixModifiers.map(([key, value]) => (
                       <span key={'affix-' + key}>
-                        {statLabels[key as StatKey] ?? key} {value >= 0 ? '+' : ''}{value}
+                        {key === 'exploration_speed_percent' ? 'Скорость исследования' : statLabels[key as StatKey] ?? key} {value >= 0 ? '+' : ''}{value}{key === 'exploration_speed_percent' ? '%' : ''}
                       </span>
                     ))}
                   </div>
