@@ -7,7 +7,7 @@ const AdventuresPanel = lazy(() => import('./AdventuresPanel').then((module) => 
 const BattleCenterPanel = lazy(() => import('./BattleCenterPanel').then((module) => ({ default: module.BattleCenterPanel })))
 const CraftingPanel = lazy(() => import('./CraftingPanel').then((module) => ({ default: module.CraftingPanel })))
 const GuidePanel = lazy(() => import('./GuidePanel').then((module) => ({ default: module.GuidePanel })))
-const GuildPanel = lazy(() => import('./GuildPanel').then((module) => ({ default: module.GuildPanel })))
+const CommunitiesPanel = lazy(() => import('./CommunitiesPanel').then((module) => ({ default: module.CommunitiesPanel })))
 const MagicPanel = lazy(() => import('./MagicPanel').then((module) => ({ default: module.MagicPanel })))
 const WorldMap = lazy(() => import('./WorldMap').then((module) => ({ default: module.WorldMap })))
 import type {
@@ -246,7 +246,7 @@ function combinedResistances(item: CharacterItem, definition: ItemDefinition) {
 export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) {
   const [tab, setTab] = useState<Tab>('character')
   const [characterTab, setCharacterTab] = useState<CharacterTab>('overview')
-  const [moreView, setMoreView] = useState<'menu' | 'guide' | 'guild'>('menu')
+  const [moreView, setMoreView] = useState<'menu' | 'guide' | 'communities'>('menu')
   const [items, setItems] = useState<CharacterItem[]>([])
   const [historyItem, setHistoryItem] = useState<CharacterItem | null>(null)
   const [historyEvents, setHistoryEvents] = useState<ItemHistoryEvent[]>([])
@@ -1402,27 +1402,27 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           <GuidePanel onBack={() => setMoreView('menu')} />
         </Suspense>
       )}
-      {tab === 'more' && moreView === 'guild' && (
-        <Suspense fallback={<LazyPanelFallback title="Загружаем гильдии…" />}>
-          <GuildPanel characterId={character.id} onBack={() => setMoreView('menu')} />
+      {tab === 'more' && moreView === 'communities' && (
+        <Suspense fallback={<LazyPanelFallback title="Загружаем сообщества…" />}>
+          <CommunitiesPanel characterId={character.id} onBack={() => setMoreView('menu')} />
         </Suspense>
       )}
       {tab === 'more' && moreView === 'menu' && (
         <div className="more-section">
-          <section className="panel guild-entry-panel">
+          <section className="panel communities-entry-panel">
             <div>
-              <span className="eyebrow">ГИЛЬДИИ</span>
-              <h2>Создай свою фракцию</h2>
+              <span className="eyebrow">СООБЩЕСТВА</span>
+              <h2>Объединения игроков</h2>
               <p className="muted">
-                Постоянные объединения игроков: состав, роли, заявки и управление. Позже поверх этой основы появятся гильдейские хранилища, казна и совместные активности.
+                Гильдии и будущие социальные объединения теперь собраны в одном разделе.
               </p>
             </div>
             <button
               className="primary-button"
               type="button"
-              onClick={() => setMoreView('guild')}
+              onClick={() => setMoreView('communities')}
             >
-              Открыть гильдии
+              Открыть сообщества
             </button>
           </section>
 
