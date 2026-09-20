@@ -267,13 +267,13 @@ export function SettlementShop({
                           <span className="rarity-label">{rarityLabels[item.rarity] ?? item.rarity}</span>
                           <h5>{item.item_name}</h5>
                         </div>
-                        <span className="shop-item-tier">T{item.shop_tier}</span>
+                        <span className="shop-item-tier">Тир {item.shop_tier}</span>
                       </div>
   
                       <p>{item.description}</p>
   
                       {item.heal_amount > 0 && (
-                        <div className="shop-item-effect">+{item.heal_amount} HP</div>
+                        <div className="shop-item-effect">+{item.heal_amount} ОЗ</div>
                       )}
   
                       {item.scroll_mode && item.scroll_spell_name && (
