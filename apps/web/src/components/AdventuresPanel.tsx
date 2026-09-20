@@ -1195,7 +1195,7 @@ export function AdventuresPanel({
           {activeDeathSpirit ? (
             <div className="event-active-run-note death-spirit-battle-note">
               <strong>Это дух погибшего персонажа.</strong>
-              <span>Если это твой дух, он ослаблен на 30% и победа вернёт потерянную вещь. Чужой дух усилен на 30%, а его трофей перейдёт победителю.</span>
+              <span>Если это твой дух, он использует 60% силы исходного персонажа и победа вернёт потерянную вещь. Чужой дух использует 160% силы исходного персонажа, а его трофей перейдёт победителю.</span>
             </div>
           ) : activeEventBoss ? (
             <div className="event-active-run-note">
