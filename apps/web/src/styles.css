@@ -7801,3 +7801,126 @@ textarea {
   font-size: 9px;
   line-height: 1.45;
 }
+
+
+/* Equipment sets */
+.equipment-set-list {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.equipment-set-card {
+  display: grid;
+  gap: 11px;
+  border: 1px solid #5b4034;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(128, 44, 26, .16), transparent 42%),
+    rgba(255,255,255,.018);
+  padding: 13px;
+}
+
+.equipment-set-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.equipment-set-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.equipment-set-heading strong {
+  color: #e0c1ae;
+  font-size: 14px;
+}
+
+.equipment-set-heading p {
+  margin: 0;
+  color: #929ca6;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.equipment-set-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.equipment-set-pieces span {
+  border: 1px solid #343d45;
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #707b85;
+  font-size: 9px;
+}
+
+.equipment-set-pieces span.owned {
+  border-color: #63543d;
+  color: #c7ad83;
+}
+
+.equipment-set-pieces span.equipped {
+  border-color: #76513f;
+  background: rgba(133, 62, 40, .12);
+  color: #e1b49f;
+}
+
+.equipment-set-bonuses {
+  display: grid;
+  gap: 7px;
+}
+
+.equipment-set-bonuses > div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #353d45;
+  border-radius: 10px;
+  background: rgba(255,255,255,.014);
+  padding: 8px 9px;
+  opacity: .6;
+}
+
+.equipment-set-bonuses > div.active {
+  border-color: #6f4838;
+  background: rgba(137, 61, 36, .10);
+  opacity: 1;
+}
+
+.equipment-set-bonuses strong {
+  color: #d2d7dc;
+  font-size: 10px;
+}
+
+.equipment-set-bonuses > div.active strong {
+  color: #e0aa90;
+}
+
+.equipment-set-bonuses span {
+  color: #8d97a1;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.equipment-set-current-bonus {
+  border: 1px solid #7a4936;
+  border-radius: 9px;
+  background: rgba(155, 61, 31, .12);
+  color: #b9a094;
+  padding: 8px 9px;
+  font-size: 9px;
+}
+
+.equipment-set-current-bonus strong {
+  color: #edac8d;
+}
+
+@media (max-width: 760px) {
+  .equipment-set-heading {
+    flex-direction: column;
+  }
+}
