@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -202,7 +203,7 @@ export function AdventuresPanel({
     })
 
     if (spellResult.error) {
-      setMessage(spellResult.error.message)
+      setMessage(userFacingError(spellResult.error.message))
       return
     }
 
@@ -249,7 +250,7 @@ export function AdventuresPanel({
       bowProfileResult.error
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       return
     }
 
@@ -309,7 +310,7 @@ export function AdventuresPanel({
 
     const error = siteResult.error ?? encounterResult.error
     if (error) {
-      if (!silent) setMessage(error.message)
+      if (!silent) setMessage(userFacingError(error.message))
       if (!silent) setLoading(false)
       return
     }
@@ -330,7 +331,7 @@ export function AdventuresPanel({
     if (lootRunId) {
       detailRequests.push(
         supabase.rpc('get_dungeon_run_loot', { p_run_id: lootRunId }).then(({ data, error }) => {
-          if (error) setMessage(error.message)
+          if (error) setMessage(userFacingError(error.message))
           else setLootDrops((data as DungeonLootDrop[] | null) ?? [])
         }),
       )
@@ -353,10 +354,10 @@ export function AdventuresPanel({
             .eq('encounter_id', latestEncounter.id)
             .order('created_at', { ascending: true }),
         ]).then(([turnResult, statusResult]) => {
-          if (turnResult.error) setMessage(turnResult.error.message)
+          if (turnResult.error) setMessage(userFacingError(turnResult.error.message))
           else setTurns((turnResult.data as CombatTurn[] | null) ?? [])
 
-          if (statusResult.error) setMessage(statusResult.error.message)
+          if (statusResult.error) setMessage(userFacingError(statusResult.error.message))
           else setStatusEffects((statusResult.data as CombatStatusEffect[] | null) ?? [])
         }),
       )
@@ -522,7 +523,7 @@ export function AdventuresPanel({
       } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
         setMessage('Сначала заверши текущий групповой поход.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusy(false)
@@ -549,7 +550,7 @@ export function AdventuresPanel({
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('У персонажа нет здоровья для начала боя.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       await loadAdventures(true)
@@ -580,7 +581,7 @@ export function AdventuresPanel({
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('У персонажа нет здоровья для начала боя.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusy(false)
@@ -604,7 +605,7 @@ export function AdventuresPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setBusy(false)
       return
     }
@@ -623,7 +624,7 @@ export function AdventuresPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setBusy(false)
       return
     }
@@ -657,7 +658,7 @@ export function AdventuresPanel({
       } else if (raw.includes('ALREADY_FULL_HEALTH')) {
         setMessage('Здоровье уже полное.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
       setBusy(false)
       return
@@ -689,7 +690,7 @@ export function AdventuresPanel({
       } else if (raw.includes('PARTY_ONLY_SCROLL')) {
         setMessage('Этот свиток можно использовать только в групповом подземелье.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusy(false)
@@ -720,7 +721,7 @@ export function AdventuresPanel({
       } else if (raw.includes('LEVEL_TOO_LOW')) {
         setMessage('Уровень персонажа слишком низкий для этого расходника.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
       setBusy(false)
       return
@@ -758,7 +759,7 @@ export function AdventuresPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setBusy(false)
       return
     }
@@ -781,7 +782,7 @@ export function AdventuresPanel({
     )
 
     if (supportError) {
-      setMessage(supportError.message)
+      setMessage(userFacingError(supportError.message))
       setBusy(false)
       return
     }
@@ -799,7 +800,7 @@ export function AdventuresPanel({
 
     const spellRuleError = spellRuleResults.find((result) => result.error)?.error
     if (spellRuleError) {
-      setMessage(spellRuleError.message)
+      setMessage(userFacingError(spellRuleError.message))
       setBusy(false)
       return
     }
@@ -929,7 +930,7 @@ export function AdventuresPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setBusy(false)
       return
     }
@@ -953,7 +954,7 @@ export function AdventuresPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setBusy(false)
       return
     }
@@ -982,7 +983,7 @@ export function AdventuresPanel({
       setMessage(
         error.message.includes('STYLE_PROFILE_NOT_READY')
           ? 'Стиль ещё изучен недостаточно. Заверши вручную хотя бы 3 боя и сделай в них не меньше 12 действий.'
-          : error.message,
+          : userFacingError(error.message),
       )
       setBusy(false)
       return
@@ -1014,7 +1015,7 @@ export function AdventuresPanel({
       setMessage(
         error.message.includes('STYLE_PROFILE_NOT_READY')
           ? 'Стиль ещё изучен недостаточно. Сначала заверши вручную хотя бы 3 обычных боя.'
-          : error.message,
+          : userFacingError(error.message),
       )
       setBusy(false)
       return
@@ -1046,7 +1047,7 @@ export function AdventuresPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setBusy(false)
       return
     }
@@ -1071,7 +1072,7 @@ export function AdventuresPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setBusy(false)
       return
     }
