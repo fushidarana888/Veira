@@ -517,6 +517,7 @@ export type CombatEncounter = {
   player_spell_damage_bonus_hits: number
   player_bow_distance: BowDistance
   player_bow_draw_pending: boolean
+  player_greatsword_crit_stacks: number
   enemy_bloodshed_stacks: number
   enemy_on_hit_effect_type: CombatStatusEffectType | null
   enemy_on_hit_effect_chance: number
