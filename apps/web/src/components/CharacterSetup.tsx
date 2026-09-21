@@ -254,7 +254,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
         } else if (raw.includes('GM_ACCOUNT_MUST_NOT_HAVE_CHARACTER')) {
           setGmMessage('ГМ-аккаунт должен быть отдельным и не иметь игрового персонажа.')
         } else {
-          setGmMessage(raw)
+          setGmMessage(userFacingError(raw, 'Не удалось активировать ГМ-доступ.'))
         }
         return
       }
