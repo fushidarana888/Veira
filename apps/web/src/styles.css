@@ -368,11 +368,6 @@ textarea {
   line-height: 1.35;
 }
 
-.stat-note {
-  font-size: 12px;
-  text-align: right;
-}
-
 .bio-text {
   margin: 14px 0 0;
   color: #c3c7cd;
@@ -714,10 +709,6 @@ textarea {
 
   .section-heading {
     align-items: flex-start;
-  }
-
-  .stat-note {
-    max-width: 120px;
   }
 
   .panel {
