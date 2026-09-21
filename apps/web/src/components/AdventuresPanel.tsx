@@ -507,7 +507,7 @@ export function AdventuresPanel({
     setBusy(true)
     setMessage('')
 
-    const { error } = await supabase.rpc('start_dungeon_run', {
+    const { data: runData, error } = await supabase.rpc('start_dungeon_run', {
       p_character_id: characterId,
       p_sector_id: site.sector_id,
     })
@@ -532,10 +532,37 @@ export function AdventuresPanel({
       return
     }
 
-    await loadAdventures(true)
-    setAdventureTab('current')
-    setMessage('Прохождение начато.')
+    const createdRun = runData as { id: string } | null
+    if (!createdRun?.id) {
+      setMessage('Не удалось открыть первый зал подземелья.')
+      setBusy(false)
+      return
+    }
+
+    const { error: combatError } = await supabase.rpc('start_dungeon_combat', {
+      p_run_id: createdRun.id,
+    })
+
+    if (combatError) {
+      const raw = combatError.message
+      if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('COMBAT_ALREADY_ACTIVE')) {
+        setMessage('В этом подземелье уже идёт бой.')
+      } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
+        setMessage('У персонажа нет здоровья для начала боя.')
+      } else {
+        setMessage(raw)
+      }
+
+      await loadAdventures(true)
+      setAdventureTab('current')
+      setBusy(false)
+      return
+    }
+
     setBusy(false)
+    onOpenBattles?.()
   }
 
   async function startCombat(runId: string) {
