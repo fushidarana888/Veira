@@ -423,6 +423,14 @@ export type SectorSiteProgress = {
   updated_at: string
 }
 
+export type SectorSiteRewardItem = {
+  item_definition_id: string
+  slug: string
+  name: string
+  rarity: ItemRarity
+  quantity: number
+}
+
 export type SectorSiteAction = {
   id: string
   character_id: string
@@ -434,6 +442,10 @@ export type SectorSiteAction = {
   completed_at: string | null
   result_title: string
   result_text: string
+  result_kind: '' | 'material_cache' | 'supplies' | 'lost_knowledge' | 'relic_fragment' | 'sealed_reliquary'
+  reward_gold: number
+  reward_experience: number
+  reward_items: SectorSiteRewardItem[]
   created_at: string
 }
 
