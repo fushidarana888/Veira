@@ -1,4 +1,5 @@
 import { userFacingError } from '../lib/userError'
+import { criticalHitCount } from '../lib/combatPresentation'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -555,12 +556,20 @@ export function DuelPanel({ characterId }: Props) {
                 <h3>Последние действия</h3>
               </div>
             </div>
-            {[...details.turns].reverse().map((turn) => (
-              <div className="duel-log-row" key={turn.id}>
-                <span>#{turn.round}</span>
-                <p>{turn.message}</p>
-              </div>
-            ))}
+            {[...details.turns].reverse().map((turn) => {
+              const criticalHits = criticalHitCount(turn.message)
+              return (
+                <div className={'duel-log-row' + (criticalHits > 0 ? ' critical-hit' : '')} key={turn.id}>
+                  <span>#{turn.round}</span>
+                  <div className="combat-log-message">
+                    {criticalHits > 0 && (
+                      <b className="critical-hit-badge">КРИТ{criticalHits > 1 ? ' ×' + criticalHits : ''}</b>
+                    )}
+                    <p>{turn.message}</p>
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           <button
