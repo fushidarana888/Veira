@@ -498,6 +498,11 @@ export function WorldMap({
   const [mapZoom, setMapZoom] = useState(initialMapZoom)
   const mapFrameRef = useRef<HTMLDivElement | null>(null)
   const mapCenteredRef = useRef(false)
+  const siteRewardNotifiedRef = useRef<string | null>(
+    cachedMap?.siteActions.find(
+      (entry) => entry.status === 'completed' && entry.action_type === 'explore_ruins',
+    )?.id ?? null,
+  )
 
   async function loadMapData(silent = false) {
     if (!silent) {
@@ -830,6 +835,18 @@ export function WorldMap({
 
   const anyBlockingActivity = Boolean(openExpedition || activeSiteAction || activeDungeonRun)
 
+  useEffect(() => {
+    if (
+      !recentSiteResult ||
+      recentSiteResult.action_type !== 'explore_ruins' ||
+      recentSiteResult.id === siteRewardNotifiedRef.current
+    ) return
+
+    siteRewardNotifiedRef.current = recentSiteResult.id
+    void Promise.resolve(onProgressChanged?.())
+    void Promise.resolve(onInventoryChanged?.())
+  }, [recentSiteResult?.id, recentSiteResult?.action_type, onProgressChanged, onInventoryChanged])
+
   const selectedSector = selectedSectorId
     ? sectorById.get(selectedSectorId) ?? null
     : null
@@ -991,6 +1008,9 @@ export function WorldMap({
     }
 
     await loadMapData()
+    if (actionType === 'explore_ruins') {
+      setMessage('Исследование руин начато. По завершении будут выданы золото, опыт и случайная находка.')
+    }
     setBusy(false)
   }
 
