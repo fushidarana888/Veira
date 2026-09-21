@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -248,7 +249,7 @@ function coopError(raw: string) {
   if (raw.includes('BOW_DISTANCE_LOCKED')) return 'Во время полного натяга дистанцию менять нельзя.'
   if (raw.includes('PARTY_MEMBER_NOT_STUNNED')) return 'Оглушение уже прошло.'
   if (raw.includes('PARTY_SPELL_NOT_SUPPORTED')) return 'Это заклинание пока не поддерживается в групповом бою.'
-  return raw
+  return userFacingError(raw)
 }
 
 function hpPercent(current: number, max: number) {
