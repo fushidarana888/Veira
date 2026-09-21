@@ -1,4 +1,5 @@
 import { userFacingError } from '../lib/userError'
+import { criticalHitCount } from '../lib/combatPresentation'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -1377,18 +1378,29 @@ export function PartyDungeonPanel({
               </small>
 
               <div className="party-combat-log">
-                {orderedTurns.map((turn) => (
-                  <div className={'party-combat-log-row ' + turn.actor_type} key={turn.id}>
-                    <span>
-                      {turn.actor_type === 'player'
-                        ? 'Игрок'
-                        : turn.actor_type === 'enemy'
-                          ? 'Враг'
-                          : 'Система'}
-                    </span>
-                    <p>{turn.message}</p>
-                  </div>
-                ))}
+                {orderedTurns.map((turn) => {
+                  const criticalHits = criticalHitCount(turn.message)
+                  return (
+                    <div
+                      className={'party-combat-log-row ' + turn.actor_type + (criticalHits > 0 ? ' critical-hit' : '')}
+                      key={turn.id}
+                    >
+                      <span>
+                        {turn.actor_type === 'player'
+                          ? 'Игрок'
+                          : turn.actor_type === 'enemy'
+                            ? 'Враг'
+                            : 'Система'}
+                      </span>
+                      <div className="combat-log-message">
+                        {criticalHits > 0 && (
+                          <b className="critical-hit-badge">КРИТ{criticalHits > 1 ? ' ×' + criticalHits : ''}</b>
+                        )}
+                        <p>{turn.message}</p>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
