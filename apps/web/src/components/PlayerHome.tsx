@@ -1,6 +1,6 @@
 import { userFacingError } from '../lib/userError'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
+import { addStatModifiers, armorDamageReductionPercent, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
 import { scheduleIdle, useSmartRefresh } from '../lib/smartRefresh'
 
@@ -755,6 +755,8 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
         / 100,
     ),
   )
+  const physicalArmorReduction = armorDamageReductionPercent(effectivePhysicalDefense)
+  const magicArmorReduction = armorDamageReductionPercent(effectiveMagicDefense)
 
   async function equipItem(item: CharacterItem) {
     const definition = normalizeDefinition(item.item_definitions)
@@ -1384,8 +1386,14 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                 <div className="combat-stats-grid">
                   <CombatStat label="Физ. мощь" value={derivedCombatStats.physicalPower} />
                   <CombatStat label="Маг. мощь" value={derivedCombatStats.magicPower} />
-                  <CombatStat label="Физ. защита" value={effectivePhysicalDefense} />
-                  <CombatStat label="Маг. защита" value={effectiveMagicDefense} />
+                  <CombatStat
+                    label="Физ. броня"
+                    value={effectivePhysicalDefense + ' · ' + physicalArmorReduction.toFixed(1) + '%'}
+                  />
+                  <CombatStat
+                    label="Маг. броня"
+                    value={effectiveMagicDefense + ' · ' + magicArmorReduction.toFixed(1) + '%'}
+                  />
                   <CombatStat label="Инициатива" value={Math.round(derivedCombatStats.initiative + raceInitiativeBonus)} />
                   <CombatStat
                     label="Шанс крита"
