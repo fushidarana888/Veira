@@ -1,3 +1,4 @@
+import { userFacingError } from './lib/userError'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
@@ -89,7 +90,7 @@ export function App() {
         profile: null,
         character: null,
         loading: false,
-        error: profileError?.message ?? 'Профиль аккаунта не найден.',
+        error: userFacingError(profileError?.message, 'Профиль аккаунта не найден.'),
       })
       return
     }
@@ -125,7 +126,7 @@ export function App() {
         profile,
         character: null,
         loading: false,
-        error: characterError.message,
+        error: userFacingError(characterError.message, 'Не удалось загрузить персонажа.'),
       })
       return
     }
