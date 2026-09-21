@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -444,7 +445,7 @@ export function GuidePanel({ onBack }: Props) {
     const { data, error } = await supabase.rpc('get_game_guide_catalog')
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message, 'Не удалось загрузить гид.'))
       setLoading(false)
       return
     }
