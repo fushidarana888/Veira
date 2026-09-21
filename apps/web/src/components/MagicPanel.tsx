@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { CharacterProgress, CharacterSpell, CombatStatusEffectType, DamageType } from '../types'
@@ -46,7 +47,7 @@ export function MagicPanel({ characterId, progress }: Props) {
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setLoading(false)
       return
     }
