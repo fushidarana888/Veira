@@ -6,7 +6,7 @@ export function criticalHitCount(message: string | null | undefined): number {
     return Math.max(1, Number(explicit[1]) || 1)
   }
 
-  return /\bкрит(?:ический|ическая|ическое|ические|ических)?\b|\(крит\b/i.test(message)
+  return message.toLocaleLowerCase('ru-RU').includes('крит')
     ? 1
     : 0
 }
