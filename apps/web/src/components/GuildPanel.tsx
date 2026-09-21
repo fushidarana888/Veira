@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -85,7 +86,7 @@ function guildError(raw: string) {
   if (raw.includes('GUILD_APPLICATION_TOO_LONG')) return 'Сообщение заявки не может быть длиннее 400 символов.'
   if (raw.includes('GUILD_FULL')) return 'В гильдии больше нет свободных мест.'
   if (raw.includes('FOUNDER_MUST_TRANSFER_OR_DISBAND')) return 'Основатель должен передать лидерство или распустить гильдию.'
-  return raw
+  return userFacingError(raw)
 }
 
 export function GuildPanel({ characterId, onBack, embedded = false }: Props) {
