@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -593,7 +594,7 @@ export function WorldMap({
       incursionResult.error
 
     if (error) {
-      if (!silent) setMessage(error.message)
+      if (!silent) setMessage(userFacingError(error.message, 'Не удалось обновить карту.'))
       if (!silent) setLoading(false)
       return
     }
@@ -897,7 +898,7 @@ export function WorldMap({
       } else if (raw.includes('EXPEDITION_ALREADY_FINISHED_OR_RESOLVING')) {
         setMessage('Экспедиция уже завершает исследование. Обнови карту через несколько секунд.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusy(false)
@@ -931,7 +932,7 @@ export function WorldMap({
       } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
         setMessage('Сначала заверши текущий групповой поход.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusy(false)
@@ -960,7 +961,7 @@ export function WorldMap({
       } else if (raw.includes('SITE_ACTION_ALREADY_FINISHED_OR_RESOLVING')) {
         setMessage('Исследование уже завершает результат. Обнови карту через несколько секунд.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
       setBusy(false)
       return
@@ -1000,7 +1001,7 @@ export function WorldMap({
       } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
         setMessage('Сначала заверши текущий групповой поход.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusy(false)
@@ -1038,7 +1039,7 @@ export function WorldMap({
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('Перед охотой восстанови хотя бы часть ОЗ.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
       setBusy(false)
       return
@@ -1108,7 +1109,7 @@ export function WorldMap({
       } else if (raw.includes('CHARACTER_BUSY') || raw.includes('PARTY_MEMBER_BUSY')) {
         setMessage('Один из участников сейчас занят другим тяжёлым действием.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
       setBusy(false)
       return
@@ -1154,7 +1155,7 @@ export function WorldMap({
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('Перед боем восстанови хотя бы часть ОЗ.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
       setBusy(false)
       return
@@ -1190,7 +1191,7 @@ export function WorldMap({
       } else if (raw.includes('PVP_DUEL_ACTIVE')) {
         setMessage('Сначала заверши активную дуэль.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
       setBusy(false)
       return
@@ -1225,7 +1226,7 @@ export function WorldMap({
       } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
         setMessage('Ты уже находишься в групповом походе.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusy(false)
@@ -1252,7 +1253,7 @@ export function WorldMap({
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('У персонажа нет здоровья для начала боя.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       await loadMapData(true)
