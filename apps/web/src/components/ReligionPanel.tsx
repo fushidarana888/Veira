@@ -88,6 +88,7 @@ function errorText(raw: string) {
   if (raw.includes('ACTIVE_OATH_NOT_FOUND')) return 'Активная клятва уже завершена.'
   if (raw.includes('ABYSS_RELIGION_REQUIRED')) return 'Жертвоприношения доступны только последователям Бездны.'
   if (raw.includes('SACRIFICE_REQUIRES_RARE_ITEM')) return 'Бездна принимает предметы редкости Rare и выше.'
+  if (raw.includes('UNIQUE_MATERIAL_PROTECTED')) return 'Уникальные ресурсы и материалы нельзя жертвовать в веру.'
   if (raw.includes('ITEM_IS_EQUIPPED')) return 'Сначала сними предмет.'
   return raw
 }
@@ -538,6 +539,7 @@ export function ReligionPanel({
           </div>
           <p className="muted">
             Можно уничтожить неэкипированный предмет Rare или выше. Чем выше редкость, тем весомее жертва и тем больше веры.
+            Уникальные ресурсы и материалы защищены и не могут быть пожертвованы.
           </p>
           {sacrificeItems.length > 0 ? (
             <div className="sacrifice-controls">
