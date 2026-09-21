@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 type GuideSection =
   | 'start'
   | 'races'
+  | 'religions'
   | 'mechanics'
   | 'weapons'
   | 'armor'
@@ -128,12 +129,69 @@ type GuideMechanics = {
   affix_slots: Record<string, number>
 }
 
+type GuideReligionPerk = {
+  level: number
+  title: string
+  description: string
+  modifiers: Record<string, unknown>
+}
+
+type GuideReligionOath = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  target_count: number
+  faith_reward: number
+  favor_reward: number
+  failure_faith_penalty: number
+  failure_favor_penalty: number
+}
+
+type GuideReligion = {
+  slug: string
+  name: string
+  short_motto: string
+  description: string
+  praise_text: string
+  taboo_text: string
+  faith_daily_cap: number
+  level10_reward_item_id: string | null
+  level10_reward_item_name: string | null
+  perks: GuideReligionPerk[]
+  oaths: GuideReligionOath[]
+}
+
+type GuideFaithSource = {
+  religion_slug: string
+  kind: 'gain' | 'penalty'
+  title: string
+  faith: number
+  favor: number
+  description: string
+}
+
+type GuideReligionThreshold = {
+  level: number
+  faith: number
+}
+
+type GuideReligionRules = {
+  faith_max: number
+  ordinary_daily_cap: number
+  oath_weekly_cap: number
+  inactive_relic_penalty_percent: number
+}
 type GuideCatalog = {
   items: GuideItem[]
   spells: GuideSpell[]
   magic_families: GuideMagicFamily[]
   races: GuideRace[]
   affixes: GuideAffix[]
+  religions: GuideReligion[]
+  religion_faith_sources: GuideFaithSource[]
+  religion_level_thresholds: GuideReligionThreshold[]
+  religion_rules: GuideReligionRules
   mechanics: GuideMechanics
 }
 
@@ -144,6 +202,7 @@ type Props = {
 const sections: Array<{ id: GuideSection; label: string; description: string }> = [
   { id: 'start', label: 'Начало', description: 'Карта всего справочника' },
   { id: 'races', label: 'Расы', description: 'Все игровые расы и их особенности' },
+  { id: 'religions', label: 'Религии', description: 'Вера, уровни, клятвы и источники' },
   { id: 'mechanics', label: 'Основы', description: 'Характеристики, урон и крит' },
   { id: 'weapons', label: 'Оружие', description: 'Семейства и весь каталог' },
   { id: 'armor', label: 'Броня', description: 'Броня, защиты и свойства' },
@@ -459,7 +518,7 @@ export function GuidePanel({ onBack }: Props) {
           <h1>Гид по механикам и контенту</h1>
           <p className="muted">
             Здесь собраны реальные правила боевой системы и актуальные каталоги из базы игры.
-            Расы, оружие, броня, заклинания, магические семейства и аффиксы обновляются вместе с игровыми данными.
+            Расы, религии, оружие, броня, заклинания, магические семейства и аффиксы обновляются вместе с игровыми данными.
           </p>
         </div>
 
@@ -922,6 +981,62 @@ export function GuidePanel({ onBack }: Props) {
             </>
           )}
 
+          {!loading && catalog && section === 'religions' && (
+            <>
+              <GuideHeading
+                eyebrow="РЕЛИГИИ"
+                title="Вера, уровни и клятвы"
+                text="Религия даёт постоянные бонусы по мере роста веры. Здесь перечислены реальные источники веры, штрафы, пороги уровней, клятвы и награды каждой традиции."
+              />
+
+              <div className="guide-rule-grid">
+                <GuideRule title="Обычная вера · лимит в день">
+                  Положительные начисления от боёв, исследований, поручений и других обычных действий суммарно дают не больше
+                  <b> +{catalog.religion_rules.ordinary_daily_cap} веры в день</b>. Штрафы за табу применяются полностью и не уменьшаются этим лимитом.
+                </GuideRule>
+                <GuideRule title="Клятвы · отдельный лимит">
+                  Завершённая клятва обычно даёт <b>до +50 веры</b>. Награда клятв не входит в дневной лимит,
+                  но за последние 7 дней через клятвы можно получить максимум <b>+{catalog.religion_rules.oath_weekly_cap} веры</b>.
+                </GuideRule>
+                <GuideRule title="Смена религии">
+                  Религию можно выбрать, покинуть или сменить вне боя, экспедиции и активного подземелья.
+                  Прогресс каждой религии хранится отдельно. При смене активная клятва прежней религии считается нарушенной.
+                </GuideRule>
+                <GuideRule title="Реликвия 10 уровня">
+                  На 10 уровне каждая религия выдаёт уникальную реликвию. Вне родной религии её характеристики и особые эффекты
+                  ослабляются примерно на <b>{catalog.religion_rules.inactive_relic_penalty_percent}%</b>; возвращение в родную веру снимает штраф.
+                </GuideRule>
+              </div>
+
+              <article className="panel guide-faith-thresholds">
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">ПРОГРЕСС ВЕРЫ</span>
+                    <h3>Пороги уровней</h3>
+                  </div>
+                  <span className="badge">макс. {catalog.religion_rules.faith_max}</span>
+                </div>
+                <div className="guide-faith-threshold-grid">
+                  {catalog.religion_level_thresholds.map((threshold) => (
+                    <span key={threshold.level}>
+                      <b>Ур. {threshold.level}</b>
+                      <small>{threshold.faith} веры</small>
+                    </span>
+                  ))}
+                </div>
+              </article>
+
+              <div className="guide-religion-list">
+                {catalog.religions.map((religion) => (
+                  <ReligionCard
+                    religion={religion}
+                    sources={catalog.religion_faith_sources.filter((source) => source.religion_slug === religion.slug)}
+                    key={religion.slug}
+                  />
+                ))}
+              </div>
+            </>
+          )}
           {!loading && catalog && section === 'blacksmith' && (
             <>
               <GuideHeading
@@ -1113,6 +1228,94 @@ function RaceCard({ race }: { race: GuideRace }) {
   )
 }
 
+function ReligionCard({
+  religion,
+  sources,
+}: {
+  religion: GuideReligion
+  sources: GuideFaithSource[]
+}) {
+  return (
+    <article className="panel guide-religion-card">
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">{religion.short_motto}</span>
+          <h3>{religion.name}</h3>
+        </div>
+        <span className="badge">до +{religion.faith_daily_cap}/день</span>
+      </div>
+
+      <p className="guide-religion-description">{religion.description}</p>
+
+      <div className="guide-rule-grid">
+        <GuideRule title="Что укрепляет веру">{religion.praise_text}</GuideRule>
+        <GuideRule title="Табу">{religion.taboo_text}</GuideRule>
+      </div>
+
+      <div className="guide-religion-source-head">
+        <span className="eyebrow">ИСТОЧНИКИ ВЕРЫ</span>
+        <strong>Что именно даёт или отнимает веру</strong>
+      </div>
+
+      <div className="guide-faith-source-grid">
+        {sources.map((source) => (
+          <div
+            className={'guide-faith-source ' + (source.kind === 'penalty' ? 'penalty' : 'gain')}
+            key={source.title}
+          >
+            <div>
+              <strong>{source.title}</strong>
+              <span>{source.description}</span>
+            </div>
+            <b>
+              {source.faith > 0 ? '+' : ''}{source.faith} веры
+              {source.favor !== 0 ? ' · ' + (source.favor > 0 ? '+' : '') + source.favor + ' благосклонности' : ''}
+            </b>
+          </div>
+        ))}
+      </div>
+
+      <details className="guide-religion-details">
+        <summary>Бонусы уровней 1–10</summary>
+        <div className="guide-religion-perk-list">
+          {religion.perks.map((perk) => (
+            <div key={perk.level}>
+              <span>Ур. {perk.level}</span>
+              <strong>{perk.title}</strong>
+              <small>{perk.description}</small>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      <details className="guide-religion-details">
+        <summary>Клятвы · {religion.oaths.length}</summary>
+        <div className="guide-religion-oath-list">
+          {religion.oaths.map((oath) => (
+            <div key={oath.id}>
+              <div>
+                <strong>{oath.name}</strong>
+                <span>{oath.description}</span>
+              </div>
+              <small>
+                Награда: +{oath.faith_reward} веры
+                {oath.favor_reward > 0 ? ' · +' + oath.favor_reward + ' благосклонности' : ''}
+                {oath.failure_faith_penalty > 0 ? ' · штраф за нарушение: −' + oath.failure_faith_penalty + ' веры' : ''}
+              </small>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      {religion.level10_reward_item_name && (
+        <div className="guide-unique-block">
+          <b>Реликвия 10 уровня · {religion.level10_reward_item_name}</b>
+          <span>Выдаётся один раз после достижения 2200 веры в этой религии.</span>
+        </div>
+      )}
+    </article>
+  )
+}
 function ItemCard({ item }: { item: GuideItem }) {
   const modifiers = objectEntries(item.stat_modifiers)
   const resistances = objectEntries(item.damage_resistances)
