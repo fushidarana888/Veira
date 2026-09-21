@@ -1,0 +1,1 @@
+grant insert on table public.gm_claim_requests to authenticated;
