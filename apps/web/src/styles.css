@@ -10402,3 +10402,172 @@ textarea {
     width: 100%;
   }
 }
+
+
+/* Critical hit feedback */
+.combat-log-message {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.combat-log-message > p {
+  margin: 0;
+}
+
+.critical-hit-badge {
+  justify-self: start;
+  border: 1px solid rgba(255, 198, 77, .72);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, rgba(255, 178, 41, .20), rgba(188, 64, 35, .16));
+  color: #ffd685;
+  box-shadow: 0 0 16px rgba(255, 169, 45, .22);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.combat-log-row.critical-hit,
+.party-combat-log-row.critical-hit,
+.duel-log-row.critical-hit {
+  border: 1px solid rgba(221, 151, 57, .58);
+  border-radius: 11px;
+  background:
+    radial-gradient(circle at 8% 50%, rgba(255, 184, 69, .12), transparent 35%),
+    linear-gradient(90deg, rgba(140, 67, 38, .14), rgba(73, 45, 24, .04));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 213, 126, .04),
+    0 0 20px rgba(206, 105, 43, .08);
+  padding: 9px 10px;
+  animation: critical-hit-pulse .62s ease-out both;
+}
+
+.combat-log-row.critical-hit p,
+.party-combat-log-row.critical-hit p,
+.duel-log-row.critical-hit p {
+  color: #f2d7a2;
+  font-weight: 720;
+}
+
+.critical-impact-banner {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 14px;
+  align-items: center;
+  border: 1px solid rgba(229, 157, 65, .68);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 16% 45%, rgba(255, 190, 79, .18), transparent 36%),
+    linear-gradient(135deg, rgba(126, 53, 32, .24), rgba(40, 26, 21, .68));
+  box-shadow: 0 0 26px rgba(194, 91, 37, .10);
+  padding: 12px 14px;
+  animation: critical-banner-impact .58s cubic-bezier(.2,.9,.25,1) both;
+}
+
+.critical-impact-banner::after {
+  content: '';
+  position: absolute;
+  inset: -80% -20%;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 222, 154, .14) 50%, transparent 58%);
+  transform: translateX(-55%);
+  animation: critical-banner-shine .75s ease-out both;
+  pointer-events: none;
+}
+
+.critical-impact-banner > span {
+  color: #ffd893;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .16em;
+}
+
+.critical-impact-banner > strong {
+  color: #fff0c4;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.critical-impact-banner > small {
+  grid-column: 1 / -1;
+  color: #cfae83;
+  font-size: 9px;
+}
+
+.greatsword-crit-charge {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  align-items: center;
+  border: 1px solid rgba(116, 88, 62, .54);
+  border-radius: 11px;
+  background: rgba(89, 58, 35, .10);
+  padding: 9px 11px;
+}
+
+.greatsword-crit-charge > span {
+  color: #9e8062;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.greatsword-crit-charge > strong {
+  color: #e3c18e;
+  font-size: 10px;
+}
+
+.greatsword-crit-charge > small {
+  grid-column: 1 / -1;
+  color: #8e959d;
+  font-size: 8px;
+}
+
+@keyframes critical-hit-pulse {
+  0% { transform: scale(.985); filter: brightness(1.5); }
+  45% { transform: scale(1.008); filter: brightness(1.16); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes critical-banner-impact {
+  0% { transform: scale(.96); opacity: .25; filter: brightness(1.8); }
+  55% { transform: scale(1.015); opacity: 1; filter: brightness(1.14); }
+  100% { transform: scale(1); opacity: 1; filter: brightness(1); }
+}
+
+@keyframes critical-banner-shine {
+  0% { transform: translateX(-60%); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translateX(65%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combat-log-row.critical-hit,
+  .party-combat-log-row.critical-hit,
+  .duel-log-row.critical-hit,
+  .critical-impact-banner,
+  .critical-impact-banner::after {
+    animation: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .critical-impact-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .critical-impact-banner > strong {
+    font-size: 17px;
+  }
+
+  .greatsword-crit-charge {
+    grid-template-columns: 1fr;
+  }
+
+  .greatsword-crit-charge > small {
+    grid-column: auto;
+  }
+}
