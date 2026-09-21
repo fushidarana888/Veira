@@ -8683,6 +8683,174 @@ textarea {
   margin-top: 0;
 }
 
+.guide-religion-list,
+.guide-religion-card {
+  display: grid;
+  gap: 12px;
+}
+
+.guide-religion-card {
+  border-color: rgba(119, 104, 143, .42);
+  background:
+    radial-gradient(circle at 92% 0, rgba(104, 80, 130, .08), transparent 34%),
+    #11161c;
+}
+
+.guide-religion-description {
+  margin: 0;
+  color: #a4adb7;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.guide-faith-thresholds {
+  display: grid;
+  gap: 10px;
+}
+
+.guide-faith-threshold-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.guide-faith-threshold-grid > span {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #313945;
+  border-radius: 10px;
+  background: #0f141a;
+  padding: 9px;
+}
+
+.guide-faith-threshold-grid b {
+  color: #d9c39f;
+  font-size: 9px;
+}
+
+.guide-faith-threshold-grid small {
+  color: #8f99a4;
+  font-size: 8px;
+}
+
+.guide-religion-source-head {
+  display: grid;
+  gap: 3px;
+  padding-top: 2px;
+}
+
+.guide-religion-source-head strong {
+  color: #dce1e6;
+  font-size: 11px;
+}
+
+.guide-faith-source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.guide-faith-source {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(70, 105, 80, .46);
+  border-radius: 11px;
+  background: rgba(54, 92, 67, .055);
+  padding: 10px;
+}
+
+.guide-faith-source.penalty {
+  border-color: rgba(126, 65, 65, .5);
+  background: rgba(112, 51, 51, .055);
+}
+
+.guide-faith-source > div {
+  display: grid;
+  gap: 3px;
+}
+
+.guide-faith-source strong {
+  color: #dce2e6;
+  font-size: 9px;
+}
+
+.guide-faith-source span {
+  color: #919ba6;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.guide-faith-source > b {
+  color: #a9c5af;
+  font-size: 9px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.guide-faith-source.penalty > b {
+  color: #d1a09a;
+}
+
+.guide-religion-details {
+  border: 1px solid #303844;
+  border-radius: 11px;
+  background: #0f141a;
+  overflow: hidden;
+}
+
+.guide-religion-details summary {
+  padding: 10px 11px;
+  color: #d4d9df;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.guide-religion-perk-list,
+.guide-religion-oath-list {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid #29313a;
+  padding: 9px;
+}
+
+.guide-religion-perk-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guide-religion-perk-list > div,
+.guide-religion-oath-list > div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #2d3540;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .018);
+  padding: 8px;
+}
+
+.guide-religion-perk-list span {
+  color: #9b805d;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.guide-religion-perk-list strong,
+.guide-religion-oath-list strong {
+  color: #dce1e6;
+  font-size: 9px;
+}
+
+.guide-religion-perk-list small,
+.guide-religion-oath-list span,
+.guide-religion-oath-list small {
+  color: #909aa5;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+
 @media (max-width: 980px) {
   .guide-layout {
     grid-template-columns: 1fr;
@@ -8726,8 +8894,14 @@ textarea {
 
   .guide-catalog-grid,
   .guide-rule-grid,
-  .guide-effect-grid {
+  .guide-effect-grid,
+  .guide-faith-source-grid,
+  .guide-religion-perk-list {
     grid-template-columns: 1fr;
+  }
+
+  .guide-faith-threshold-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .guide-bloodshed-steps {
