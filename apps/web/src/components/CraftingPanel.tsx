@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { CharacterCraftingRecipe, CharacterProgress, ItemRarity } from '../types'
@@ -37,7 +38,7 @@ export function CraftingPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setLoading(false)
       return
     }
@@ -71,7 +72,7 @@ export function CraftingPanel({
       } else if (raw.includes('CHARACTER_BUSY')) {
         setMessage('Нельзя заниматься ремеслом во время другого активного действия.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
       setBusyRecipe(null)
       return
