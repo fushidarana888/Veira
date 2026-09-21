@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import './settlementQuests.css'
@@ -93,7 +94,7 @@ function errorMessage(raw: string) {
   if (raw.includes('QUEST_NOT_COMPLETE')) return 'Условия поручения ещё не выполнены.'
   if (raw.includes('QUEST_ITEMS_MISSING')) return 'Не хватает предметов для сдачи.'
   if (raw.includes('QUEST_ALREADY_COMPLETED')) return 'Это одноразовое поручение уже выполнено.'
-  return raw
+  return userFacingError(raw)
 }
 
 export function SettlementQuestsPanel({
