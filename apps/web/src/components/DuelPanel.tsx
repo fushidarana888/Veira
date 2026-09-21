@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -140,7 +141,7 @@ function duelError(raw: string) {
   if (raw.includes('SPELL_NOT_LEARNED')) return 'Это заклинание не изучено.'
   if (raw.includes('DUEL_NOT_ACTIVE')) return 'Эта дуэль уже завершена.'
   if (raw.includes('DUEL_NOT_PENDING')) return 'Этот вызов уже обработан.'
-  return raw
+  return userFacingError(raw)
 }
 
 function spellKindLabel(kind: CharacterSpell['spell_kind']) {
