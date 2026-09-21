@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -77,7 +78,7 @@ function partyError(raw: string) {
   if (raw.includes('PARTY_INVITE_NOT_PENDING')) return 'Это приглашение уже обработано.'
   if (raw.includes('PARTY_NOT_ACTIVE')) return 'Эта группа уже распущена.'
   if (raw.includes('PARTY_LEADER_REQUIRED')) return 'Это действие доступно только лидеру группы.'
-  return raw
+  return userFacingError(raw)
 }
 
 export function PartyPanel({ characterId }: Props) {
