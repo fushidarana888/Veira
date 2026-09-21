@@ -812,7 +812,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       } else if (raw.includes('ITEM_IS_NOT_RESOURCE_CONSUMABLE')) {
         setInventoryMessage('Этот предмет не восстанавливает ОЗ или ману.')
       } else {
-        setInventoryMessage(raw)
+        setInventoryMessage(userFacingError(raw))
       }
       setInventoryBusy(false)
       return
@@ -872,7 +872,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       } else if (raw.includes('ITEM_IS_NOT_EXCHANGEABLE')) {
         setInventoryMessage('Этот предмет нельзя обменять на золото.')
       } else {
-        setInventoryMessage(raw)
+        setInventoryMessage(userFacingError(raw))
       }
       setInventoryBusy(false)
       return
@@ -907,7 +907,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       } else if (raw.includes('COMBAT_ACTIVE')) {
         setInventoryMessage('Нельзя изучать заклинания во время боя.')
       } else {
-        setInventoryMessage(raw)
+        setInventoryMessage(userFacingError(raw))
       }
       setInventoryBusy(false)
       return
@@ -945,7 +945,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     if (raw.includes('RACE_REQUIRES_GM_ACCESS')) return 'Эта раса доступна только после разрешения ГМ.'
     if (raw.includes('RACE_NOT_PLAYABLE')) return 'Эта раса сейчас недоступна игрокам.'
     if (raw.includes('CHARACTER_BUSY')) return 'Нельзя менять расу во время боя, экспедиции или другого активного действия.'
-    return raw
+    return userFacingError(raw)
   }
 
   async function loadCustomization() {
