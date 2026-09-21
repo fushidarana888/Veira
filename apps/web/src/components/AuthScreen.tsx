@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { FormEvent, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -78,7 +79,7 @@ export function AuthScreen() {
         password,
       })
 
-      if (error) setMessage(error.message)
+      if (error) setMessage(userFacingError(error.message, 'Не удалось выполнить вход.'))
     }
 
     setBusy(false)
