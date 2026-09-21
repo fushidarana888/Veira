@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { BlacksmithPanel } from './BlacksmithPanel'
@@ -114,7 +115,7 @@ export function SettlementShop({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setItems([])
       setLoading(false)
       return
@@ -165,7 +166,7 @@ export function SettlementShop({
       } else if (raw.includes('CHARACTER_BUSY')) {
         setMessage('Нельзя закупаться во время экспедиции, исследования или прохождения подземелья.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusyItemId(null)
