@@ -1169,7 +1169,7 @@ export function WorldMap({
     setBusy(true)
     setMessage('')
 
-    const { error } = await supabase.rpc('start_dungeon_run', {
+    const { data: runData, error } = await supabase.rpc('start_dungeon_run', {
       p_character_id: characterId,
       p_sector_id: selectedSector.id,
     })
@@ -1185,7 +1185,7 @@ export function WorldMap({
       } else if (raw.includes('EXPEDITION_ALREADY_ACTIVE') || raw.includes('SITE_ACTION_ALREADY_ACTIVE')) {
         setMessage('Сначала заверши текущее исследование.')
       } else if (raw.includes('PARTY_DUNGEON_ACTIVE')) {
-        setMessage('Ты уже находишься в групповом походе. Управление им находится в «Приключениях».')
+        setMessage('Ты уже находишься в групповом походе.')
       } else {
         setMessage(raw)
       }
@@ -1194,9 +1194,36 @@ export function WorldMap({
       return
     }
 
-    await loadMapData()
-    setMessage('Прохождение подземелья начато. Продолжение доступно в разделе «Приключения».')
+    const createdRun = runData as { id: string } | null
+    if (!createdRun?.id) {
+      setMessage('Не удалось открыть первый зал подземелья.')
+      setBusy(false)
+      return
+    }
+
+    const { error: combatError } = await supabase.rpc('start_dungeon_combat', {
+      p_run_id: createdRun.id,
+    })
+
+    if (combatError) {
+      const raw = combatError.message
+      if (raw.includes('PVP_DUEL_ACTIVE')) {
+        setMessage('Сначала заверши активную дуэль.')
+      } else if (raw.includes('COMBAT_ALREADY_ACTIVE')) {
+        setMessage('В этом подземелье уже идёт бой.')
+      } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
+        setMessage('У персонажа нет здоровья для начала боя.')
+      } else {
+        setMessage(raw)
+      }
+
+      await loadMapData(true)
+      setBusy(false)
+      return
+    }
+
     setBusy(false)
+    onOpenBattles?.()
   }
 
   if (loading && sectors.length === 0) {
