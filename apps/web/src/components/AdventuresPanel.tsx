@@ -32,7 +32,7 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
 }
 
-type AdventureTab = 'current' | 'locations' | 'bosses'
+type AdventureTab = 'locations' | 'bosses'
 
 type CombatScroll = {
   id: string
@@ -380,10 +380,7 @@ export function AdventuresPanel({
   }, [characterId, mode])
 
   useEffect(() => {
-    if (
-      !combatToolkitLoaded
-      && (mode === 'battles' || adventureTab === 'current')
-    ) {
+    if (!combatToolkitLoaded && mode === 'battles') {
       void loadCombatToolkit()
     }
   }, [mode, adventureTab, combatToolkitLoaded, characterId])
@@ -556,7 +553,6 @@ export function AdventuresPanel({
       }
 
       await loadAdventures(true)
-      setAdventureTab('current')
       setBusy(false)
       return
     }
@@ -1180,7 +1176,7 @@ export function AdventuresPanel({
               <span className="eyebrow">ПРИКЛЮЧЕНИЯ</span>
               <h2>Центр приключений</h2>
               <p className="muted">
-                Здесь выбираются места, собирается группа и начинается поход. Сам бой теперь находится в отдельной кнопке «Бои».
+                Здесь выбираются места и особые угрозы. После входа всё прохождение подземелья — бои, победы между залами, следующий зал, побег и награды — находится только в «Бои → Сейчас».
               </p>
             </div>
             <div className="adventure-counters">
@@ -1190,10 +1186,6 @@ export function AdventuresPanel({
           </article>
 
           <div className="adventure-folder-tabs" role="tablist" aria-label="Разделы приключений">
-            <button className={adventureTab === 'current' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'current'} onClick={() => setAdventureTab('current')}>
-              <span>Поход</span>
-              {activeDungeon && <b>1</b>}
-            </button>
             <button className={adventureTab === 'locations' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'locations'} onClick={() => setAdventureTab('locations')}>
               <span>Места</span>
               <b>{ruins.length + dungeons.length}</b>
@@ -1213,13 +1205,13 @@ export function AdventuresPanel({
             characterId={characterId}
             onChanged={async () => {
               await loadAdventures(true)
-              setAdventureTab('current')
+              onOpenBattles?.()
             }}
           />
         </div>
       )}
 
-      {(mode === 'battles' || adventureTab === 'current') && (
+      {mode === 'battles' && (
         <div className="adventure-folder-content">
           {!activeDungeon && !latestCombat && (
             <article className="panel adventure-empty-folder">
@@ -1229,18 +1221,7 @@ export function AdventuresPanel({
             </article>
           )}
 
-      {activeDungeon && activeDungeon.active_run_id && (mode === 'adventures' && activeCombat ? (
-        <article className="panel battle-moved-panel">
-          <span className="eyebrow">БОЙ ИДЁТ</span>
-          <h3>{activeCombat.enemy_name}</h3>
-          <p className="muted">
-            Боевой интерфейс перенесён в отдельный раздел «Бои». Здесь остаётся управление самим походом.
-          </p>
-          <button className="primary-button" type="button" onClick={onOpenBattles}>
-            Открыть текущий бой
-          </button>
-        </article>
-      ) : (
+      {activeDungeon && activeDungeon.active_run_id && (
         <article className="panel active-dungeon-panel">
           <div className="section-heading">
             <div>
@@ -2226,7 +2207,7 @@ export function AdventuresPanel({
             </div>
           )}
         </article>
-      ))}
+      )}
 
       {mode === 'battles' && !activeCombat && latestCombat && latestCombat.status !== 'active' && (
         <article className="panel combat-result-panel">
@@ -2421,9 +2402,17 @@ export function AdventuresPanel({
                     )}
 
                     {active && (
-                      <span className="badge">
-                        {(site.run_rooms_cleared ?? 0)} / {(site.run_total_rooms ?? 0)}
-                      </span>
+                      <>
+                        <span className="badge">идёт в «Боях»</span>
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          disabled={busy}
+                          onClick={onOpenBattles}
+                        >
+                          Открыть
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
