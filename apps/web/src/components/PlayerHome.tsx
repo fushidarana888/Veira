@@ -162,7 +162,7 @@ const weaponFamilyMechanicLabels: Partial<Record<NonNullable<ItemDefinition['wea
   mace: 'Оглушение 8% соло/дуэль · 5% пати',
   hammer: 'Оглушение 8% соло/дуэль · 5% пати',
   club: 'Дробящий урон: уязвимость ×1,5 · сопротивление учитывается на 50%',
-  greatsword: 'Некритический физический удар: +5 п.п. шанс крита · крит сбрасывает накопление · общий кап 60%',
+  greatsword: 'Некритический физический удар: +15 п.п. шанс крита · крит сбрасывает накопление · общий кап 75%',
 }
 
 const statLabels: Record<StatKey, string> = {
@@ -1397,7 +1397,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                   <CombatStat label="Инициатива" value={Math.round(derivedCombatStats.initiative + raceInitiativeBonus)} />
                   <CombatStat
                     label="Шанс крита"
-                    value={Math.min(60, derivedCombatStats.criticalChancePercent + raceCriticalChanceBonus).toFixed(1) + '%'}
+                    value={Math.min(75, derivedCombatStats.criticalChancePercent + raceCriticalChanceBonus).toFixed(1) + '%'}
                   />
                   <CombatStat label="Крит. урон" value="Физ. ×1.5 · Маг. ×1.4" />
                 </div>
