@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { addStatModifiers, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
@@ -320,7 +321,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     })
 
     if (error) {
-      setProgressMessage(error.message)
+      setProgressMessage(userFacingError(error.message, 'Не удалось обновить данные персонажа.'))
       return null
     }
 
@@ -330,12 +331,12 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   }
 
   async function loadReligionModifiers() {
-    const { data, error } = await supabase.rpc('get_religion_catalog', {
+    const { data, error } = await supabase.rpc('get_religion_catalog_v2', {
       p_character_id: character.id,
     })
 
     if (error) {
-      setProgressMessage(error.message)
+      setProgressMessage(userFacingError(error.message, 'Не удалось обновить данные персонажа.'))
       return null
     }
 
@@ -352,7 +353,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     })
 
     if (error) {
-      setProgressMessage(error.message)
+      setProgressMessage(userFacingError(error.message, 'Не удалось обновить данные персонажа.'))
       return null
     }
 
@@ -374,7 +375,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       .eq('character_id', character.id)
 
     if (equipmentError) {
-      setInventoryMessage(equipmentError.message)
+      setInventoryMessage(userFacingError(equipmentError.message, 'Не удалось загрузить экипировку.'))
       return
     }
 
@@ -438,7 +439,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       .in('id', equippedIds)
 
     if (itemError) {
-      setInventoryMessage(itemError.message)
+      setInventoryMessage(userFacingError(itemError.message, 'Не удалось загрузить инвентарь.'))
       return
     }
 
@@ -515,7 +516,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       ])
 
     if (itemError || equipmentError || setError) {
-      setInventoryMessage(itemError?.message ?? equipmentError?.message ?? setError?.message ?? 'Не удалось загрузить инвентарь.')
+      setInventoryMessage(userFacingError(itemError?.message ?? equipmentError?.message ?? setError?.message, 'Не удалось загрузить инвентарь.'))
       setInventoryBusy(false)
       return
     }
@@ -568,7 +569,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     if (error) {
       setHistoryMessage(error.message.includes('ITEM_HISTORY_NOT_TRACKED')
         ? 'Для этого типа предмета история не ведётся.'
-        : error.message)
+        : userFacingError(error.message))
       setHistoryBusy(false)
       return
     }
@@ -781,7 +782,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       if (error.message.includes('LEVEL_TOO_LOW')) {
         setInventoryMessage(`Недостаточный уровень персонажа для этой вещи. Требуется уровень ${definition.required_level}.`)
       } else {
-        setInventoryMessage(error.message)
+        setInventoryMessage(userFacingError(error.message))
       }
       setInventoryBusy(false)
       return
@@ -927,7 +928,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     })
 
     if (error) {
-      setInventoryMessage(error.message)
+      setInventoryMessage(userFacingError(error.message))
       setInventoryBusy(false)
       return
     }
@@ -1103,7 +1104,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     })
 
     if (error) {
-      setSecurityMessage(error.message)
+      setSecurityMessage(userFacingError(error.message, 'Не удалось обновить настройки безопасности.'))
       setSecurityBusy(false)
       return
     }
@@ -1126,7 +1127,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     })
 
     if (error) {
-      setProgressMessage(error.message)
+      setProgressMessage(userFacingError(error.message, 'Не удалось обновить данные персонажа.'))
       setStatBusy(false)
       return
     }
@@ -1378,7 +1379,6 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                     <span className="eyebrow">БОЕВЫЕ ПАРАМЕТРЫ</span>
                     <h2>Производные характеристики</h2>
                   </div>
-                  <span className="muted stat-note">Первая версия формул</span>
                 </div>
 
                 <div className="combat-stats-grid">
