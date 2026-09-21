@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { DamageType, RaceDefinition, RaceTrait } from '../types'
@@ -103,7 +104,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
       if (!active) return
 
       if (error) {
-        setMessage('Не удалось загрузить список рас: ' + error.message)
+        setMessage(userFacingError(error.message, 'Не удалось загрузить список рас.'))
         setRaceLoading(false)
         return
       }
@@ -217,7 +218,7 @@ export function CharacterSetup({ userId, displayName, onCreated, onSignOut }: Pr
       } else if (raw.includes('BIOGRAPHY_REQUIRED')) {
         setMessage('Короткая биография обязательна.')
       } else {
-        setMessage(raw)
+        setMessage(userFacingError(raw))
       }
 
       setBusy(false)
