@@ -99,7 +99,10 @@ const equipmentExchangeValues: Record<ItemDefinition['rarity'], number> = {
 }
 
 function itemExchangeValue(definition: ItemDefinition) {
-  if (definition.category === 'material') return materialExchangeValues[definition.rarity]
+  if (definition.category === 'material') {
+    if (definition.rarity === 'unique') return 0
+    return materialExchangeValues[definition.rarity]
+  }
   if (['weapon', 'armor', 'accessory'].includes(definition.category)) {
     return equipmentExchangeValues[definition.rarity]
   }
@@ -855,7 +858,9 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
 
     if (error) {
       const raw = error.message
-      if (raw.includes('PROTECTED_ITEM')) {
+      if (raw.includes('UNIQUE_MATERIAL_PROTECTED')) {
+        setInventoryMessage('Уникальные ресурсы и материалы нельзя обменять на золото.')
+      } else if (raw.includes('PROTECTED_ITEM')) {
         setInventoryMessage('Этот особый предмет нельзя обменять на золото.')
       } else if (raw.includes('ITEM_IS_EQUIPPED')) {
         setInventoryMessage('Сначала сними вещь с персонажа.')
@@ -2070,7 +2075,9 @@ function InventoryPanel({
                       Боевой свиток · используется во время боя
                     </span>
                   ) : definition.category === 'material' ? (
-                    definition.slug === 'tempering_mark_iii' ? (
+                    definition.rarity === 'unique' ? (
+                      <span className="muted item-state">Уникальный ресурс · обмен недоступен</span>
+                    ) : definition.slug === 'tempering_mark_iii' ? (
                       <span className="muted item-state">Особый ресурс · обмен недоступен</span>
                     ) : (
                       <div className="resource-item-actions material-exchange-actions">
