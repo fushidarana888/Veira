@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import './religionPanel.css'
@@ -90,7 +91,7 @@ function errorText(raw: string) {
   if (raw.includes('SACRIFICE_REQUIRES_RARE_ITEM')) return 'Бездна принимает предметы редкости Rare и выше.'
   if (raw.includes('UNIQUE_MATERIAL_PROTECTED')) return 'Уникальные ресурсы и материалы нельзя жертвовать в веру.'
   if (raw.includes('ITEM_IS_EQUIPPED')) return 'Сначала сними предмет.'
-  return raw
+  return userFacingError(raw)
 }
 
 export function ReligionPanel({
