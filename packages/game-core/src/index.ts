@@ -41,6 +41,11 @@ export type DerivedCombatStats = {
   criticalChancePercent: number
 }
 
+export function armorDamageReductionPercent(armor: number): number {
+  const safeArmor = Math.max(0, Number(armor) || 0)
+  return Math.min(80, (80 * safeArmor) / (safeArmor + 60))
+}
+
 export function experienceForNextLevel(level: number): number {
   const safeLevel = Math.max(1, Math.floor(level))
   return 100 * safeLevel * safeLevel
