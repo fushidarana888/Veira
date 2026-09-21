@@ -74,6 +74,36 @@ type BattleEncounterSummary = {
   ended_at: string | null
 }
 
+type BattleLootItem = {
+  item_definition_id: string | null
+  name: string
+  slug: string | null
+  rarity: string | null
+  quantity: number
+  source_type: string | null
+}
+
+type BattleConsumableUsage = {
+  item_definition_id: string | null
+  name: string
+  slug: string | null
+  quantity: number
+  usage_kind: string
+}
+
+type BattleReward = {
+  tracked: boolean
+  gold: number | null
+  experience: number | null
+  loot: BattleLootItem[]
+}
+
+type BattleEconomyDetail = {
+  reward: BattleReward
+  consumables: BattleConsumableUsage[]
+  consumables_complete: boolean
+}
+
 type BattleDetail = {
   battle_id: string
   kind: BattleKind
@@ -87,6 +117,9 @@ type BattleDetail = {
   participants: BattleParticipant[]
   encounters?: BattleEncounterSummary[]
   unattributed_effect_damage?: number
+  reward?: BattleReward
+  consumables?: BattleConsumableUsage[]
+  consumables_complete?: boolean
 }
 
 const emptyOverview: BattleOverview = {
@@ -178,7 +211,7 @@ export function BattleCenterPanel({
     setHistoryLoading(true)
     const { data, error } = await supabase.rpc('get_battle_history', {
       p_character_id: characterId,
-      p_limit: 40,
+      p_limit: 50,
     })
 
     if (error) {
@@ -194,16 +227,27 @@ export function BattleCenterPanel({
     setDetailLoading(true)
     setSelected(null)
 
-    const { data, error } = await supabase.rpc('get_battle_history_detail', {
-      p_character_id: characterId,
-      p_kind: entry.kind,
-      p_battle_id: entry.battle_id,
-    })
+    const [detailResult, economyResult] = await Promise.all([
+      supabase.rpc('get_battle_history_detail', {
+        p_character_id: characterId,
+        p_kind: entry.kind,
+        p_battle_id: entry.battle_id,
+      }),
+      supabase.rpc('get_battle_history_economy', {
+        p_character_id: characterId,
+        p_kind: entry.kind,
+        p_battle_id: entry.battle_id,
+      }),
+    ])
 
-    if (error) {
-      setMessage(error.message)
+    if (detailResult.error) {
+      setMessage(detailResult.error.message)
+    } else if (economyResult.error) {
+      setMessage(economyResult.error.message)
     } else {
-      setSelected((data as BattleDetail | null) ?? null)
+      const detail = (detailResult.data as BattleDetail | null) ?? null
+      const economy = (economyResult.data as BattleEconomyDetail | null) ?? null
+      setSelected(detail && economy ? { ...detail, ...economy } : detail)
     }
     setDetailLoading(false)
   }
@@ -329,6 +373,9 @@ export function BattleCenterPanel({
                 Обновить
               </button>
             </div>
+            <p className="battle-history-retention-note">
+              Хранятся 50 последних завершённых боёв. Более старые записи автоматически удаляются.
+            </p>
 
             {historyLoading && pastBattles.length === 0 && <p className="muted">Загружаем историю…</p>}
             {!historyLoading && pastBattles.length === 0 && <p className="muted">Завершённых боёв пока нет.</p>}
@@ -434,6 +481,70 @@ export function BattleCenterPanel({
                     Общий урон эффектов группы без однозначного автора: <b>{selected.unattributed_effect_damage}</b>
                   </p>
                 )}
+
+                <div className="battle-history-economy">
+                  <div className="battle-economy-card">
+                    <div className="battle-economy-heading">
+                      <span>НАГРАДА</span>
+                      <strong>Итог боя</strong>
+                    </div>
+
+                    {selected.reward?.tracked === false ? (
+                      <p className="battle-old-snapshot">
+                        Для этого старого группового боя точная сумма золота и опыта ещё не сохранялась.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="battle-reward-stats">
+                          <span><b>{selected.reward?.gold ?? 0}</b> золота</span>
+                          <span><b>{selected.reward?.experience ?? 0}</b> опыта</span>
+                        </div>
+
+                        {(selected.reward?.loot?.length ?? 0) > 0 ? (
+                          <div className="battle-loot-list">
+                            {selected.reward!.loot.map((item, index) => (
+                              <div
+                                className={'battle-loot-item ' + (item.rarity ? 'rarity-' + item.rarity : '')}
+                                key={(item.item_definition_id ?? item.slug ?? item.name) + ':' + index}
+                              >
+                                <span>{item.name}</span>
+                                <b>×{item.quantity}</b>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <small className="battle-economy-empty">Лут не получен.</small>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="battle-economy-card">
+                    <div className="battle-economy-heading">
+                      <span>ПОТРАЧЕНО</span>
+                      <strong>Расходники</strong>
+                    </div>
+
+                    {(selected.consumables?.length ?? 0) > 0 ? (
+                      <div className="battle-consumable-list">
+                        {selected.consumables!.map((item, index) => (
+                          <div className="battle-consumable-item" key={(item.item_definition_id ?? item.slug ?? item.name) + ':' + index}>
+                            <span>{item.name}</span>
+                            <b>×{item.quantity}</b>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <small className="battle-economy-empty">Расходники не использовались.</small>
+                    )}
+
+                    {selected.consumables_complete === false && (
+                      <p className="battle-history-legacy-note">
+                        Старый бой: расходники восстановлены по журналу ходов, поэтому траты между залами могли не сохраниться.
+                      </p>
+                    )}
+                  </div>
+                </div>
 
                 {(selected.encounters?.length ?? 0) > 0 && (
                   <div className="battle-encounter-list">
