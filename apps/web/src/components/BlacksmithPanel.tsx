@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
@@ -88,7 +89,7 @@ function blacksmithError(raw: string) {
   if (raw.includes('MAX_ENHANCEMENT_REACHED')) return 'Оружие уже заточено до +20.'
   if (raw.includes('TEMPERING_MARK_NOT_AVAILABLE')) return 'Клеймо закалки III не найдено в инвентаре.'
   if (raw.includes('MARK_NOT_NEEDED')) return 'Клеймо можно применить только к оружию ниже +3.'
-  return raw
+  return userFacingError(raw)
 }
 
 function affixSummary(affix: BlacksmithAffix) {
