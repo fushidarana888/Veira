@@ -211,6 +211,24 @@ const contentLabels: Record<string, string> = {
   event: 'Событие',
 }
 
+const ruinsResultLabels: Record<string, string> = {
+  material_cache: 'тайник',
+  supplies: 'припасы',
+  lost_knowledge: 'знание',
+  relic_fragment: 'реликвия',
+  sealed_reliquary: 'реликварий',
+}
+
+function ruinsBaseRewardRange(danger: number | null) {
+  const value = Math.max(0, Math.min(10, danger ?? 0))
+  return {
+    goldMin: 20 + value * 10,
+    goldMax: 30 + value * 12,
+    experienceMin: 25 + value * 18,
+    experienceMax: 40 + value * 21,
+  }
+}
+
 type VisibleSectorContent = Exclude<SectorContentType, 'unassigned'>
 
 const mapContentLegend: Array<{
@@ -527,7 +545,7 @@ export function WorldMap({
         .limit(20),
       supabase
         .from('sector_site_actions')
-        .select('id, character_id, sector_id, action_type, status, started_at, ends_at, completed_at, result_title, result_text, created_at')
+        .select('id, character_id, sector_id, action_type, status, started_at, ends_at, completed_at, result_title, result_text, result_kind, reward_gold, reward_experience, reward_items, created_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(20),
@@ -1317,7 +1335,7 @@ export function WorldMap({
             <span className="eyebrow">АКТИВНОЕ ПОДЗЕМЕЛЬЕ</span>
             <h3>Персонаж находится внутри</h3>
             <p className="muted">
-              Сектор #{activeDungeonRun.sector_id}. Управление прохождением находится в разделе «Приключения».
+              Сектор #{activeDungeonRun.sector_id}. Управление прохождением находится в «Бои → Сейчас».
             </p>
           </div>
           <span className="badge">у входа</span>
@@ -1336,16 +1354,29 @@ export function WorldMap({
       )}
 
       {!activeSiteAction && recentSiteResult && (
-        <article className="panel expedition-result-card site-result-card">
+        <article className={'panel expedition-result-card site-result-card ' + (recentSiteResult.action_type === 'explore_ruins' ? 'ruins-result-card' : '')}>
           <div>
             <span className="eyebrow">
               {recentSiteResult.action_type === 'explore_ruins' ? 'РУИНЫ ИССЛЕДОВАНЫ' : 'ВХОД РАЗВЕДАН'}
             </span>
             <h3>{recentSiteResult.result_title}</h3>
             <p>{recentSiteResult.result_text}</p>
+            {recentSiteResult.action_type === 'explore_ruins' && (
+              <div className="ruins-reward-summary">
+                <span>+{recentSiteResult.reward_gold} золота</span>
+                <span>+{recentSiteResult.reward_experience} опыта</span>
+                {(recentSiteResult.reward_items ?? []).map((item) => (
+                  <span className={'rarity-' + item.rarity} key={item.item_definition_id}>
+                    {item.name} ×{item.quantity}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <span className="badge">
-            {recentSiteResult.action_type === 'explore_ruins' ? 'исследовано' : 'доступен вход'}
+            {recentSiteResult.action_type === 'explore_ruins'
+              ? ruinsResultLabels[recentSiteResult.result_kind] ?? 'исследовано'
+              : 'доступен вход'}
           </span>
         </article>
       )}
@@ -1827,19 +1858,64 @@ export function WorldMap({
               const thisActionActive =
                 activeSiteAction?.sector_id === selectedSector.id &&
                 activeSiteAction.action_type === 'explore_ruins'
+              const previousResult = siteActions.find(
+                (entry) =>
+                  entry.sector_id === selectedSector.id &&
+                  entry.action_type === 'explore_ruins' &&
+                  entry.status === 'completed',
+              ) ?? null
+              const rewardRange = ruinsBaseRewardRange(selectedSector.danger_level)
 
               return (
-                <div className="sector-site-actions">
+                <div className="sector-site-actions ruins-site-actions">
                   <div className="sector-site-state">
                     <strong>Руины</strong>
                     <span>
                       {alreadyExplored
-                        ? 'Подробно исследованы'
+                        ? 'Полностью исследованы — награда за эти руины уже получена'
                         : thisActionActive
                           ? 'Исследование уже идёт'
-                          : 'Обнаружены, но ещё не исследованы'}
+                          : 'Одноразовое глубокое исследование с гарантированной наградой и случайной находкой'}
                     </span>
                   </div>
+
+                  {!alreadyExplored && (
+                    <div className="ruins-reward-preview">
+                      <div>
+                        <strong>Гарантировано</strong>
+                        <span>
+                          {rewardRange.goldMin}–{rewardRange.goldMax} золота · {rewardRange.experienceMin}–{rewardRange.experienceMax} опыта
+                        </span>
+                      </div>
+                      <div className="ruins-chance-grid">
+                        <span><b>40%</b> материалы</span>
+                        <span><b>25%</b> припасы</span>
+                        <span><b>17%</b> свитки</span>
+                        <span><b>13%</b> осколок реликвии · опасность 3+</span>
+                        <span><b>5%</b> реликварий · опасность 6+</span>
+                      </div>
+                      <small>
+                        На низкой опасности шанс недоступной редкой находки превращается в шанс найти дополнительный свиток.
+                        Более опасные руины дают больше золота и опыта, а редкие реликварии — ещё и крупный бонус сверху.
+                      </small>
+                    </div>
+                  )}
+
+                  {alreadyExplored && previousResult?.result_text && (
+                    <div className="ruins-previous-result">
+                      <span className="eyebrow">НАЙДЕНО РАНЕЕ</span>
+                      <strong>{previousResult.result_title}</strong>
+                      <div className="ruins-reward-summary">
+                        <span>+{previousResult.reward_gold} золота</span>
+                        <span>+{previousResult.reward_experience} опыта</span>
+                        {(previousResult.reward_items ?? []).map((item) => (
+                          <span className={'rarity-' + item.rarity} key={item.item_definition_id}>
+                            {item.name} ×{item.quantity}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {!alreadyExplored && !thisActionActive && (
                     <button
