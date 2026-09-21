@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -104,7 +105,7 @@ function bossError(raw: string) {
   if (raw.includes('PARTY_DUNGEON_ALREADY_ACTIVE')) return 'У этой пати уже идёт другой групповой бой.'
   if (raw.includes('EVENT_BOSS_NOT_ACTIVE')) return 'Эта ротация уже закончилась или ещё не началась.'
   if (raw.includes('CHARACTER_HAS_NO_HP') || raw.includes('PARTY_MEMBER_HAS_NO_HP')) return 'Перед входом хотя бы немного восстанови ОЗ.'
-  return raw
+  return userFacingError(raw)
 }
 
 function formatEndsAt(value: string) {
