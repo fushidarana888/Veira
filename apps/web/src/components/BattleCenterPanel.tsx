@@ -1,3 +1,4 @@
+import { userFacingError } from '../lib/userError'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
@@ -198,7 +199,7 @@ export function BattleCenterPanel({
     })
 
     if (error) {
-      if (!silent) setMessage(error.message)
+      if (!silent) setMessage(userFacingError(error.message))
       if (!silent) setLoading(false)
       return
     }
@@ -215,7 +216,7 @@ export function BattleCenterPanel({
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(userFacingError(error.message))
       setHistory([])
     } else {
       setHistory((data as BattleHistoryEntry[] | null) ?? [])
@@ -241,9 +242,9 @@ export function BattleCenterPanel({
     ])
 
     if (detailResult.error) {
-      setMessage(detailResult.error.message)
+      setMessage(userFacingError(detailResult.error.message))
     } else if (economyResult.error) {
-      setMessage(economyResult.error.message)
+      setMessage(userFacingError(economyResult.error.message))
     } else {
       const detail = (detailResult.data as BattleDetail | null) ?? null
       const economy = (economyResult.data as BattleEconomyDetail | null) ?? null
