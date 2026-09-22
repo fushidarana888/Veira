@@ -107,7 +107,7 @@ export function MagicPanel({ characterId, progress }: Props) {
     .filter((spell) => spell.combat_slot !== null)
     .sort((a, b) => (a.combat_slot ?? 99) - (b.combat_slot ?? 99))
 
-  const concentrationActive = selectedSpells.length === 1
+  const concentrationActive = selectedSpells.length === 1 && selectedSpells[0]?.spell_kind !== 'summon'
 
   const manaPercent = progress.mana_max > 0
     ? Math.max(0, Math.min(100, Math.round((progress.mana_current / progress.mana_max) * 100)))
