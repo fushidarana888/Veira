@@ -985,7 +985,12 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   }, [tab, character.id])
 
   async function changeRace() {
-    if (!customizationState || selectedCustomizationRaceId === customizationState.current_race_id) return
+    if (!customizationState) return
+
+    if (selectedCustomizationRaceId === customizationState.current_race_id) {
+      setCustomizationMessage('Сначала выбери другую расу.')
+      return
+    }
 
     const selectedRace = customizationRaces.find((race) => race.id === selectedCustomizationRaceId)
     if (!selectedRace) return
@@ -1662,16 +1667,17 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                     customizationBusy !== null
                     || !customizationState
                     || customizationState.busy_for_race_change
-                    || selectedCustomizationRaceId === customizationState.current_race_id
                     || customizationRaces.find((race) => race.id === selectedCustomizationRaceId)?.is_available === false
                   }
                   onClick={() => void changeRace()}
                 >
                   {customizationBusy === 'race'
                     ? 'Меняем…'
-                    : customizationState?.free_race_changes
-                      ? `Сменить бесплатно · осталось ${customizationState.free_race_changes}`
-                      : 'Сменить расу · 150 золота'}
+                    : customizationState && selectedCustomizationRaceId === customizationState.current_race_id
+                      ? 'Выбери другую расу'
+                      : customizationState?.free_race_changes
+                        ? `Сменить бесплатно · осталось ${customizationState.free_race_changes}`
+                        : 'Сменить расу · 150 золота'}
                 </button>
               </article>
 
@@ -1712,15 +1718,16 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                     customizationBusy !== null
                     || !customizationState
                     || !customizationBio.trim()
-                    || customizationBio.trim() === characterBio.trim()
                   }
                   onClick={() => void changeBio()}
                 >
                   {customizationBusy === 'bio'
                     ? 'Сохраняем…'
-                    : customizationState?.free_bio_changes
-                      ? `Изменить бесплатно · осталось ${customizationState.free_bio_changes}`
-                      : 'Изменить биографию · 50 золота'}
+                    : customizationBio.trim() === characterBio.trim()
+                      ? 'Внеси изменения в биографию'
+                      : customizationState?.free_bio_changes
+                        ? `Изменить бесплатно · осталось ${customizationState.free_bio_changes}`
+                        : 'Изменить биографию · 50 золота'}
                 </button>
               </article>
             </div>
