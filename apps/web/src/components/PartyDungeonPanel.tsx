@@ -3,7 +3,7 @@ import { criticalHitCount } from '../lib/combatPresentation'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
-import type { BowDistance, BowProfile } from '../types'
+import type { BowDistance, BowProfile, CombatSummon } from '../types'
 
 type PartySummary = {
   id: string
@@ -123,7 +123,7 @@ type PartySpell = {
   slug: string
   name: string
   description: string
-  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'summon'
   damage_type: string | null
   mana_cost: number
   required_level: number
@@ -339,6 +339,7 @@ export function PartyDungeonPanel({
   const [party, setParty] = useState<PartySummary | null>(null)
   const [options, setOptions] = useState<DungeonOption[]>([])
   const [state, setState] = useState<PartyDungeonState>(emptyState)
+  const [summons, setSummons] = useState<CombatSummon[]>([])
   const [spells, setSpells] = useState<PartySpell[]>([])
   const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
   const [spellTargets, setSpellTargets] = useState<Record<string, string>>({})
@@ -378,9 +379,29 @@ export function PartyDungeonPanel({
 
     setSpells(
       ((spellResult.data as PartySpell[] | null) ?? [])
-        .filter((spell) => spell.combat_slot !== null && ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt'].includes(spell.spell_kind)),
+        .filter((spell) => spell.combat_slot !== null && ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt', 'summon'].includes(spell.spell_kind)),
     )
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
+  }
+
+  async function loadPartySummons(encounterId: string | null) {
+    if (!encounterId) {
+      setSummons([])
+      return
+    }
+
+    const { data, error } = await supabase.rpc('get_combat_summons', {
+      p_character_id: characterId,
+      p_context_type: 'party',
+      p_encounter_id: encounterId,
+    })
+
+    if (error) {
+      setMessage(coopError(error.message))
+      return
+    }
+
+    setSummons((data as CombatSummon[] | null) ?? [])
   }
 
   async function loadDynamicState(silent = false) {
@@ -398,7 +419,9 @@ export function PartyDungeonPanel({
         return
       }
 
-      setState(normalizeState(dungeonResult.data as Partial<PartyDungeonState> | null))
+      const nextState = normalizeState(dungeonResult.data as Partial<PartyDungeonState> | null)
+      setState(nextState)
+      await loadPartySummons(nextState.encounter?.id ?? null)
       if (!silent) setLoading(false)
       return
     }
@@ -425,7 +448,9 @@ export function PartyDungeonPanel({
 
     setParty(overview?.party ?? null)
     setOptions(nextOptions)
-    setState(normalizeState(dungeonResult.data as Partial<PartyDungeonState> | null))
+    const nextState = normalizeState(dungeonResult.data as Partial<PartyDungeonState> | null)
+    setState(nextState)
+    await loadPartySummons(nextState.encounter?.id ?? null)
 
     if (
       selectedSectorId == null
@@ -564,10 +589,31 @@ export function PartyDungeonPanel({
     setBusy(false)
   }
 
+  async function setPartySummonTarget(summon: CombatSummon, value: string) {
+    if (!state.encounter || summon.status !== 'active' || summon.owner_character_id !== characterId) return
+    const separator = value.indexOf(':')
+    const targetType = (separator >= 0 ? value.slice(0, separator) : value) as CombatSummon['target_type']
+    const targetId = separator >= 0 ? value.slice(separator + 1) || null : null
+
+    setBusy(true)
+    setMessage('')
+    const { error } = await supabase.rpc('set_combat_summon_target', {
+      p_character_id: characterId,
+      p_context_type: 'party',
+      p_encounter_id: state.encounter.id,
+      p_summon_id: summon.id,
+      p_target_type: targetType,
+      p_target_id: targetId,
+    })
+    if (error) setMessage(coopError(error.message))
+    await loadPartySummons(state.encounter.id)
+    setBusy(false)
+  }
+
   async function castPartySpell(spell: PartySpell) {
     if (!state.encounter) return
 
-    const support = spell.spell_kind !== 'damage'
+    const support = !['damage', 'summon'].includes(spell.spell_kind)
     const targetId = support
       ? spellTargets[spell.id] ?? characterId
       : null
@@ -1051,6 +1097,44 @@ export function PartyDungeonPanel({
                       ))}
                   </div>
                 )}
+
+                {summons
+                  .filter((summon) => summon.owner_character_id === member.character_id)
+                  .map((summon) => (
+                    <div className={'party-summon-card ' + summon.status} key={summon.id}>
+                      <div className="party-summon-head">
+                        <div>
+                          <strong>{summon.summon_name}</strong>
+                          <span>
+                            призыв {member.character_id === characterId ? '· твой' : '· ' + member.name}
+                          </span>
+                        </div>
+                        <b>{summon.status === 'dead' ? 'ПОГИБ' : summon.hp_current + ' / ' + summon.hp_max + ' ОЗ'}</b>
+                      </div>
+                      <div className="party-resource-meter hp summon">
+                        <span style={{ width: hpPercent(summon.hp_current, summon.hp_max) + '%' }} />
+                      </div>
+                      <div className="party-summon-stats">
+                        <span>Атака {summon.attack}</span>
+                        <span>Физ. броня {summon.physical_armor}</span>
+                        <span>Маг. броня {summon.magic_armor}</span>
+                      </div>
+                      {summon.status === 'active' && (
+                        <label className="party-summon-target">
+                          <span>Атаковать</span>
+                          <select
+                            value={summon.target_type + ':' + (summon.target_id ?? '')}
+                            disabled={busy || summon.owner_character_id !== characterId}
+                            onChange={(event) => void setPartySummonTarget(summon, event.target.value)}
+                          >
+                            {activeEncounter && (
+                              <option value="encounter_enemy:">{activeEncounter.enemy_name}</option>
+                            )}
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                  ))}
               </div>
             ))}
           </div>
@@ -1289,7 +1373,7 @@ export function PartyDungeonPanel({
 
                   <div className="party-spell-grid">
                     {spells.map((spell) => {
-                      const support = spell.spell_kind !== 'damage'
+                      const support = !['damage', 'summon'].includes(spell.spell_kind)
                       const targetId = spellTargets[spell.id] ?? characterId
                       const target = state.members.find((member) => member.character_id === targetId) ?? me
                       const noMana = (me?.mana_current ?? 0) < spell.mana_cost
@@ -1316,6 +1400,8 @@ export function PartyDungeonPanel({
                             <span>
                               {spell.spell_kind === 'damage'
                                 ? (damageLabels[spell.damage_type ?? ''] ?? spell.damage_type ?? 'магия')
+                                : spell.spell_kind === 'summon'
+                                  ? 'призыв существа'
                                 : spell.spell_kind === 'heal'
                                   ? 'лечение / поднятие'
                                   : spell.spell_kind === 'guard'
@@ -1364,7 +1450,9 @@ export function PartyDungeonPanel({
                                 ? 'ОЗ полностью восстановлено'
                                 : spell.spell_kind === 'damage'
                                   ? 'Применить'
-                                  : 'На выбранного'}
+                                  : spell.spell_kind === 'summon'
+                                    ? 'Призвать'
+                                    : 'На выбранного'}
                           </button>
                         </div>
                       )
