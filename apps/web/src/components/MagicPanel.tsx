@@ -130,7 +130,7 @@ export function MagicPanel({ characterId, progress }: Props) {
             <strong>{progress.mana_current} / {progress.mana_max}</strong>
           </div>
           <div className="meter mana-meter"><span style={{ width: manaPercent + '%' }} /></div>
-          <small>Пассивное восстановление: +10 маны в час вне активного боя</small>
+          <small>Пассивное восстановление зависит от расы: 25–45 маны в час вне активного боя</small>
         </div>
       </article>
 
@@ -213,6 +213,8 @@ export function MagicPanel({ characterId, progress }: Props) {
                   </div>
                   {spell.spell_kind === 'heal' ? (
                     <span className="damage-type-chip healing">Лечение</span>
+                  ) : spell.spell_kind === 'summon' ? (
+                    <span className="damage-type-chip healing">Призыв</span>
                   ) : spell.damage_type ? (
                     <span className="damage-type-chip">{damageLabels[spell.damage_type]}</span>
                   ) : null}
@@ -232,7 +234,12 @@ export function MagicPanel({ characterId, progress }: Props) {
 
                 <div className="spell-stats">
                   <span>Мана <strong>{spell.mana_cost}</strong></span>
-                  <span>{spell.spell_kind === 'heal' ? 'Лечение' : 'Сила'} <strong>×{Number(spell.power_multiplier).toFixed(2)}</strong></span>
+                  {spell.spell_kind !== 'summon' && (
+                    <span>{spell.spell_kind === 'heal' ? 'Лечение' : 'Сила'} <strong>×{Number(spell.power_multiplier).toFixed(2)}</strong></span>
+                  )}
+                  {spell.spell_kind === 'summon' && (
+                    <span>Тип <strong>боевой призыв</strong></span>
+                  )}
                   {spell.flat_power > 0 && (
                     <span>{spell.spell_kind === 'heal' ? 'База' : 'Бонус'} <strong>+{spell.flat_power}</strong></span>
                   )}
