@@ -11360,3 +11360,118 @@ textarea {
 .duel-tempo {
   margin-top: 10px;
 }
+
+
+/* Party round order by initiative */
+.party-initiative-order {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(108, 137, 144, .18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .014);
+}
+
+.party-initiative-order-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.party-initiative-order-head strong {
+  color: #d9dfdf;
+  font-size: 9px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.party-initiative-order-head span {
+  color: #788487;
+  font-size: 7.5px;
+}
+
+.party-initiative-order-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.party-initiative-order-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(121, 137, 140, .17);
+  border-radius: 999px;
+  background: rgba(10, 14, 19, .72);
+  color: #aeb8b8;
+  font-size: 8px;
+}
+
+.party-initiative-order-chip b {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .045);
+  color: #879294;
+  font-size: 7px;
+}
+
+.party-initiative-order-chip em {
+  color: #7e898b;
+  font-style: normal;
+  font-size: 7px;
+}
+
+.party-initiative-order-chip.current {
+  border-color: rgba(202, 163, 99, .42);
+  background: rgba(142, 101, 48, .12);
+  color: #e1c18c;
+  box-shadow: inset 0 0 0 1px rgba(226, 190, 130, .035);
+}
+
+.party-initiative-order-chip.current b {
+  background: rgba(214, 172, 105, .16);
+  color: #e4c18a;
+}
+
+.party-initiative-order-chip.current em {
+  color: #c5a978;
+}
+
+.party-initiative-order-chip.acted {
+  opacity: .46;
+  text-decoration: line-through;
+}
+
+.party-initiative-order-chip.self:not(.current) {
+  border-color: rgba(100, 154, 164, .24);
+}
+
+.party-turn-status.current-turn {
+  border-color: rgba(183, 145, 86, .30);
+  background: rgba(141, 100, 47, .08);
+}
+
+.party-turn-status.waiting-turn {
+  color: #879194;
+}
+
+@media (max-width: 620px) {
+  .party-initiative-order-list {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .party-initiative-order-chip {
+    justify-content: flex-start;
+  }
+
+  .party-initiative-order-chip em {
+    margin-left: auto;
+  }
+}
