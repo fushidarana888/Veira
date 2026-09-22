@@ -1123,8 +1123,8 @@ export function WorldMap({
     onOpenBattles?.()
   }
 
-  async function startWorldStrongEnemy(enemy: WorldStrongEnemy) {
-    if (enemy.run_status === 'active') {
+  async function startWorldStrongEnemy(enemy: WorldStrongEnemy, mode: 'solo' | 'party') {
+    if (mode === 'solo' && enemy.run_status === 'active') {
       onOpenBattles?.()
       return
     }
@@ -1135,25 +1135,35 @@ export function WorldMap({
     const { error } = await supabase.rpc('start_event_boss', {
       p_character_id: characterId,
       p_event_id: enemy.event_id,
-      p_mode: 'solo',
+      p_mode: mode,
     })
 
     if (error) {
       const raw = error.message
-      if (raw.includes('EVENT_BOSS_CHARACTER_LIMIT_REACHED')) {
-        setMessage('Этот персонаж уже победил данного сильного врага. Повторная победа недоступна.')
-      } else if (raw.includes('EVENT_BOSS_NOT_ACTIVE')) {
+      if (raw.includes('EVENT_BOSS_NOT_ACTIVE')) {
         setMessage('Это мировое событие уже закончилось.')
       } else if (raw.includes('EVENT_BOSS_SECTOR_NOT_DISCOVERED')) {
         setMessage('Сначала нужно открыть сектор с этим противником.')
-      } else if (raw.includes('EVENT_BOSS_SOLO_ONLY')) {
-        setMessage('Этого противника можно атаковать только в одиночку.')
+      } else if (raw.includes('PARTY_MEMBER_SECTOR_NOT_DISCOVERED')) {
+        setMessage('У одного из участников пати этот сектор ещё не открыт.')
+      } else if (raw.includes('PARTY_NOT_FOUND')) {
+        setMessage('Для группового боя сначала создай пати.')
+      } else if (raw.includes('PARTY_LEADER_REQUIRED')) {
+        setMessage('Групповой бой с мировым боссом запускает лидер пати.')
+      } else if (raw.includes('PARTY_NEEDS_TWO_MEMBERS')) {
+        setMessage('Для группового боя нужно минимум 2 персонажа.')
+      } else if (raw.includes('PARTY_TOO_LARGE')) {
+        setMessage('В бой с мировым боссом можно войти группой максимум из 4 персонажей.')
+      } else if (raw.includes('PARTY_DUNGEON_ALREADY_ACTIVE')) {
+        setMessage('У этой пати уже идёт другой групповой бой.')
+      } else if (raw.includes('PARTY_MEMBER_BUSY')) {
+        setMessage('Один из участников пати занят другим тяжёлым действием.')
       } else if (raw.includes('CHARACTER_BUSY') || raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')) {
         setMessage('Персонаж уже занят другим боем или исследованием.')
       } else if (raw.includes('PVP_DUEL_ACTIVE')) {
         setMessage('Сначала заверши активную дуэль.')
-      } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
-        setMessage('Перед боем восстанови хотя бы часть ОЗ.')
+      } else if (raw.includes('CHARACTER_HAS_NO_HP') || raw.includes('PARTY_MEMBER_HAS_NO_HP')) {
+        setMessage('Перед боем всем участникам нужно восстановить хотя бы часть ОЗ.')
       } else {
         setMessage(userFacingError(raw))
       }
@@ -1767,7 +1777,9 @@ export function WorldMap({
                     <div className={'world-strong-enemy-card ' + (enemy.defeated ? 'defeated' : '')} key={enemy.event_id}>
                       <div className="world-strong-enemy-head">
                         <div>
-                          <span className="eyebrow">{enemy.defeated ? 'ПОБЕЖДЁН' : 'СИЛЬНЫЙ ВРАГ · ТОЛЬКО СОЛО'}</span>
+                          <span className="eyebrow">
+                            {enemy.defeated ? 'ПЕРВАЯ НАГРАДА ПОЛУЧЕНА' : 'СИЛЬНЫЙ ВРАГ · СОЛО ИЛИ ПАТИ'}
+                          </span>
                           <strong>{enemy.name}</strong>
                           <small>Исчезнет через <Countdown endsAt={enemy.ends_at} /></small>
                         </div>
@@ -1810,30 +1822,55 @@ export function WorldMap({
                       </div>
 
                       <div className="world-strong-enemy-reward">
-                        <span className="eyebrow">НАГРАДА ЗА ПОБЕДУ</span>
-                        <strong>{enemy.reward_experience} опыта · {enemy.reward_gold} золота</strong>
-                        {enemy.reward_name && (
+                        <span className="eyebrow">
+                          {enemy.defeated ? 'ПОВТОРНЫЕ ПОБЕДЫ' : 'ПЕРВАЯ ПОБЕДА'}
+                        </span>
+                        {enemy.defeated ? (
                           <>
-                            <small>Особая награда: {enemy.reward_name}</small>
-                            {enemy.reward_description && <small>{enemy.reward_description}</small>}
+                            <strong>Без золота и опыта</strong>
+                            <small>Первую награду ты уже получил. Сражаться с боссом можно сколько угодно.</small>
+                          </>
+                        ) : (
+                          <>
+                            <strong>{enemy.reward_experience} опыта · {enemy.reward_gold} золота</strong>
+                            {enemy.reward_name && (
+                              <>
+                                <small>Особая награда: {enemy.reward_name}</small>
+                                {enemy.reward_description && <small>{enemy.reward_description}</small>}
+                              </>
+                            )}
                           </>
                         )}
                       </div>
 
-                      <button
-                        className="primary-button"
-                        type="button"
-                        disabled={busy || enemy.defeated || (!runActive && enemy.character_busy)}
-                        onClick={() => runActive ? onOpenBattles?.() : void startWorldStrongEnemy(enemy)}
-                      >
-                        {enemy.defeated
-                          ? 'Уже побеждён'
-                          : runActive
+                      <div className="world-strong-enemy-actions">
+                        <button
+                          className="primary-button"
+                          type="button"
+                          disabled={busy || (!runActive && enemy.character_busy)}
+                          onClick={() => runActive ? onOpenBattles?.() : void startWorldStrongEnemy(enemy, 'solo')}
+                        >
+                          {runActive
                             ? 'Продолжить бой'
                             : enemy.character_busy
                               ? 'Персонаж занят'
-                              : 'Сразиться с сильным врагом'}
-                      </button>
+                              : enemy.defeated
+                                ? 'Сразиться снова · соло'
+                                : 'Сразиться · соло'}
+                        </button>
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          disabled={busy || runActive || enemy.character_busy}
+                          onClick={() => void startWorldStrongEnemy(enemy, 'party')}
+                        >
+                          {enemy.character_busy
+                            ? 'Пати сейчас недоступно'
+                            : enemy.defeated
+                              ? 'Сразиться снова · пати 2–4'
+                              : 'Сразиться · пати 2–4'}
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
