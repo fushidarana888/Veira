@@ -384,7 +384,6 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
 
     if (equippedIds.length === 0) {
       setEquipment([])
-      setItems([])
       return
     }
 
@@ -444,7 +443,12 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     }
 
     setEquipment(nextEquipment)
-    setItems((itemData as CharacterItem[] | null) ?? [])
+    const equippedItems = (itemData as CharacterItem[] | null) ?? []
+    setItems((current) => {
+      const merged = new Map(current.map((item) => [item.id, item]))
+      for (const item of equippedItems) merged.set(item.id, item)
+      return [...merged.values()]
+    })
   }
 
   async function loadInventory() {
@@ -544,12 +548,10 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     if (
       tab === 'character'
       && (characterTab === 'inventory' || characterTab === 'equipment')
-      && !inventoryHydrated
-      && !inventoryBusy
     ) {
       void loadInventory()
     }
-  }, [tab, characterTab, inventoryHydrated, inventoryBusy, character.id])
+  }, [tab, characterTab, character.id])
 
   async function refreshInventoryState() {
     if (inventoryHydrated) return loadInventory()
