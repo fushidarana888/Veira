@@ -110,6 +110,7 @@ type PartyCombatMember = {
   acted: boolean
   is_leader: boolean
   joined_order: number
+  initiative_meter: number
   reward_exhausted: boolean
   reward_attempt_number: number | null
   reward_cycle_ends_at: string | null
@@ -635,7 +636,7 @@ export function PartyDungeonPanel({
       return
     }
 
-    const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
+    const result = data as { status?: string; run_status?: string; enemy_acted?: boolean; extra_action?: boolean } | null
 
     await Promise.all([
       loadDynamicState(true),
@@ -650,6 +651,8 @@ export function PartyDungeonPanel({
       )
     } else if (result?.status === 'defeat') {
       setMessage('Вся группа выведена из строя. Поход завершён поражением.')
+    } else if (result?.extra_action) {
+      setMessage('Инициатива продвинула тебя вперёд: доступно ещё одно полное действие до хода противника.')
     } else if (result?.enemy_acted) {
       setMessage('Раунд завершён: после действий группы противник ответил атакой.')
     } else {
@@ -719,7 +722,7 @@ export function PartyDungeonPanel({
       return
     }
 
-    const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
+    const result = data as { status?: string; run_status?: string; enemy_acted?: boolean; extra_action?: boolean } | null
     await Promise.all([
       loadDynamicState(true),
       refreshPlayer(result?.status === 'victory' || result?.status === 'defeat'),
@@ -733,6 +736,8 @@ export function PartyDungeonPanel({
       )
     } else if (result?.status === 'defeat') {
       setMessage('После хода противника вся группа выведена из строя.')
+    } else if (result?.extra_action) {
+      setMessage('Заклинание применено, а высокая инициатива сразу даёт тебе ещё одно полное действие.')
     } else if (result?.enemy_acted) {
       setMessage('Заклинание применено. Все участники походили, поэтому противник ответил.')
     } else {
@@ -764,7 +769,7 @@ export function PartyDungeonPanel({
       return
     }
 
-    const result = data as { status?: string; run_status?: string; enemy_acted?: boolean } | null
+    const result = data as { status?: string; run_status?: string; enemy_acted?: boolean; extra_action?: boolean } | null
     await Promise.all([
       loadDynamicState(true),
       refreshPlayer(true),
@@ -799,7 +804,7 @@ export function PartyDungeonPanel({
       return
     }
 
-    const result = data as { status?: string; enemy_acted?: boolean; enemy_stunned?: boolean } | null
+    const result = data as { status?: string; enemy_acted?: boolean; enemy_stunned?: boolean; extra_action?: boolean } | null
     await Promise.all([
       loadDynamicState(true),
       refreshPlayer(result?.status === 'victory' || result?.status === 'defeat'),
@@ -807,6 +812,8 @@ export function PartyDungeonPanel({
 
     if (result?.status === 'defeat') {
       setMessage('После пропущенного хода группа потерпела поражение.')
+    } else if (result?.extra_action) {
+      setMessage('Оглушение забрало действие, но высокий темп сразу продвинул тебя к следующему полному ходу.')
     } else if (result?.enemy_stunned) {
       setMessage('Ты пропускаешь ход из-за оглушения, но противник тоже оглушён и не атакует.')
     } else if (result?.enemy_acted) {
@@ -1390,6 +1397,15 @@ export function PartyDungeonPanel({
                   <span>ОМ {member.mana_current}/{member.mana_max}</span>
                   <div className="party-resource-meter mana">
                     <span style={{ width: hpPercent(member.mana_current, member.mana_max) + '%' }} />
+                  </div>
+                </div>
+                <div className="initiative-tempo compact">
+                  <div className="initiative-tempo-head">
+                    <span>Темп инициативы</span>
+                    <strong>{member.initiative_meter ?? 0} / 100</strong>
+                  </div>
+                  <div className="initiative-tempo-meter">
+                    <span style={{ width: Math.max(0, Math.min(100, member.initiative_meter ?? 0)) + '%' }} />
                   </div>
                 </div>
 
