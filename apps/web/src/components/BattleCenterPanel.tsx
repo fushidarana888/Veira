@@ -382,7 +382,9 @@ export function BattleCenterPanel({
             <PartyDungeonPanel
               characterId={characterId}
               mode="management"
-              onOpenBattles={() => setTab('current')}
+              onOpenBattles={() => {
+                void loadOverview().finally(() => setTab('current'))
+              }}
               onProgressChanged={onProgressChanged}
               onInventoryChanged={onInventoryChanged}
             />
