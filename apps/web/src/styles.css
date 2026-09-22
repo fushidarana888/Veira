@@ -9739,9 +9739,8 @@ textarea {
 }
 
 .world-strong-enemy-card.defeated {
-  border-color: rgba(170, 190, 170, 0.24);
+  border-color: rgba(170, 190, 170, 0.28);
   background: rgba(26, 34, 28, 0.46);
-  opacity: 0.82;
 }
 
 .world-strong-enemy-head {
@@ -9814,6 +9813,16 @@ textarea {
   background: rgba(80, 67, 28, 0.18);
 }
 
+.world-strong-enemy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.world-strong-enemy-actions > button {
+  flex: 1 1 190px;
+}
+
 .wolf-wound-state {
   display: grid;
   gap: 3px;
@@ -9854,7 +9863,8 @@ textarea {
     flex-direction: column;
   }
 
-  .world-strong-enemy-card .primary-button {
+  .world-strong-enemy-card .primary-button,
+  .world-strong-enemy-actions > button {
     width: 100%;
   }
 }
