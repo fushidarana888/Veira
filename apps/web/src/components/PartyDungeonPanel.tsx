@@ -110,7 +110,7 @@ type PartyCombatMember = {
   acted: boolean
   is_leader: boolean
   joined_order: number
-  initiative_meter: number
+  initiative_meter?: number
   reward_exhausted: boolean
   reward_attempt_number: number | null
   reward_cycle_ends_at: string | null
