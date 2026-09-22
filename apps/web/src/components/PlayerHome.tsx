@@ -1236,7 +1236,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                     />
                   </div>
                   <small className="passive-regen-note">
-                    Пассивное восстановление: +{raceDefinition?.mana_regen_per_hour ?? 10} маны в час вне активного боя
+                    Пассивное восстановление: +{raceDefinition?.mana_regen_per_hour ?? 35} маны в час вне активного боя
                   </small>
                 </article>
 
