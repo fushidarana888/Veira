@@ -66,7 +66,7 @@ type DuelParticipant = {
   physical_defense: number
   magic_defense: number
   initiative: number
-  initiative_meter: number
+  initiative_meter?: number
   weapon_damage_type: string
   magic_damage_type: string
   guard_reduction_percent: number
