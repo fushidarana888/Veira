@@ -3,7 +3,7 @@ import { criticalHitCount } from '../lib/combatPresentation'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
-import type { BowDistance, BowProfile, CombatSummon } from '../types'
+import type { BowDistance, BowProfile, CombatEnemyTarget, CombatSummon } from '../types'
 
 type PartySummary = {
   id: string
@@ -339,6 +339,7 @@ export function PartyDungeonPanel({
   const [party, setParty] = useState<PartySummary | null>(null)
   const [options, setOptions] = useState<DungeonOption[]>([])
   const [state, setState] = useState<PartyDungeonState>(emptyState)
+  const [enemyTargets, setEnemyTargets] = useState<CombatEnemyTarget[]>([])
   const [summons, setSummons] = useState<CombatSummon[]>([])
   const [spells, setSpells] = useState<PartySpell[]>([])
   const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
@@ -387,21 +388,31 @@ export function PartyDungeonPanel({
   async function loadPartySummons(encounterId: string | null) {
     if (!encounterId) {
       setSummons([])
+      setEnemyTargets([])
       return
     }
 
-    const { data, error } = await supabase.rpc('get_combat_summons', {
-      p_character_id: characterId,
-      p_context_type: 'party',
-      p_encounter_id: encounterId,
-    })
+    const [summonResult, targetResult] = await Promise.all([
+      supabase.rpc('get_combat_summons', {
+        p_character_id: characterId,
+        p_context_type: 'party',
+        p_encounter_id: encounterId,
+      }),
+      supabase.rpc('get_combat_enemy_targets', {
+        p_character_id: characterId,
+        p_context_type: 'party',
+        p_encounter_id: encounterId,
+      }),
+    ])
 
+    const error = summonResult.error ?? targetResult.error
     if (error) {
       setMessage(coopError(error.message))
       return
     }
 
-    setSummons((data as CombatSummon[] | null) ?? [])
+    setSummons((summonResult.data as CombatSummon[] | null) ?? [])
+    setEnemyTargets((targetResult.data as CombatEnemyTarget[] | null) ?? [])
   }
 
   async function loadDynamicState(silent = false) {
@@ -1127,9 +1138,16 @@ export function PartyDungeonPanel({
                             disabled={busy || summon.owner_character_id !== characterId}
                             onChange={(event) => void setPartySummonTarget(summon, event.target.value)}
                           >
-                            {activeEncounter && (
-                              <option value="encounter_enemy:">{activeEncounter.enemy_name}</option>
-                            )}
+                            {enemyTargets
+                              .filter((target) => target.status === 'active')
+                              .map((target) => (
+                                <option
+                                  key={target.target_type + ':' + (target.target_id ?? '')}
+                                  value={target.target_type + ':' + (target.target_id ?? '')}
+                                >
+                                  {target.name} · {target.hp_current}/{target.hp_max} ОЗ
+                                </option>
+                              ))}
                           </select>
                         </label>
                       )}
