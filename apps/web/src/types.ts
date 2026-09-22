@@ -776,6 +776,15 @@ export type CharacterSpell = {
 
 
 
+export type CombatEnemyTarget = {
+  target_type: 'encounter_enemy' | 'enemy_instance'
+  target_id: string | null
+  name: string
+  hp_current: number
+  hp_max: number
+  status: 'active' | 'defeated'
+}
+
 export type CombatSummon = {
   id: string
   owner_character_id: string
