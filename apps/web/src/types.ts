@@ -511,6 +511,7 @@ export type CombatEncounter = {
   player_hp_max: number
   player_mana_current: number
   player_mana_max: number
+  player_initiative_meter: number
   player_counter_bonus_percent: number
   player_counter_blocked_damage: number
   player_spell_damage_bonus_percent: number
