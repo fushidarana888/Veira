@@ -15,6 +15,7 @@ import type {
   CombatEncounter,
   CombatStyleProfile,
   CharacterSpell,
+  CombatEnemyTarget,
   CombatSummon,
   CombatStatusEffect,
   CombatStatusEffectType,
@@ -184,6 +185,7 @@ export function AdventuresPanel({
   const [encounters, setEncounters] = useState<CombatEncounter[]>([])
   const [turns, setTurns] = useState<CombatTurn[]>([])
   const [statusEffects, setStatusEffects] = useState<CombatStatusEffect[]>([])
+  const [enemyTargets, setEnemyTargets] = useState<CombatEnemyTarget[]>([])
   const [summons, setSummons] = useState<CombatSummon[]>([])
   const [spells, setSpells] = useState<CharacterSpell[]>([])
   const [preparedSpells, setPreparedSpells] = useState<CharacterSpell[]>([])
@@ -362,7 +364,12 @@ export function AdventuresPanel({
             p_context_type: 'solo',
             p_encounter_id: latestEncounter.id,
           }),
-        ]).then(([turnResult, statusResult, summonResult]) => {
+          supabase.rpc('get_combat_enemy_targets', {
+            p_character_id: characterId,
+            p_context_type: 'solo',
+            p_encounter_id: latestEncounter.id,
+          }),
+        ]).then(([turnResult, statusResult, summonResult, targetResult]) => {
           if (turnResult.error) setMessage(userFacingError(turnResult.error.message))
           else setTurns((turnResult.data as CombatTurn[] | null) ?? [])
 
@@ -371,12 +378,16 @@ export function AdventuresPanel({
 
           if (summonResult.error) setMessage(userFacingError(summonResult.error.message))
           else setSummons((summonResult.data as CombatSummon[] | null) ?? [])
+
+          if (targetResult.error) setMessage(userFacingError(targetResult.error.message))
+          else setEnemyTargets((targetResult.data as CombatEnemyTarget[] | null) ?? [])
         }),
       )
     } else {
       setTurns([])
       setStatusEffects([])
       setSummons([])
+      setEnemyTargets([])
     }
 
     await Promise.all(detailRequests)
@@ -474,7 +485,7 @@ export function AdventuresPanel({
   }
 
   async function refreshCombatDetails(encounterId: string) {
-    const [turnResult, statusResult, summonResult] = await Promise.all([
+    const [turnResult, statusResult, summonResult, targetResult] = await Promise.all([
       supabase
         .from('combat_turns')
         .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
@@ -491,6 +502,11 @@ export function AdventuresPanel({
         p_context_type: 'solo',
         p_encounter_id: encounterId,
       }),
+      supabase.rpc('get_combat_enemy_targets', {
+        p_character_id: characterId,
+        p_context_type: 'solo',
+        p_encounter_id: encounterId,
+      }),
     ])
 
     if (!turnResult.error) {
@@ -501,6 +517,9 @@ export function AdventuresPanel({
     }
     if (!summonResult.error) {
       setSummons((summonResult.data as CombatSummon[] | null) ?? [])
+    }
+    if (!targetResult.error) {
+      setEnemyTargets((targetResult.data as CombatEnemyTarget[] | null) ?? [])
     }
   }
 
@@ -1933,7 +1952,16 @@ export function AdventuresPanel({
                                   disabled={busy}
                                   onChange={(event) => void setSummonTarget(summon, event.target.value)}
                                 >
-                                  <option value="encounter_enemy:">{activeCombat.enemy_name}</option>
+                                  {enemyTargets
+                                    .filter((target) => target.status === 'active')
+                                    .map((target) => (
+                                      <option
+                                        key={target.target_type + ':' + (target.target_id ?? '')}
+                                        value={target.target_type + ':' + (target.target_id ?? '')}
+                                      >
+                                        {target.name} · {target.hp_current}/{target.hp_max} ОЗ
+                                      </option>
+                                    ))}
                                 </select>
                               </label>
                             )}
