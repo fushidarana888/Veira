@@ -308,7 +308,7 @@ export function AdventuresPanel({
       }),
       supabase
         .from('combat_encounters')
-        .select('id, dungeon_run_id, death_spirit_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_wound_stacks, enemy_rage_hunt_stacks, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, player_greatsword_crit_stacks, enemy_bloodshed_stacks, created_at, ended_at')
+        .select('id, dungeon_run_id, death_spirit_id, character_id, sector_id, status, round, room_index, is_boss, enemy_template_id, enemy_name, enemy_level, enemy_hp_current, enemy_hp_max, enemy_attack, enemy_defense, enemy_initiative, enemy_damage_type, enemy_resistances, enemy_on_hit_effect_type, enemy_on_hit_effect_chance, enemy_on_hit_effect_turns, enemy_on_hit_effect_potency, enemy_special_name, enemy_special_kind, enemy_special_value, enemy_special_damage_multiplier, enemy_special_every_n, enemy_special_damage_type, enemy_special_effect_type, enemy_special_effect_chance, enemy_special_effect_turns, enemy_special_effect_potency, enemy_special_telegraph_text, enemy_special_attack_text, enemy_special_charging, enemy_special_started_round, enemy_guard_percent, enemy_guard_hits, enemy_attack_bonus_percent, enemy_phase, enemy_phase2_hp_percent, enemy_phase2_name, enemy_phase2_attack_bonus_percent, enemy_phase2_defense_bonus_percent, enemy_phase2_special_every_n, player_wound_stacks, enemy_rage_hunt_stacks, player_physical_damage_type, player_magic_damage_type, player_hp_current, player_hp_max, player_mana_current, player_mana_max, player_initiative_meter, player_counter_bonus_percent, player_counter_blocked_damage, player_spell_damage_bonus_percent, player_spell_damage_bonus_hits, player_bow_distance, player_bow_draw_pending, player_greatsword_crit_stacks, enemy_bloodshed_stacks, created_at, ended_at')
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(6),
@@ -1885,6 +1885,16 @@ export function AdventuresPanel({
                     <strong>{activeCombat.player_mana_current} / {activeCombat.player_mana_max}</strong>
                   </div>
                   <div className="combat-hp-meter mana"><span style={{ width: playerManaPercent + '%' }} /></div>
+                  <div className="initiative-tempo">
+                    <div className="initiative-tempo-head">
+                      <span>Темп инициативы</span>
+                      <strong>{activeCombat.player_initiative_meter ?? 0} / 100</strong>
+                    </div>
+                    <div className="initiative-tempo-meter">
+                      <span style={{ width: Math.max(0, Math.min(100, activeCombat.player_initiative_meter ?? 0)) + '%' }} />
+                    </div>
+                    <small>100 — дополнительное полное действие до хода противника</small>
+                  </div>
                   {activeCombat.player_counter_bonus_percent > 0 && (
                     <div className="combat-counter-ready">
                       <strong>Контратака +{activeCombat.player_counter_bonus_percent}%</strong>
