@@ -10496,36 +10496,6 @@ textarea {
   color: #cfae83;
   font-size: 9px;
 }
-
-.greatsword-crit-charge {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 3px 10px;
-  align-items: center;
-  border: 1px solid rgba(116, 88, 62, .54);
-  border-radius: 11px;
-  background: rgba(89, 58, 35, .10);
-  padding: 9px 11px;
-}
-
-.greatsword-crit-charge > span {
-  color: #9e8062;
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: .12em;
-}
-
-.greatsword-crit-charge > strong {
-  color: #e3c18e;
-  font-size: 10px;
-}
-
-.greatsword-crit-charge > small {
-  grid-column: 1 / -1;
-  color: #8e959d;
-  font-size: 8px;
-}
-
 @keyframes critical-hit-pulse {
   0% { transform: scale(.985); filter: brightness(1.5); }
   45% { transform: scale(1.008); filter: brightness(1.16); }
@@ -10561,13 +10531,5 @@ textarea {
 
   .critical-impact-banner > strong {
     font-size: 17px;
-  }
-
-  .greatsword-crit-charge {
-    grid-template-columns: 1fr;
-  }
-
-  .greatsword-crit-charge > small {
-    grid-column: auto;
   }
 }
