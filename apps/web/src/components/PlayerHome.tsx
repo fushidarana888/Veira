@@ -1407,9 +1407,6 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                   />
                   <CombatStat label="Крит. урон" value="Физ. ×1.5 · Маг. ×1.4" />
                 </div>
-                <p className="combat-stat-system-note">
-                  Инициатива теперь влияет на темп боя: быстрый персонаж постепенно продвигается вперёд по очереди и иногда получает дополнительное полное действие. Бонус ограничен, поэтому высокая инициатива не удваивает число ходов.
-                </p>
               </section>
 
               <section className="panel">
