@@ -893,6 +893,7 @@ export function PartyDungeonPanel({
   )
   const partyMemberCount = party?.member_count ?? state.members.length
   const canStartGroup = partyMemberCount >= 2
+  const selectedDungeon = options.find((option) => option.sector_id === selectedSectorId) ?? null
   const selectedBoss = bossOptions.find((boss) => boss.event_id === selectedBossId) ?? null
   const canAct = Boolean(
     activeEncounter
@@ -1103,114 +1104,182 @@ export function PartyDungeonPanel({
             </div>
           ) : (
             <div className="party-expedition-picker">
-              <div className="party-dungeon-waiting">
-                Награды боссов считаются отдельно для каждого участника. Уже полученная личная награда никогда не мешает идти на босса вместе.
+              <div className="party-expedition-note">
+                <div>
+                  <span className="eyebrow">ОБЩИЙ ВЫБОР ПАТИ</span>
+                  <strong>Куда идём дальше?</strong>
+                </div>
+                <p>
+                  Подземелье требует общий разведанный вход. У боссов личные награды считаются отдельно:
+                  уже полученная награда не мешает идти вместе.
+                </p>
               </div>
 
-              <section className="party-expedition-choice">
-                <div className="party-subheading">
-                  <div>
-                    <strong>Общие подземелья</strong>
-                    <span>один и тот же разведанный вход у всей пати</span>
+              <div className="party-expedition-grid">
+                <section className="party-expedition-choice dungeon">
+                  <div className="party-expedition-card-head">
+                    <div>
+                      <span className="eyebrow">ПОДЗЕМЕЛЬЯ</span>
+                      <h3>Общий поход</h3>
+                      <p>Один разведанный вход должен быть открыт у всей группы.</p>
+                    </div>
+                    <span className="party-expedition-count">
+                      {options.length} {options.length === 1 ? 'вариант' : 'варианта'}
+                    </span>
                   </div>
-                  <b>{options.length}</b>
-                </div>
 
-                {options.length === 0 ? (
-                  <p className="muted">Общих разведанных подземелий сейчас нет.</p>
-                ) : (
-                  <>
-                    <label>
-                      <span>Общий вход</span>
-                      <select
-                        value={selectedSectorId ?? ''}
-                        disabled={busy || !isLeader}
-                        onChange={(event) => setSelectedSectorId(Number(event.target.value))}
-                      >
-                        {options.map((option) => (
-                          <option key={option.sector_id} value={option.sector_id}>
-                            {option.title} · опасность {option.danger_level}/10 · {terrainLabels[option.terrain_type] ?? option.terrain_type}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    {isLeader && (
-                      <button
-                        className="primary-button"
-                        type="button"
-                        disabled={busy || !selectedSectorId}
-                        onClick={() => void startRun()}
-                      >
-                        {busy ? 'Собираем группу…' : 'Начать поход в данж'}
-                      </button>
-                    )}
-                  </>
-                )}
-              </section>
+                  {options.length === 0 ? (
+                    <div className="party-expedition-empty">
+                      <strong>Нет общего входа</strong>
+                      <span>Исследуйте один и тот же данж всеми участниками пати.</span>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="party-expedition-select">
+                        <span>Выбрать подземелье</span>
+                        <select
+                          value={selectedSectorId ?? ''}
+                          disabled={busy || !isLeader}
+                          onChange={(event) => setSelectedSectorId(Number(event.target.value))}
+                        >
+                          {options.map((option) => (
+                            <option key={option.sector_id} value={option.sector_id}>
+                              {option.title} · опасность {option.danger_level}/10 · {terrainLabels[option.terrain_type] ?? option.terrain_type}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
 
-              <section className="party-expedition-choice boss">
-                <div className="party-subheading">
-                  <div>
-                    <strong>Общие боссы</strong>
-                    <span>мировые, еженедельные, рейдовые и будущие типы</span>
-                  </div>
-                  <b>{bossOptions.length}</b>
-                </div>
-
-                {bossOptions.length === 0 ? (
-                  <p className="muted">Сейчас нет активных боссов, доступных всей пати.</p>
-                ) : (
-                  <>
-                    <label>
-                      <span>Выбрать босса</span>
-                      <select
-                        value={selectedBossId ?? ''}
-                        disabled={busy || !isLeader}
-                        onChange={(event) => setSelectedBossId(event.target.value)}
-                      >
-                        {bossOptions.map((boss) => (
-                          <option key={boss.event_id} value={boss.event_id}>
-                            {boss.name} · {bossKindLabel(boss.boss_kind)} · ур. {boss.recommended_level}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    {selectedBoss && (
-                      <div className="party-boss-preview">
-                        <div>
-                          <span className="eyebrow">{bossKindLabel(selectedBoss.boss_kind).toUpperCase()}</span>
-                          <strong>{selectedBoss.name}</strong>
-                          <small>{selectedBoss.description}</small>
-                        </div>
-                        <div className="party-boss-reward-state">
-                          <span>Первая награда ещё доступна: <b>{selectedBoss.fresh_reward_members}/{selectedBoss.party_size}</b></span>
-                          {selectedBoss.capped_members > 0 && (
-                            <span>
-                              Уже исчерпали личный лимит: <b>{selectedBoss.capped_members}</b> · они всё равно участвуют, но без повторной награды
+                      {selectedDungeon && (
+                        <div className="party-dungeon-preview">
+                          <div className="party-expedition-preview-top">
+                            <span className="party-expedition-type">Подземелье</span>
+                            <span className={'party-danger-chip danger-' + Math.min(10, Math.max(0, selectedDungeon.danger_level))}>
+                              Опасность {selectedDungeon.danger_level}/10
                             </span>
-                          )}
-                          <span>
-                            Первая победа: <b>{selectedBoss.first_reward_gold} золота · {selectedBoss.first_reward_experience} опыта</b>
-                            {selectedBoss.special_reward_name ? ' · ' + selectedBoss.special_reward_name : ''}
-                          </span>
+                          </div>
+                          <div className="party-expedition-preview-copy">
+                            <h4>{selectedDungeon.title}</h4>
+                            <p>{terrainLabels[selectedDungeon.terrain_type] ?? selectedDungeon.terrain_type}</p>
+                          </div>
+                          <div className="party-expedition-meta">
+                            <span>Общий вход подтверждён для всей пати</span>
+                            <span>2–4 участника</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {isLeader && (
-                      <button
-                        className="primary-button"
-                        type="button"
-                        disabled={busy || !selectedBossId}
-                        onClick={() => void startBoss()}
-                      >
-                        {busy ? 'Собираем группу…' : 'Начать бой с боссом'}
-                      </button>
-                    )}
-                  </>
-                )}
-              </section>
+                      {isLeader && (
+                        <button
+                          className="primary-button party-expedition-action"
+                          type="button"
+                          disabled={busy || !selectedSectorId}
+                          onClick={() => void startRun()}
+                        >
+                          {busy ? 'Собираем группу…' : 'Начать поход'}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </section>
+
+                <section className="party-expedition-choice boss">
+                  <div className="party-expedition-card-head">
+                    <div>
+                      <span className="eyebrow">БОССЫ</span>
+                      <h3>Общий вызов</h3>
+                      <p>Мировые, еженедельные, рейдовые и событийные противники.</p>
+                    </div>
+                    <span className="party-expedition-count boss-count">
+                      {bossOptions.length} {bossOptions.length === 1 ? 'босс' : 'босса'}
+                    </span>
+                  </div>
+
+                  {bossOptions.length === 0 ? (
+                    <div className="party-expedition-empty">
+                      <strong>Нет доступных боссов</strong>
+                      <span>Сейчас у всей группы нет общего активного босса.</span>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="party-expedition-select">
+                        <span>Выбрать босса</span>
+                        <select
+                          value={selectedBossId ?? ''}
+                          disabled={busy || !isLeader}
+                          onChange={(event) => setSelectedBossId(event.target.value)}
+                        >
+                          {bossOptions.map((boss) => (
+                            <option key={boss.event_id} value={boss.event_id}>
+                              {boss.name} · {bossKindLabel(boss.boss_kind)} · ур. {boss.recommended_level}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      {selectedBoss && (
+                        <div className="party-boss-preview">
+                          <div className="party-expedition-preview-top">
+                            <span className="party-expedition-type boss-type">
+                              {bossKindLabel(selectedBoss.boss_kind)}
+                            </span>
+                            <span className="party-boss-level">ур. {selectedBoss.recommended_level}</span>
+                          </div>
+
+                          <div className="party-expedition-preview-copy">
+                            <h4>{selectedBoss.name}</h4>
+                            <p>{selectedBoss.description}</p>
+                          </div>
+
+                          <div className={'party-boss-availability ' + (selectedBoss.fresh_reward_members > 0 ? 'available' : 'claimed')}>
+                            <span>Первая награда</span>
+                            <strong>
+                              {selectedBoss.fresh_reward_members > 0
+                                ? 'доступна ' + selectedBoss.fresh_reward_members + '/' + selectedBoss.party_size
+                                : 'получена всеми'}
+                            </strong>
+                          </div>
+
+                          <div className="party-boss-reward-chips">
+                            <span><b>{selectedBoss.first_reward_gold}</b> золота</span>
+                            <span><b>{selectedBoss.first_reward_experience}</b> опыта</span>
+                            {selectedBoss.special_reward_name && (
+                              <span className="special">{selectedBoss.special_reward_name}</span>
+                            )}
+                          </div>
+
+                          {(selectedBoss.repeat_reward_gold > 0 || selectedBoss.repeat_reward_experience > 0) ? (
+                            <small className="party-boss-repeat-reward">
+                              Повторная победа: {selectedBoss.repeat_reward_gold} золота · {selectedBoss.repeat_reward_experience} опыта.
+                            </small>
+                          ) : (
+                            <small className="party-boss-repeat-reward muted">
+                              Повторные победы доступны без повторной личной награды.
+                            </small>
+                          )}
+
+                          {selectedBoss.capped_members > 0 && (
+                            <small className="party-boss-limit-note">
+                              {selectedBoss.capped_members} участник(а) уже исчерпали личный лимит, но всё равно могут участвовать.
+                            </small>
+                          )}
+                        </div>
+                      )}
+
+                      {isLeader && (
+                        <button
+                          className="primary-button party-expedition-action boss-action"
+                          type="button"
+                          disabled={busy || !selectedBossId}
+                          onClick={() => void startBoss()}
+                        >
+                          {busy ? 'Собираем группу…' : 'Начать бой с боссом'}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </section>
+              </div>
 
               {!isLeader && (
                 <div className="party-dungeon-waiting">
