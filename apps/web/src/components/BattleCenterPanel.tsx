@@ -185,6 +185,7 @@ export function BattleCenterPanel({
 }: Props) {
   const [tab, setTab] = useState<BattleTab>('current')
   const [overview, setOverview] = useState<BattleOverview>(emptyOverview)
+  const [heldFinishedKind, setHeldFinishedKind] = useState<BattleKind | null>(null)
   const [history, setHistory] = useState<BattleHistoryEntry[]>([])
   const [selected, setSelected] = useState<BattleDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -204,7 +205,16 @@ export function BattleCenterPanel({
       return
     }
 
-    setOverview((data as BattleOverview | null) ?? emptyOverview)
+    const nextOverview = (data as BattleOverview | null) ?? emptyOverview
+    setOverview(nextOverview)
+
+    if (
+      tab === 'current'
+      && (nextOverview.active_kind === 'solo' || nextOverview.active_kind === 'party')
+    ) {
+      setHeldFinishedKind(nextOverview.active_kind)
+    }
+
     if (!silent) setLoading(false)
   }
 
@@ -254,8 +264,13 @@ export function BattleCenterPanel({
   }
 
   useEffect(() => {
+    setHeldFinishedKind(null)
     void loadOverview()
   }, [characterId])
+
+  useEffect(() => {
+    if (tab !== 'current') setHeldFinishedKind(null)
+  }, [tab])
 
   useSmartRefresh(
     () => loadOverview(true),
@@ -274,6 +289,8 @@ export function BattleCenterPanel({
     () => history.filter((entry) => entry.status !== 'active'),
     [history],
   )
+  const currentKind = overview.active_kind ?? heldFinishedKind
+  const showingFinishedResult = !overview.active_kind && heldFinishedKind !== null
 
   return (
     <section className="battle-center-section">
@@ -285,16 +302,22 @@ export function BattleCenterPanel({
             Текущая битва, группа, кооперативные походы, история прохождений и дуэли теперь собраны в одном месте.
           </p>
         </div>
-        <div className={'battle-live-indicator ' + (overview.active_kind ? 'active' : '')}>
-          <strong>{overview.active_kind ? 'LIVE' : '—'}</strong>
-          <span>{overview.active_kind ? kindLabels[overview.active_kind] : 'нет активного боя'}</span>
+        <div className={'battle-live-indicator ' + (overview.active_kind ? 'active' : showingFinishedResult ? 'result' : '')}>
+          <strong>{overview.active_kind ? 'LIVE' : showingFinishedResult ? 'ИТОГ' : '—'}</strong>
+          <span>
+            {overview.active_kind
+              ? kindLabels[overview.active_kind]
+              : showingFinishedResult && currentKind
+                ? kindLabels[currentKind] + ' · завершён'
+                : 'нет активного боя'}
+          </span>
         </div>
       </article>
 
       <div className="battle-center-tabs" role="tablist" aria-label="Разделы боевого центра">
         <button className={tab === 'current' ? 'active' : ''} type="button" onClick={() => setTab('current')}>
           Сейчас
-          {overview.active_kind && <b>1</b>}
+          {currentKind && <b>{overview.active_kind ? '1' : 'ИТОГ'}</b>}
         </button>
         <button className={tab === 'group' ? 'active' : ''} type="button" onClick={() => setTab('group')}>
           Группа
@@ -315,7 +338,7 @@ export function BattleCenterPanel({
         <>
           {loading ? (
             <LoadingBattle />
-          ) : !overview.active_kind ? (
+          ) : !currentKind ? (
             <article className="panel battle-center-empty">
               <span className="eyebrow">СЕЙЧАС</span>
               <h3>Активного боя нет</h3>
@@ -325,7 +348,7 @@ export function BattleCenterPanel({
             </article>
           ) : (
             <Suspense fallback={<LoadingBattle />}>
-              {overview.active_kind === 'solo' && (
+              {currentKind === 'solo' && (
                 <AdventuresPanel
                   characterId={characterId}
                   mode="battles"
@@ -333,7 +356,7 @@ export function BattleCenterPanel({
                   onInventoryChanged={onInventoryChanged}
                 />
               )}
-              {overview.active_kind === 'party' && (
+              {currentKind === 'party' && (
                 <PartyDungeonPanel
                   characterId={characterId}
                   mode="combat"
@@ -341,7 +364,7 @@ export function BattleCenterPanel({
                   onInventoryChanged={onInventoryChanged}
                 />
               )}
-              {overview.active_kind === 'pvp' && <DuelPanel characterId={characterId} />}
+              {currentKind === 'pvp' && <DuelPanel characterId={characterId} />}
             </Suspense>
           )}
         </>
