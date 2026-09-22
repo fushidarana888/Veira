@@ -81,6 +81,7 @@ type PartyEncounter = {
   enemy_damage_type: string
   enemy_bloodshed_stacks: number
   acted_character_ids: string[]
+  next_actor_character_id: string | null
   created_at: string
   ended_at: string | null
 }
@@ -91,6 +92,7 @@ type PartyCombatMember = {
   display_name: string
   race: string
   level: number
+  initiative: number
   hp_current: number
   hp_max: number
   mana_current: number
@@ -265,6 +267,7 @@ function coopError(raw: string) {
   if (raw.includes('PARTY_DUNGEON_ALREADY_ACTIVE')) return 'У этой группы уже идёт совместный поход.'
   if (raw.includes('PARTY_LEADER_REQUIRED')) return 'Начинать зал и принимать решение о побеге может только лидер группы.'
   if (raw.includes('PARTY_ACTION_ALREADY_USED_THIS_ROUND')) return 'Ты уже сделал действие в этом раунде. Ждём остальных участников.'
+  if (raw.includes('PARTY_NOT_YOUR_TURN')) return 'Сейчас ход другого участника. Очередь определяется инициативой.'
   if (raw.includes('PARTY_MEMBER_DOWNED')) return 'Персонаж мёртв и не может действовать, пока его не воскресят.'
   if (raw.includes('PARTY_TARGET_LOST')) return 'Потерянного персонажа нельзя воскресить или выбрать целью поддержки до конца этого боя.'
   if (raw.includes('SACRIFICE_ALREADY_USED_THIS_RUN')) return '«Последняя жертва» уже была использована в этом бою-походе.'
@@ -613,7 +616,7 @@ export function PartyDungeonPanel({
     }
 
     await loadDynamicState(true)
-    setMessage('Битва началась. Каждый живой участник получает минимум одно действие; высокая инициатива может дать дополнительный полный ход до ответа противника.')
+    setMessage('Битва началась. В каждом раунде участники ходят от большей инициативы к меньшей; высокая инициатива также может дать дополнительный полный ход.')
     setBusy(false)
   }
 
@@ -900,12 +903,25 @@ export function PartyDungeonPanel({
   const canStartGroup = partyMemberCount >= 2
   const selectedDungeon = options.find((option) => option.sector_id === selectedSectorId) ?? null
   const selectedBoss = bossOptions.find((boss) => boss.event_id === selectedBossId) ?? null
+  const nextActor = activeEncounter
+    ? state.members.find((member) => member.character_id === activeEncounter.next_actor_character_id) ?? null
+    : null
+  const isMyTurn = Boolean(
+    activeEncounter
+    && activeEncounter.next_actor_character_id === characterId,
+  )
+  const initiativeOrder = activeEncounter
+    ? [...state.members]
+        .filter((member) => !member.downed && !member.lost)
+        .sort((left, right) => (right.initiative ?? 0) - (left.initiative ?? 0) || left.joined_order - right.joined_order)
+    : []
   const canAct = Boolean(
     activeEncounter
     && me
     && !me.downed
     && !me.lost
     && !me.acted
+    && isMyTurn
     && !meStunned
     && !busy,
   )
@@ -915,6 +931,7 @@ export function PartyDungeonPanel({
     && !me.downed
     && !me.lost
     && !me.acted
+    && isMyTurn
     && meStunned
     && !busy,
   )
@@ -1368,7 +1385,7 @@ export function PartyDungeonPanel({
                   <div>
                     <strong>{member.name}</strong>
                     <span>
-                      @{member.display_name} · УР. {member.level}
+                      @{member.display_name} · УР. {member.level} · Иниц. {member.initiative ?? 0}
                       {member.character_id === characterId ? ' · ты' : ''}
                     </span>
                   </div>
@@ -1377,11 +1394,13 @@ export function PartyDungeonPanel({
                       ? 'потерян'
                       : member.dead
                         ? 'мёртв'
-                        : activeEncounter && member.acted
-                        ? 'походил'
-                        : member.is_leader
-                          ? 'лидер'
-                          : 'готов'}
+                        : activeEncounter?.next_actor_character_id === member.character_id
+                          ? member.character_id === characterId ? 'твой ход' : 'ходит'
+                          : activeEncounter && member.acted
+                            ? 'походил'
+                            : member.is_leader
+                              ? 'лидер'
+                              : 'ожидает'}
                   </span>
                 </div>
 
@@ -1564,14 +1583,40 @@ export function PartyDungeonPanel({
                 )}
               </div>
 
-              <div className="party-turn-status">
+              <div className="party-initiative-order">
+                <div className="party-initiative-order-head">
+                  <strong>Очередь раунда</strong>
+                  <span>по инициативе</span>
+                </div>
+                <div className="party-initiative-order-list">
+                  {initiativeOrder.map((member, index) => (
+                    <span
+                      className={[
+                        'party-initiative-order-chip',
+                        member.acted ? 'acted' : '',
+                        activeEncounter.next_actor_character_id === member.character_id ? 'current' : '',
+                        member.character_id === characterId ? 'self' : '',
+                      ].filter(Boolean).join(' ')}
+                      key={member.character_id}
+                    >
+                      <b>{index + 1}</b>
+                      {member.name}
+                      <em>Иниц. {member.initiative ?? 0}</em>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className={'party-turn-status ' + (isMyTurn ? 'current-turn' : 'waiting-turn')}>
                 {me?.downed
                   ? 'Ты выведен из строя. Союзник с лечащим заклинанием может вернуть тебя в бой.'
                   : me?.acted
                     ? 'Твоё действие принято. Ждём остальных живых участников.'
-                    : meStunned
-                      ? 'Ты оглушён и не можешь действовать в этом раунде.'
-                      : 'Твой ход в этом раунде.'}
+                    : !isMyTurn
+                      ? `Сейчас ходит ${nextActor?.name ?? 'другой участник'} · инициатива ${nextActor?.initiative ?? '—'}.`
+                      : meStunned
+                        ? 'Сейчас твой ход по инициативе, но ты оглушён и должен пропустить действие.'
+                        : 'Сейчас твой ход — у тебя наибольшая инициатива среди ещё не походивших участников.'}
               </div>
 
               {isBowProfile(bowProfile) && me && (
