@@ -1217,7 +1217,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                   </div>
                   <div className="meter"><span style={{ width: hpPercent + '%' }} /></div>
                   <small className="passive-regen-note">
-                    Пассивное восстановление: +{raceDefinition?.hp_regen_per_hour ?? 8} ОЗ в час вне активного боя
+                    Пассивное восстановление: +{raceDefinition?.hp_regen_per_hour ?? 50} ОЗ в час вне активного боя
                   </small>
                 </article>
 
