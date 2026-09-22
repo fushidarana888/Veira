@@ -10758,3 +10758,81 @@ textarea {
     flex-direction: column;
   }
 }
+
+
+/* Party destination picker: dungeons + bosses */
+.party-expedition-picker {
+  display: grid;
+  gap: 12px;
+}
+
+.party-expedition-choice {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(140, 150, 145, .18);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, .018);
+}
+
+.party-expedition-choice.boss {
+  border-color: rgba(166, 125, 77, .26);
+  background: linear-gradient(135deg, rgba(91, 55, 31, .10), rgba(255, 255, 255, .015));
+}
+
+.party-expedition-choice .party-subheading {
+  margin: 0;
+}
+
+.party-expedition-choice .party-subheading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.party-expedition-choice .party-subheading span {
+  color: #899194;
+  font-size: 8px;
+}
+
+.party-boss-preview {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgba(190, 148, 94, .18);
+  border-radius: 11px;
+  background: rgba(74, 48, 27, .12);
+}
+
+.party-boss-preview > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.party-boss-preview > div:first-child > strong {
+  font-size: 11px;
+}
+
+.party-boss-preview > div:first-child > small {
+  color: #959c9c;
+  line-height: 1.45;
+}
+
+.party-boss-reward-state {
+  display: grid;
+  gap: 5px;
+}
+
+.party-boss-reward-state > span {
+  color: #9ca4a5;
+  font-size: 8px;
+}
+
+.party-boss-reward-state b {
+  color: #d3d8d2;
+}
+
+@media (max-width: 620px) {
+  .party-expedition-choice {
+    padding: 10px;
+  }
+}
