@@ -878,7 +878,7 @@ export function PartyDungeonPanel({
     )
   }
 
-  if (mode === 'combat' && state.encounter?.status !== 'active') return null
+  if (mode === 'combat' && !activeRun) return null
 
   return (
     <article className="panel party-dungeon-panel">
