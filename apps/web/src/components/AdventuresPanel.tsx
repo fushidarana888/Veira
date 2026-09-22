@@ -15,6 +15,7 @@ import type {
   CombatEncounter,
   CombatStyleProfile,
   CharacterSpell,
+  CombatSummon,
   CombatStatusEffect,
   CombatStatusEffectType,
   CombatTurn,
@@ -112,6 +113,7 @@ function spellKindLabel(spell: CharacterSpell) {
   if (spell.spell_kind === 'cleanse') return 'Очищение'
   if (spell.spell_kind === 'buff') return 'Усиление'
   if (spell.spell_kind === 'taunt') return 'Провокация · только группа'
+  if (spell.spell_kind === 'summon') return 'Призыв существа'
   if (spell.spell_kind === 'sacrifice') return 'Последняя жертва · только группа'
   return spell.damage_type ? damageTypeLabels[spell.damage_type] : 'Магия'
 }
@@ -182,6 +184,7 @@ export function AdventuresPanel({
   const [encounters, setEncounters] = useState<CombatEncounter[]>([])
   const [turns, setTurns] = useState<CombatTurn[]>([])
   const [statusEffects, setStatusEffects] = useState<CombatStatusEffect[]>([])
+  const [summons, setSummons] = useState<CombatSummon[]>([])
   const [spells, setSpells] = useState<CharacterSpell[]>([])
   const [preparedSpells, setPreparedSpells] = useState<CharacterSpell[]>([])
   const [combatScrolls, setCombatScrolls] = useState<CombatScroll[]>([])
@@ -354,17 +357,26 @@ export function AdventuresPanel({
             .select('id, encounter_id, target, effect_type, potency, remaining_turns, source, created_at, updated_at')
             .eq('encounter_id', latestEncounter.id)
             .order('created_at', { ascending: true }),
-        ]).then(([turnResult, statusResult]) => {
+          supabase.rpc('get_combat_summons', {
+            p_character_id: characterId,
+            p_context_type: 'solo',
+            p_encounter_id: latestEncounter.id,
+          }),
+        ]).then(([turnResult, statusResult, summonResult]) => {
           if (turnResult.error) setMessage(userFacingError(turnResult.error.message))
           else setTurns((turnResult.data as CombatTurn[] | null) ?? [])
 
           if (statusResult.error) setMessage(userFacingError(statusResult.error.message))
           else setStatusEffects((statusResult.data as CombatStatusEffect[] | null) ?? [])
+
+          if (summonResult.error) setMessage(userFacingError(summonResult.error.message))
+          else setSummons((summonResult.data as CombatSummon[] | null) ?? [])
         }),
       )
     } else {
       setTurns([])
       setStatusEffects([])
+      setSummons([])
     }
 
     await Promise.all(detailRequests)
@@ -462,7 +474,7 @@ export function AdventuresPanel({
   }
 
   async function refreshCombatDetails(encounterId: string) {
-    const [turnResult, statusResult] = await Promise.all([
+    const [turnResult, statusResult, summonResult] = await Promise.all([
       supabase
         .from('combat_turns')
         .select('id, encounter_id, round, actor, action_type, damage, player_hp_after, enemy_hp_after, message, created_at')
@@ -474,6 +486,11 @@ export function AdventuresPanel({
         .select('id, encounter_id, target, effect_type, potency, remaining_turns, source, created_at, updated_at')
         .eq('encounter_id', encounterId)
         .order('created_at', { ascending: true }),
+      supabase.rpc('get_combat_summons', {
+        p_character_id: characterId,
+        p_context_type: 'solo',
+        p_encounter_id: encounterId,
+      }),
     ])
 
     if (!turnResult.error) {
@@ -481,6 +498,9 @@ export function AdventuresPanel({
     }
     if (!statusResult.error) {
       setStatusEffects((statusResult.data as CombatStatusEffect[] | null) ?? [])
+    }
+    if (!summonResult.error) {
+      setSummons((summonResult.data as CombatSummon[] | null) ?? [])
     }
   }
 
@@ -636,6 +656,28 @@ export function AdventuresPanel({
       ...activeCombat,
       player_bow_distance: distance,
     })
+    setBusy(false)
+  }
+
+  async function setSummonTarget(summon: CombatSummon, value: string) {
+    if (!activeCombat || summon.status !== 'active') return
+    const separator = value.indexOf(':')
+    const targetType = (separator >= 0 ? value.slice(0, separator) : value) as CombatSummon['target_type']
+    const targetId = separator >= 0 ? value.slice(separator + 1) || null : null
+
+    setBusy(true)
+    setMessage('')
+    const { error } = await supabase.rpc('set_combat_summon_target', {
+      p_character_id: characterId,
+      p_context_type: 'solo',
+      p_encounter_id: activeCombat.id,
+      p_summon_id: summon.id,
+      p_target_type: targetType,
+      p_target_id: targetId,
+    })
+
+    if (error) setMessage(userFacingError(error.message))
+    await refreshCombatDetails(activeCombat.id)
     setBusy(false)
   }
 
@@ -1859,6 +1901,45 @@ export function AdventuresPanel({
                           {effect.potency > 0 ? ' · ' + effect.potency : ''}
                         </span>
                       ))}
+                    </div>
+                  )}
+
+                  {summons.length > 0 && (
+                    <div className="combat-summons-list">
+                      {summons.map((summon) => {
+                        const hp = summon.hp_max > 0
+                          ? Math.max(0, Math.min(100, Math.round(summon.hp_current / summon.hp_max * 100)))
+                          : 0
+                        return (
+                          <div className={'combat-summon-card ' + summon.status} key={summon.id}>
+                            <div className="combat-summon-head">
+                              <div>
+                                <strong>{summon.summon_name}</strong>
+                                <span>{summon.role === 'tank' ? 'защитник' : summon.role === 'support' ? 'дух поддержки' : 'боевой зверь'}</span>
+                              </div>
+                              <b>{summon.status === 'dead' ? 'ПОГИБ' : summon.hp_current + ' / ' + summon.hp_max + ' ОЗ'}</b>
+                            </div>
+                            <div className="combat-hp-meter summon"><span style={{ width: hp + '%' }} /></div>
+                            <div className="combat-summon-stats">
+                              <span>Атака {summon.attack}</span>
+                              <span>Физ. броня {summon.physical_armor}</span>
+                              <span>Маг. броня {summon.magic_armor}</span>
+                            </div>
+                            {summon.status === 'active' && (
+                              <label className="combat-summon-target">
+                                <span>Атаковать</span>
+                                <select
+                                  value={summon.target_type + ':' + (summon.target_id ?? '')}
+                                  disabled={busy}
+                                  onChange={(event) => void setSummonTarget(summon, event.target.value)}
+                                >
+                                  <option value="encounter_enemy:">{activeCombat.enemy_name}</option>
+                                </select>
+                              </label>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
