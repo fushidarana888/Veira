@@ -878,7 +878,102 @@ export function PartyDungeonPanel({
     )
   }
 
-  if (mode === 'combat' && !activeRun) return null
+  if (mode === 'combat' && !activeRun) {
+    if (!run || !encounter || encounter.status === 'active') return null
+
+    const victory = run.status === 'completed' || encounter.status === 'victory'
+    const defeat = encounter.status === 'defeat'
+    const resultTitle = victory ? 'ПОБЕДА' : defeat ? 'ПОРАЖЕНИЕ' : 'ПОХОД ЗАВЕРШЁН'
+
+    return (
+      <article className={'panel party-dungeon-panel party-combat-final ' + (victory ? 'victory' : defeat ? 'defeat' : 'ended')}>
+        <div className="party-combat-final-head">
+          <div>
+            <span className="eyebrow">{resultTitle}</span>
+            <h2>{run.title}</h2>
+            <p className="muted">
+              {victory
+                ? 'Групповой бой завершён победой. Результат останется здесь, пока ты не выйдешь из «Бои → Сейчас».'
+                : defeat
+                  ? 'Отряд проиграл бой. Результат останется здесь, пока ты не выйдешь из «Бои → Сейчас».'
+                  : 'Групповой поход завершён. Результат останется здесь, пока ты не выйдешь из «Бои → Сейчас».'}
+            </p>
+          </div>
+          <span className={'badge ' + (victory ? 'ready' : '')}>
+            {victory ? 'победа' : defeat ? 'поражение' : run.status}
+          </span>
+        </div>
+
+        <div className="party-combat-final-summary">
+          <span><strong>{encounter.enemy_name}</strong><small>последний противник</small></span>
+          <span><strong>{run.rooms_cleared}/{run.total_rooms}</strong><small>залов пройдено</small></span>
+          <span><strong>{encounter.round}</strong><small>раундов в финале</small></span>
+        </div>
+
+        {state.members.length > 0 && (
+          <div className="party-combat-final-members">
+            {state.members.map((member) => (
+              <span className={member.dead || member.lost ? 'down' : ''} key={member.character_id}>
+                <strong>{member.display_name || member.name}</strong>
+                <small>
+                  {member.lost
+                    ? 'потерян'
+                    : member.dead || member.downed
+                      ? 'погиб'
+                      : member.hp_current + ' / ' + member.hp_max + ' ОЗ'}
+                </small>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {orderedTurns.length > 0 && (
+          <div className="party-combat-log party-combat-final-log">
+            {orderedTurns.map((turn) => {
+              const criticalHits = criticalHitCount(turn.message)
+              return (
+                <div
+                  className={'party-combat-log-row ' + turn.actor_type + (criticalHits > 0 ? ' critical-hit' : '')}
+                  key={turn.id}
+                >
+                  <span>
+                    {turn.actor_type === 'player'
+                      ? 'Игрок'
+                      : turn.actor_type === 'enemy'
+                        ? 'Враг'
+                        : 'Система'}
+                  </span>
+                  <div className="combat-log-message">
+                    {criticalHits > 0 && (
+                      <b className="critical-hit-badge">КРИТ{criticalHits > 1 ? ' ×' + criticalHits : ''}</b>
+                    )}
+                    <p>{turn.message}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {state.loot.length > 0 && (
+          <div className="party-personal-loot">
+            <div className="party-subheading">
+              <strong>Твоя личная добыча</strong>
+              <span>уже в инвентаре</span>
+            </div>
+            <div className="party-personal-loot-grid">
+              {state.loot.map((drop) => (
+                <div className={'party-loot-item rarity-' + drop.rarity} key={drop.id}>
+                  <strong>{drop.item_name}</strong>
+                  <b>×{drop.quantity}</b>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </article>
+    )
+  }
 
   return (
     <article className="panel party-dungeon-panel">
