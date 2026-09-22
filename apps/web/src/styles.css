@@ -1530,6 +1530,12 @@ textarea {
   font-size: 27px;
 }
 
+.combat-stat-tile small {
+  color: #777f89;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
 @media (max-width: 820px) {
   .level-up-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -11348,4 +11354,9 @@ textarea {
   color: #737d80;
   font-size: 7px;
   line-height: 1.35;
+}
+
+
+.duel-tempo {
+  margin-top: 10px;
 }
