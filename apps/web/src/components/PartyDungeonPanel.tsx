@@ -1202,19 +1202,24 @@ export function PartyDungeonPanel({
                     </div>
                   ) : (
                     <>
-                      <label className="party-expedition-select">
+                      <label className="party-expedition-select party-boss-selector">
                         <span>Выбрать босса</span>
-                        <select
-                          value={selectedBossId ?? ''}
-                          disabled={busy || !isLeader}
-                          onChange={(event) => setSelectedBossId(event.target.value)}
-                        >
-                          {bossOptions.map((boss) => (
-                            <option key={boss.event_id} value={boss.event_id}>
-                              {boss.name} · {bossKindLabel(boss.boss_kind)} · ур. {boss.recommended_level}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="party-boss-selector-shell">
+                          <span className="party-boss-selector-sigil" aria-hidden="true">✦</span>
+                          <select
+                            className="party-boss-selector-control"
+                            value={selectedBossId ?? ''}
+                            disabled={busy || !isLeader}
+                            onChange={(event) => setSelectedBossId(event.target.value)}
+                          >
+                            {bossOptions.map((boss) => (
+                              <option key={boss.event_id} value={boss.event_id}>
+                                {boss.name} · {bossKindLabel(boss.boss_kind)} · ур. {boss.recommended_level}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="party-boss-selector-chevron" aria-hidden="true">⌄</span>
+                        </div>
                       </label>
 
                       {selectedBoss && (
