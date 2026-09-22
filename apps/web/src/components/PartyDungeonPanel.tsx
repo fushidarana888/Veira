@@ -813,8 +813,13 @@ export function PartyDungeonPanel({
   )
   const enemyStatuses = state.statuses.filter((status) => status.target_type === 'enemy')
   const meStunned = myStatuses.some((status) => status.effect_type === 'stun')
-  const isLeader = Boolean(party && party.leader_character_id === characterId)
-  const canStartGroup = Boolean(party && party.member_count >= 2)
+  const isLeader = Boolean(
+    activeRun
+      ? activeRun.leader_character_id === characterId
+      : party?.leader_character_id === characterId
+  )
+  const partyMemberCount = party?.member_count ?? state.members.length
+  const canStartGroup = partyMemberCount >= 2
   const canAct = Boolean(
     activeEncounter
     && me
@@ -856,7 +861,7 @@ export function PartyDungeonPanel({
     )
   }
 
-  if (!party) return null
+  if (mode === 'management' && !party) return null
 
   if (mode === 'management' && state.encounter?.status === 'active') {
     return (
@@ -890,7 +895,7 @@ export function PartyDungeonPanel({
           </p>
         </div>
         <span className="badge">
-          {activeRun ? activeRun.member_count + ' в походе' : party.member_count + ' / 4'}
+          {activeRun ? activeRun.member_count + ' в походе' : partyMemberCount + ' / 4'}
         </span>
       </div>
 
