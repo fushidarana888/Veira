@@ -439,7 +439,6 @@ export function AdventuresPanel({
   const enemyStatusEffects = statusEffects.filter((effect) => effect.target === 'enemy')
   const latestPlayerTurn = turns.find((turn) => turn.actor === 'player') ?? null
   const latestPlayerCriticalHits = criticalHitCount(latestPlayerTurn?.message)
-  const greatswordCritBonus = Math.min(75, (activeCombat?.player_greatsword_crit_stacks ?? 0) * 15)
   const latestCombatSite = latestCombat
     ? sites.find((site) => site.active_run_id === latestCombat.dungeon_run_id) ?? null
     : null
@@ -2198,14 +2197,6 @@ export function AdventuresPanel({
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-
-              {greatswordCritBonus > 0 && (
-                <div className="greatsword-crit-charge" aria-live="polite">
-                  <span>ДВУРУЧНЫЙ МЕЧ</span>
-                  <strong>+{greatswordCritBonus} п.п. к следующему криту</strong>
-                  <small>Некритический физический удар добавляет +15 п.п. · крит сбрасывает накопление.</small>
                 </div>
               )}
 
