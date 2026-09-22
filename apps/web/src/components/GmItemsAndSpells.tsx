@@ -205,7 +205,7 @@ type SpellDraft = {
   name: string
   description: string
   enabled: boolean
-  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice' | 'summon'
   damage_type: MagicDamageType | null
   mana_cost: number
   required_level: number
@@ -267,6 +267,7 @@ function defaultFamilySlugs(
   if (kind === 'buff') return ['enhancement']
   if (kind === 'taunt') return ['control']
   if (kind === 'sacrifice') return ['sacrifice', 'healing', 'protective']
+  if (kind === 'summon') return ['summoning', 'nature']
   return []
 }
 
@@ -1389,6 +1390,7 @@ export function GmItemsAndSpells() {
                   <option value="cleanse">Очищение дебаффов</option>
                   <option value="buff">Усиление урона</option>
                   <option value="taunt">Провокация союзника</option>
+                  <option value="summon">Призыв существа</option>
                   <option value="sacrifice">Последняя жертва · только боевой свиток</option>
                 </select>
               </label>
