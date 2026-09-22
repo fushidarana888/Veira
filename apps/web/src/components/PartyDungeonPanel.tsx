@@ -613,7 +613,7 @@ export function PartyDungeonPanel({
     }
 
     await loadDynamicState(true)
-    setMessage('Битва началась. Каждый живой участник получает одно действие в раунде.')
+    setMessage('Битва началась. Каждый живой участник получает минимум одно действие; высокая инициатива может дать дополнительный полный ход до ответа противника.')
     setBusy(false)
   }
 
@@ -812,8 +812,6 @@ export function PartyDungeonPanel({
 
     if (result?.status === 'defeat') {
       setMessage('После пропущенного хода группа потерпела поражение.')
-    } else if (result?.extra_action) {
-      setMessage('Оглушение забрало действие, но высокий темп сразу продвинул тебя к следующему полному ходу.')
     } else if (result?.enemy_stunned) {
       setMessage('Ты пропускаешь ход из-за оглушения, но противник тоже оглушён и не атакует.')
     } else if (result?.enemy_acted) {
