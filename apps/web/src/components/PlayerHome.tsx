@@ -1396,7 +1396,11 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                     label="Маг. броня"
                     value={effectiveMagicDefense + ' · ' + magicArmorReduction.toFixed(1) + '%'}
                   />
-                  <CombatStat label="Инициатива" value={Math.round(derivedCombatStats.initiative + raceInitiativeBonus)} />
+                  <CombatStat
+                    label="Инициатива"
+                    value={Math.round(derivedCombatStats.initiative + raceInitiativeBonus)}
+                    hint="Высокая инициатива копит темп для дополнительного полного действия"
+                  />
                   <CombatStat
                     label="Шанс крита"
                     value={Math.min(75, derivedCombatStats.criticalChancePercent + raceCriticalChanceBonus).toFixed(1) + '%'}
@@ -2347,11 +2351,20 @@ function Stat({ label, value, base }: { label: string; value: number; base: numb
   )
 }
 
-function CombatStat({ label, value }: { label: string; value: number | string }) {
+function CombatStat({
+  label,
+  value,
+  hint,
+}: {
+  label: string
+  value: number | string
+  hint?: string
+}) {
   return (
     <div className="combat-stat-tile">
       <span>{label}</span>
       <strong>{value}</strong>
+      {hint && <small>{hint}</small>}
     </div>
   )
 }
