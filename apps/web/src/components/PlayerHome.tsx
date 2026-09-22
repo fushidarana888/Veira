@@ -948,7 +948,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     if (raw.includes('BIOGRAPHY_TOO_LONG')) return 'Биография не может быть длиннее 4000 символов.'
     if (raw.includes('RACE_REQUIRES_GM_ACCESS')) return 'Эта раса доступна только после разрешения ГМ.'
     if (raw.includes('RACE_NOT_PLAYABLE')) return 'Эта раса сейчас недоступна игрокам.'
-    if (raw.includes('CHARACTER_BUSY')) return 'Нельзя менять расу во время боя, экспедиции или другого активного действия.'
+    if (raw.includes('CHARACTER_BUSY')) return 'Нельзя менять расу во время боя, данжа, PvP или незавершённого активного действия.'
     return userFacingError(raw)
   }
 
@@ -1632,7 +1632,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
 
                 <p>
                   Первые две смены бесплатны. Затем каждая смена стоит <b>150 золота</b>.
-                  Во время боя, экспедиции или другого активного действия расу менять нельзя.
+                  Во время обычной экспедиции расу менять можно. Смена блокируется только во время боя, данжа, PvP и незавершённого активного действия.
                 </p>
 
                 <label>
