@@ -2392,6 +2392,32 @@ export function AdventuresPanel({
               : latestCombat.status}
           </span>
 
+          <p className="combat-result-sticky-note">
+            Этот результат останется в «Бои → Сейчас», пока ты не выйдешь из раздела.
+          </p>
+
+          {turns.length > 0 && (
+            <div className="combat-log combat-result-log">
+              {turns.map((turn) => {
+                const criticalHits = criticalHitCount(turn.message)
+                return (
+                  <div
+                    className={'combat-log-row ' + turn.actor + (criticalHits > 0 ? ' critical-hit' : '')}
+                    key={turn.id}
+                  >
+                    <span>{turn.actor === 'player' ? 'Ты' : turn.actor === 'enemy' ? 'Противник' : 'Система'}</span>
+                    <div className="combat-log-message">
+                      {criticalHits > 0 && (
+                        <b className="critical-hit-badge">КРИТ{criticalHits > 1 ? ' ×' + criticalHits : ''}</b>
+                      )}
+                      <p>{turn.message}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {lootDrops.length > 0 && (
             <div className="dungeon-loot-block result">
               <div className="combat-special-heading">
