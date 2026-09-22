@@ -10533,3 +10533,128 @@ textarea {
     font-size: 17px;
   }
 }
+
+
+/* Combat summons */
+.combat-summons-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.combat-summon-card,
+.party-summon-card {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(112, 146, 102, .34);
+  border-radius: 12px;
+  padding: 10px;
+  background: linear-gradient(135deg, rgba(67, 96, 61, .12), rgba(25, 32, 28, .2));
+}
+
+.combat-summon-card.dead,
+.party-summon-card.dead {
+  opacity: .58;
+  filter: saturate(.45);
+}
+
+.combat-summon-head,
+.party-summon-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.combat-summon-head > div,
+.party-summon-head > div {
+  display: grid;
+  gap: 2px;
+}
+
+.combat-summon-head strong,
+.party-summon-head strong {
+  font-size: 11px;
+}
+
+.combat-summon-head span,
+.party-summon-head span,
+.combat-summon-head b,
+.party-summon-head b {
+  font-size: 8px;
+}
+
+.combat-summon-head b,
+.party-summon-head b {
+  color: #cfd9bf;
+  white-space: nowrap;
+}
+
+.combat-hp-meter.summon,
+.party-resource-meter.summon {
+  height: 5px;
+}
+
+.combat-hp-meter.summon > span,
+.party-resource-meter.summon > span {
+  background: linear-gradient(90deg, #6e9860, #9fbd78);
+}
+
+.combat-summon-stats,
+.party-summon-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.combat-summon-stats span,
+.party-summon-stats span {
+  border: 1px solid rgba(134, 155, 123, .2);
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #aeb8a5;
+  font-size: 7px;
+}
+
+.combat-summon-target,
+.party-summon-target {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.combat-summon-target > span,
+.party-summon-target > span {
+  color: #9aa697;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.combat-summon-target select,
+.party-summon-target select {
+  min-width: 0;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 9px;
+}
+
+.party-summon-card {
+  margin-top: 8px;
+}
+
+@media (max-width: 620px) {
+  .combat-summon-head,
+  .party-summon-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .combat-summon-target,
+  .party-summon-target {
+    grid-template-columns: 1fr;
+  }
+}
