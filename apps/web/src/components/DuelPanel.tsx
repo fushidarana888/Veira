@@ -66,6 +66,7 @@ type DuelParticipant = {
   physical_defense: number
   magic_defense: number
   initiative: number
+  initiative_meter: number
   weapon_damage_type: string
   magic_damage_type: string
   guard_reduction_percent: number
@@ -791,6 +792,7 @@ function DuelFighter({
         <span>Физ. защ. {participant.physical_defense}</span>
         <span>Маг. защ. {participant.magic_defense}</span>
         <span>Иниц. {participant.initiative}</span>
+        <span>Темп {participant.initiative_meter ?? 0}/100</span>
         <span>Дистанция {participant.bow_distance === 'close' ? 'ближняя' : participant.bow_distance === 'far' ? 'дальняя' : 'средняя'}</span>
         {participant.bloodshed_stacks > 0 && <span>Кровопролитие ×{participant.bloodshed_stacks}</span>}
       </div>
