@@ -1135,19 +1135,24 @@ export function PartyDungeonPanel({
                     </div>
                   ) : (
                     <>
-                      <label className="party-expedition-select">
+                      <label className="party-expedition-select party-dungeon-selector">
                         <span>Выбрать подземелье</span>
-                        <select
-                          value={selectedSectorId ?? ''}
-                          disabled={busy || !isLeader}
-                          onChange={(event) => setSelectedSectorId(Number(event.target.value))}
-                        >
-                          {options.map((option) => (
-                            <option key={option.sector_id} value={option.sector_id}>
-                              {option.title} · опасность {option.danger_level}/10 · {terrainLabels[option.terrain_type] ?? option.terrain_type}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="party-boss-selector-shell">
+                          <span className="party-boss-selector-sigil" aria-hidden="true">✦</span>
+                          <select
+                            className="party-boss-selector-control"
+                            value={selectedSectorId ?? ''}
+                            disabled={busy || !isLeader}
+                            onChange={(event) => setSelectedSectorId(Number(event.target.value))}
+                          >
+                            {options.map((option) => (
+                              <option key={option.sector_id} value={option.sector_id}>
+                                {option.title} · опасность {option.danger_level}/10 · {terrainLabels[option.terrain_type] ?? option.terrain_type}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="party-boss-selector-chevron" aria-hidden="true">⌄</span>
+                        </div>
                       </label>
 
                       {selectedDungeon && (
