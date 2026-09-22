@@ -848,7 +848,7 @@ export function PartyDungeonPanel({
     : 0
 
   const orderedTurns = useMemo(
-    () => [...state.turns].reverse(),
+    () => [...state.turns].sort((left, right) => right.id - left.id),
     [state.turns],
   )
 
