@@ -64,7 +64,7 @@ function emptyRace(): RaceDraft {
     hp_bonus: 0,
     mana_bonus: 0,
     hp_regen_per_hour: 50,
-    mana_regen_per_hour: 10,
+    mana_regen_per_hour: 35,
     damage_resistances: {},
     passive_type: null,
     passive_value: 0,
