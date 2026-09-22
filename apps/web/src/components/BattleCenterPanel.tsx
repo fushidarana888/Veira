@@ -265,8 +265,13 @@ export function BattleCenterPanel({
 
   useEffect(() => {
     setHeldFinishedKind(null)
-    void loadOverview()
   }, [characterId])
+
+  useEffect(() => {
+    if (tab === 'current' || tab === 'group') {
+      void loadOverview()
+    }
+  }, [tab, characterId])
 
   useEffect(() => {
     if (tab !== 'current') setHeldFinishedKind(null)
