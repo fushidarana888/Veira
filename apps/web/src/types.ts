@@ -734,7 +734,7 @@ export type SpellDefinition = {
   name: string
   description: string
   enabled: boolean
-  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice' | 'summon'
   damage_type: MagicDamageType | null
   mana_cost: number
   required_level: number
@@ -758,7 +758,7 @@ export type CharacterSpell = {
   slug: string
   name: string
   description: string
-  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice'
+  spell_kind: 'damage' | 'heal' | 'guard' | 'cleanse' | 'buff' | 'taunt' | 'sacrifice' | 'summon'
   damage_type: MagicDamageType | null
   mana_cost: number
   required_level: number
@@ -774,6 +774,29 @@ export type CharacterSpell = {
   combat_slot: number | null
 }
 
+
+
+export type CombatSummon = {
+  id: string
+  owner_character_id: string
+  owner_name: string
+  summon_slug: string
+  summon_name: string
+  description: string
+  role: 'damage' | 'tank' | 'support'
+  status: 'active' | 'dead'
+  hp_current: number
+  hp_max: number
+  attack: number
+  physical_armor: number
+  magic_armor: number
+  damage_type: DamageType
+  target_type: 'encounter_enemy' | 'enemy_instance'
+  target_id: string | null
+  target_name: string
+  created_at: string
+  died_at: string | null
+}
 
 export type CombatStatusEffect = {
   id: string
