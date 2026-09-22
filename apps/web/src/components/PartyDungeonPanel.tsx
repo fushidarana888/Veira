@@ -26,6 +26,25 @@ type DungeonOption = {
   terrain_type: string
 }
 
+type PartyBossOption = {
+  event_id: string
+  slug: string
+  boss_kind: string
+  name: string
+  description: string
+  recommended_level: number
+  sector_id: number | null
+  ends_at: string
+  party_size: number
+  fresh_reward_members: number
+  capped_members: number
+  first_reward_gold: number
+  first_reward_experience: number
+  repeat_reward_gold: number
+  repeat_reward_experience: number
+  special_reward_name: string | null
+}
+
 type PartyRun = {
   id: string
   party_id: string
@@ -192,6 +211,19 @@ const damageLabels: Record<string, string> = {
   moon: 'луна',
 }
 
+const bossKindLabels: Record<string, string> = {
+  weekly: 'еженедельный',
+  world_enemy: 'мировой',
+  sector_incursion: 'вторжение',
+  raid: 'рейдовый',
+  seasonal: 'сезонный',
+  event: 'событийный',
+}
+
+function bossKindLabel(kind: string) {
+  return bossKindLabels[kind] ?? kind.replaceAll('_', ' ')
+}
+
 const terrainLabels: Record<string, string> = {
   plains: 'равнины',
   forest: 'лес',
@@ -226,6 +258,9 @@ function coopError(raw: string) {
   if (raw.includes('PARTY_NEEDS_TWO_MEMBERS')) return 'Для группового похода нужно минимум 2 персонажа.'
   if (raw.includes('PARTY_DUNGEON_NOT_AVAILABLE_TO_ALL')) return 'Не у всех участников открыт и разведан этот вход.'
   if (raw.includes('PARTY_MEMBER_BUSY')) return 'Один из участников занят другой тяжёлой активностью. Группа пока не может войти.'
+  if (raw.includes('EVENT_BOSS_PARTY_DISABLED')) return 'Этот босс специально отключён для группового режима.'
+  if (raw.includes('EVENT_BOSS_NOT_ACTIVE')) return 'Этот босс сейчас недоступен.'
+  if (raw.includes('EVENT_BOSS_SECTOR_NOT_DISCOVERED') || raw.includes('PARTY_MEMBER_SECTOR_NOT_DISCOVERED')) return 'Сектор этого босса должен быть открыт у всех участников пати.'
   if (raw.includes('PARTY_DUNGEON_ALREADY_ACTIVE')) return 'У этой группы уже идёт совместный поход.'
   if (raw.includes('PARTY_LEADER_REQUIRED')) return 'Начинать зал и принимать решение о побеге может только лидер группы.'
   if (raw.includes('PARTY_ACTION_ALREADY_USED_THIS_ROUND')) return 'Ты уже сделал действие в этом раунде. Ждём остальных участников.'
@@ -338,6 +373,7 @@ export function PartyDungeonPanel({
 }: Props) {
   const [party, setParty] = useState<PartySummary | null>(null)
   const [options, setOptions] = useState<DungeonOption[]>([])
+  const [bossOptions, setBossOptions] = useState<PartyBossOption[]>([])
   const [state, setState] = useState<PartyDungeonState>(emptyState)
   const [enemyTargets, setEnemyTargets] = useState<CombatEnemyTarget[]>([])
   const [summons, setSummons] = useState<CombatSummon[]>([])
@@ -345,6 +381,7 @@ export function PartyDungeonPanel({
   const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
   const [spellTargets, setSpellTargets] = useState<Record<string, string>>({})
   const [selectedSectorId, setSelectedSectorId] = useState<number | null>(null)
+  const [selectedBossId, setSelectedBossId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -437,17 +474,20 @@ export function PartyDungeonPanel({
       return
     }
 
-    const [partyResult, optionResult, dungeonResult] = await Promise.all([
+    const [partyResult, optionResult, bossOptionResult, dungeonResult] = await Promise.all([
       supabase.rpc('get_party_overview', {
         p_character_id: characterId,
       }),
       supabase.rpc('get_party_dungeon_options', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_party_boss_options', {
+        p_character_id: characterId,
+      }),
       dungeonPromise,
     ])
 
-    const error = partyResult.error ?? optionResult.error ?? dungeonResult.error
+    const error = partyResult.error ?? optionResult.error ?? bossOptionResult.error ?? dungeonResult.error
     if (error) {
       if (!silent) setMessage(coopError(error.message))
       if (!silent) setLoading(false)
@@ -456,9 +496,11 @@ export function PartyDungeonPanel({
 
     const overview = partyResult.data as PartyOverview | null
     const nextOptions = (optionResult.data as DungeonOption[] | null) ?? []
+    const nextBossOptions = (bossOptionResult.data as PartyBossOption[] | null) ?? []
 
     setParty(overview?.party ?? null)
     setOptions(nextOptions)
+    setBossOptions(nextBossOptions)
     const nextState = normalizeState(dungeonResult.data as Partial<PartyDungeonState> | null)
     setState(nextState)
     await loadPartySummons(nextState.encounter?.id ?? null)
@@ -468,6 +510,13 @@ export function PartyDungeonPanel({
       || !nextOptions.some((entry) => entry.sector_id === selectedSectorId)
     ) {
       setSelectedSectorId(nextOptions[0]?.sector_id ?? null)
+    }
+
+    if (
+      selectedBossId == null
+      || !nextBossOptions.some((entry) => entry.event_id === selectedBossId)
+    ) {
+      setSelectedBossId(nextBossOptions[0]?.event_id ?? null)
     }
 
     if (!silent) setLoading(false)
@@ -519,6 +568,30 @@ export function PartyDungeonPanel({
     await loadDynamicState(true)
     setMessage('Группа вошла в подземелье. Лидер может открыть первый зал.')
     setBusy(false)
+  }
+
+  async function startBoss() {
+    if (!selectedBossId) return
+
+    setBusy(true)
+    setMessage('Группа готовится к бою с боссом…')
+
+    const { error } = await supabase.rpc('start_event_boss', {
+      p_character_id: characterId,
+      p_event_id: selectedBossId,
+      p_mode: 'party',
+    })
+
+    if (error) {
+      setMessage(coopError(error.message))
+      setBusy(false)
+      return
+    }
+
+    await loadDynamicState(true)
+    setMessage('Бой с боссом начался. Награда будет рассчитана отдельно для каждого участника.')
+    setBusy(false)
+    onOpenBattles?.()
   }
 
   async function startRoom() {
@@ -820,6 +893,7 @@ export function PartyDungeonPanel({
   )
   const partyMemberCount = party?.member_count ?? state.members.length
   const canStartGroup = partyMemberCount >= 2
+  const selectedBoss = bossOptions.find((boss) => boss.event_id === selectedBossId) ?? null
   const canAct = Boolean(
     activeEncounter
     && me
@@ -1024,50 +1098,123 @@ export function PartyDungeonPanel({
             <div className="party-dungeon-empty">
               <strong>Нужен хотя бы ещё один участник</strong>
               <p className="muted">
-                Когда в группе будет 2–4 персонажа, здесь появятся подземелья, которые открыты и разведаны у всех участников.
-              </p>
-            </div>
-          ) : options.length === 0 ? (
-            <div className="party-dungeon-empty">
-              <strong>Нет общего разведанного подземелья</strong>
-              <p className="muted">
-                Для совместного входа один и тот же данж должен быть открыт и разведан каждым участником группы.
+                Когда в группе будет 2–4 персонажа, здесь появятся общие подземелья и боссы, доступные всем участникам.
               </p>
             </div>
           ) : (
-            <div className="party-dungeon-start">
+            <div className="party-expedition-picker">
               <div className="party-dungeon-waiting">
-                Твой боевой набор: {spells.length}/3 · {spells.length > 0 ? spells.map((spell) => spell.name).join(' · ') : 'без заклинаний'}.
-                {spells.length === 1 ? ' Концентрация активна.' : ''} После начала похода изменить его нельзя.
+                Награды боссов считаются отдельно для каждого участника. Уже полученная личная награда никогда не мешает идти на босса вместе.
               </div>
 
-              <label>
-                <span>Общий вход</span>
-                <select
-                  value={selectedSectorId ?? ''}
-                  disabled={busy || !isLeader}
-                  onChange={(event) => setSelectedSectorId(Number(event.target.value))}
-                >
-                  {options.map((option) => (
-                    <option key={option.sector_id} value={option.sector_id}>
-                      {option.title} · опасность {option.danger_level}/10 · {terrainLabels[option.terrain_type] ?? option.terrain_type}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <section className="party-expedition-choice">
+                <div className="party-subheading">
+                  <div>
+                    <strong>Общие подземелья</strong>
+                    <span>один и тот же разведанный вход у всей пати</span>
+                  </div>
+                  <b>{options.length}</b>
+                </div>
 
-              {isLeader ? (
-                <button
-                  className="primary-button"
-                  type="button"
-                  disabled={busy || !selectedSectorId}
-                  onClick={() => void startRun()}
-                >
-                  {busy ? 'Собираем группу…' : 'Начать групповой поход'}
-                </button>
-              ) : (
+                {options.length === 0 ? (
+                  <p className="muted">Общих разведанных подземелий сейчас нет.</p>
+                ) : (
+                  <>
+                    <label>
+                      <span>Общий вход</span>
+                      <select
+                        value={selectedSectorId ?? ''}
+                        disabled={busy || !isLeader}
+                        onChange={(event) => setSelectedSectorId(Number(event.target.value))}
+                      >
+                        {options.map((option) => (
+                          <option key={option.sector_id} value={option.sector_id}>
+                            {option.title} · опасность {option.danger_level}/10 · {terrainLabels[option.terrain_type] ?? option.terrain_type}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {isLeader && (
+                      <button
+                        className="primary-button"
+                        type="button"
+                        disabled={busy || !selectedSectorId}
+                        onClick={() => void startRun()}
+                      >
+                        {busy ? 'Собираем группу…' : 'Начать поход в данж'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </section>
+
+              <section className="party-expedition-choice boss">
+                <div className="party-subheading">
+                  <div>
+                    <strong>Общие боссы</strong>
+                    <span>мировые, еженедельные, рейдовые и будущие типы</span>
+                  </div>
+                  <b>{bossOptions.length}</b>
+                </div>
+
+                {bossOptions.length === 0 ? (
+                  <p className="muted">Сейчас нет активных боссов, доступных всей пати.</p>
+                ) : (
+                  <>
+                    <label>
+                      <span>Выбрать босса</span>
+                      <select
+                        value={selectedBossId ?? ''}
+                        disabled={busy || !isLeader}
+                        onChange={(event) => setSelectedBossId(event.target.value)}
+                      >
+                        {bossOptions.map((boss) => (
+                          <option key={boss.event_id} value={boss.event_id}>
+                            {boss.name} · {bossKindLabel(boss.boss_kind)} · ур. {boss.recommended_level}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {selectedBoss && (
+                      <div className="party-boss-preview">
+                        <div>
+                          <span className="eyebrow">{bossKindLabel(selectedBoss.boss_kind).toUpperCase()}</span>
+                          <strong>{selectedBoss.name}</strong>
+                          <small>{selectedBoss.description}</small>
+                        </div>
+                        <div className="party-boss-reward-state">
+                          <span>Первая награда ещё доступна: <b>{selectedBoss.fresh_reward_members}/{selectedBoss.party_size}</b></span>
+                          {selectedBoss.capped_members > 0 && (
+                            <span>
+                              Уже исчерпали личный лимит: <b>{selectedBoss.capped_members}</b> · они всё равно участвуют, но без повторной награды
+                            </span>
+                          )}
+                          <span>
+                            Первая победа: <b>{selectedBoss.first_reward_gold} золота · {selectedBoss.first_reward_experience} опыта</b>
+                            {selectedBoss.special_reward_name ? ' · ' + selectedBoss.special_reward_name : ''}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {isLeader && (
+                      <button
+                        className="primary-button"
+                        type="button"
+                        disabled={busy || !selectedBossId}
+                        onClick={() => void startBoss()}
+                      >
+                        {busy ? 'Собираем группу…' : 'Начать бой с боссом'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </section>
+
+              {!isLeader && (
                 <div className="party-dungeon-waiting">
-                  Лидер выбирает подземелье и запускает поход.
+                  Лидер выбирает подземелье или босса и запускает поход.
                 </div>
               )}
             </div>
