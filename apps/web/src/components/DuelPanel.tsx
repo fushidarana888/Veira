@@ -792,9 +792,19 @@ function DuelFighter({
         <span>Физ. защ. {participant.physical_defense}</span>
         <span>Маг. защ. {participant.magic_defense}</span>
         <span>Иниц. {participant.initiative}</span>
-        <span>Темп {participant.initiative_meter ?? 0}/100</span>
+
         <span>Дистанция {participant.bow_distance === 'close' ? 'ближняя' : participant.bow_distance === 'far' ? 'дальняя' : 'средняя'}</span>
         {participant.bloodshed_stacks > 0 && <span>Кровопролитие ×{participant.bloodshed_stacks}</span>}
+      </div>
+
+      <div className="initiative-tempo compact duel-tempo">
+        <div className="initiative-tempo-head">
+          <span>Темп инициативы</span>
+          <strong>{participant.initiative_meter ?? 0} / 100</strong>
+        </div>
+        <div className="initiative-tempo-meter">
+          <span style={{ width: Math.max(0, Math.min(100, participant.initiative_meter ?? 0)) + '%' }} />
+        </div>
       </div>
 
       {participant.guard_reduction_percent > 0 && (
