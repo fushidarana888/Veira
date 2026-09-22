@@ -62,6 +62,7 @@ const spellKindLabels: Record<SpellDefinition['spell_kind'], string> = {
   cleanse: 'Очищение',
   buff: 'Усиление',
   taunt: 'Провокация',
+  summon: 'Призыв',
   sacrifice: 'Последняя жертва',
 }
 
