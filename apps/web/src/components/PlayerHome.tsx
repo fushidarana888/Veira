@@ -1343,12 +1343,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                 <div className="stats-grid">
                   <Stat label="Сила" value={effectiveStats.strength} base={progress.strength} />
                   <Stat label="Ловкость" value={effectiveStats.agility} base={progress.agility} />
-                  <Stat
-                    label="Интеллект"
-                    value={effectiveStats.intellect}
-                    base={progress.intellect}
-                    hint="+1 ИНТ = +3 маг. мощи и +1 маг. брони"
-                  />
+                  <Stat label="Интеллект" value={effectiveStats.intellect} base={progress.intellect} />
                   <Stat label="Живучесть" value={effectiveStats.vitality} base={progress.vitality} />
                   <Stat label="Удача" value={effectiveStats.luck} base={progress.luck} />
                 </div>
