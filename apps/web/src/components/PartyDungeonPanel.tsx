@@ -104,6 +104,7 @@ type PartyCombatMember = {
   incoming_damage_reduction_percent: number
   incoming_damage_reduction_rounds: number
   guard_percent: number
+  reflect_percent: number
   damage_bonus_percent: number
   damage_bonus_hits: number
   taunt_chance: number
@@ -704,8 +705,11 @@ export function PartyDungeonPanel({
     if (!state.encounter) return
 
     const support = !['damage', 'summon'].includes(spell.spell_kind)
+    const selfOnly = spell.slug === 'mirror_barrier'
     const targetId = support
-      ? spellTargets[spell.id] ?? characterId
+      ? selfOnly
+        ? characterId
+        : spellTargets[spell.id] ?? characterId
       : null
 
     setBusy(true)
@@ -1444,6 +1448,11 @@ export function PartyDungeonPanel({
                 {member.guard_percent > 0 && (
                   <small className="party-guard-state">Защита −{member.guard_percent}% следующего удара</small>
                 )}
+                {member.reflect_percent > 0 && (
+                  <small className="party-guard-state">
+                    Зеркальный барьер · отражение {member.reflect_percent}% следующего прямого удара
+                  </small>
+                )}
                 {member.damage_bonus_hits > 0 && member.damage_bonus_percent > 0 && (
                   <small className="party-buff-state">
                     Боевой фокус +{member.damage_bonus_percent}% · атак {member.damage_bonus_hits}
@@ -1777,7 +1786,8 @@ export function PartyDungeonPanel({
                   <div className="party-spell-grid">
                     {spells.map((spell) => {
                       const support = !['damage', 'summon'].includes(spell.spell_kind)
-                      const targetId = spellTargets[spell.id] ?? characterId
+                      const selfOnly = spell.slug === 'mirror_barrier'
+                      const targetId = selfOnly ? characterId : spellTargets[spell.id] ?? characterId
                       const target = state.members.find((member) => member.character_id === targetId) ?? me
                       const noMana = (me?.mana_current ?? 0) < spell.mana_cost
                       const targetInvalid = Boolean(
@@ -1808,7 +1818,7 @@ export function PartyDungeonPanel({
                                 : spell.spell_kind === 'heal'
                                   ? 'лечение / поднятие'
                                   : spell.spell_kind === 'guard'
-                                    ? 'щит союзника'
+                                    ? (selfOnly ? 'отражение на себя' : 'щит союзника')
                                     : spell.spell_kind === 'cleanse'
                                       ? 'очищение'
                                       : spell.spell_kind === 'taunt'
@@ -1818,7 +1828,7 @@ export function PartyDungeonPanel({
                             </span>
                           </div>
 
-                          {support && (
+                          {support && !selfOnly && (
                             <select
                               value={targetId}
                               disabled={!canAct || Boolean(me?.bow_draw_pending)}
@@ -1855,7 +1865,9 @@ export function PartyDungeonPanel({
                                   ? 'Применить'
                                   : spell.spell_kind === 'summon'
                                     ? 'Призвать'
-                                    : 'На выбранного'}
+                                    : selfOnly
+                                      ? 'На себя'
+                                      : 'На выбранного'}
                           </button>
                         </div>
                       )
@@ -1865,7 +1877,7 @@ export function PartyDungeonPanel({
               )}
 
               <small className="party-coop-note">
-                Мёртвого союзника можно воскресить лечением; Потерянного — нельзя до конца всего похода. Щит и Боевой фокус можно направлять на товарищей. «Провокация» действует до смерти цели или конца текущей битвы. Ожог, кровотечение, яд, оглушение, охлаждение, ослабление и уязвимость работают в групповой битве; «Очищение» снимает негативные эффекты с выбранного участника.
+                Мёртвого союзника можно воскресить лечением; Потерянного — нельзя до конца всего похода. Арканный щит и Боевой фокус можно направлять на товарищей, а «Зеркальный барьер» работает только на самого заклинателя. «Провокация» действует до смерти цели или конца текущей битвы. Ожог, кровотечение, яд, оглушение, охлаждение, ослабление и уязвимость работают в групповой битве; «Очищение» снимает негативные эффекты с выбранного участника.
               </small>
 
               <div className="party-combat-log">
