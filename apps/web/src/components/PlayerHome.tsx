@@ -173,6 +173,10 @@ const statLabels: Record<StatKey, string> = {
   luck: 'Удача',
 }
 
+const statUpgradeHints: Partial<Record<StatKey, string>> = {
+  intellect: '+3 маг. мощи · +1 маг. броня',
+}
+
 function raceTraitNumber(traits: RaceTrait[] | undefined, type: string) {
   return (traits ?? []).reduce((sum, trait) => (
     trait.type === type && typeof trait.value === 'number'
@@ -1339,7 +1343,12 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                 <div className="stats-grid">
                   <Stat label="Сила" value={effectiveStats.strength} base={progress.strength} />
                   <Stat label="Ловкость" value={effectiveStats.agility} base={progress.agility} />
-                  <Stat label="Интеллект" value={effectiveStats.intellect} base={progress.intellect} />
+                  <Stat
+                    label="Интеллект"
+                    value={effectiveStats.intellect}
+                    base={progress.intellect}
+                    hint="+1 ИНТ = +3 маг. мощи и +1 маг. брони"
+                  />
                   <Stat label="Живучесть" value={effectiveStats.vitality} base={progress.vitality} />
                   <Stat label="Удача" value={effectiveStats.luck} base={progress.luck} />
                 </div>
@@ -1374,6 +1383,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                         <span>
                           <strong>{statLabels[stat]}</strong>
                           <small>Сейчас {progress[stat]}</small>
+                          {statUpgradeHints[stat] && <small className="stat-upgrade-hint">{statUpgradeHints[stat]}</small>}
                         </span>
                         <b>+1</b>
                       </button>
@@ -2343,7 +2353,17 @@ function EquipmentPanel({
   )
 }
 
-function Stat({ label, value, base }: { label: string; value: number; base: number }) {
+function Stat({
+  label,
+  value,
+  base,
+  hint,
+}: {
+  label: string
+  value: number
+  base: number
+  hint?: string
+}) {
   const bonus = value - base
 
   return (
@@ -2351,6 +2371,7 @@ function Stat({ label, value, base }: { label: string; value: number; base: numb
       <span>{label}</span>
       <strong>{value}</strong>
       {bonus !== 0 && <small>База {base} · {bonus > 0 ? '+' : ''}{bonus} от вещей</small>}
+      {hint && <small>{hint}</small>}
     </div>
   )
 }
