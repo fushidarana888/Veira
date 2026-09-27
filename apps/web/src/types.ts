@@ -1013,6 +1013,8 @@ export type AutobattleResult = {
   player_mana?: number
   player_mana_max?: number
   hp_percent?: number
+  boss_defeated?: boolean
+  boss_name?: string | null
 }
 
 export type CombatStyleProfile = {
