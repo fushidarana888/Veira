@@ -276,6 +276,21 @@ function combinedResistances(item: CharacterItem, definition: ItemDefinition) {
   return result
 }
 
+function itemStory(item: CharacterItem) {
+  const title = typeof item.metadata?.story_title === 'string'
+    ? item.metadata.story_title
+    : ''
+  const text = typeof item.metadata?.story_text === 'string'
+    ? item.metadata.story_text
+    : ''
+
+  if (!text) return null
+  return {
+    title: title || 'История предмета',
+    text,
+  }
+}
+
 export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) {
   const [tab, setTab] = useState<Tab>('character')
   const [characterTab, setCharacterTab] = useState<CharacterTab>('overview')
@@ -1984,6 +1999,7 @@ function InventoryPanel({
               .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] !== 0)
             const damageBonuses = Object.entries(definition.damage_bonuses ?? {})
               .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
+            const story = itemStory(item)
 
             return (
               <article className={'item-card rarity-' + definition.rarity} key={item.id}>
@@ -2098,6 +2114,14 @@ function InventoryPanel({
                   <div className="unique-property">
                     <strong>{definition.unique_property_name}</strong>
                     <span>{definition.unique_property_description}</span>
+                  </div>
+                )}
+
+                {story && (
+                  <div className="item-story-card">
+                    <span className="eyebrow">СЛЕД ПРОШЛОГО</span>
+                    <strong>{story.title}</strong>
+                    <p>{story.text}</p>
                   </div>
                 )}
 
@@ -2294,6 +2318,7 @@ function EquipmentPanel({
           const entry = bySlot.get(slot)
           const item = entry ? itemById.get(entry.character_item_id) : null
           const definition = item ? normalizeDefinition(item.item_definitions) : null
+          const story = item ? itemStory(item) : null
 
           return (
             <article className="equipment-slot" key={slot}>
@@ -2376,6 +2401,13 @@ function EquipmentPanel({
                     <div className="unique-property compact">
                       <strong>{definition.unique_property_name}</strong>
                       <span>{definition.unique_property_description}</span>
+                    </div>
+                  )}
+                  {story && (
+                    <div className="item-story-card compact">
+                      <span className="eyebrow">СЛЕД ПРОШЛОГО</span>
+                      <strong>{story.title}</strong>
+                      <p>{story.text}</p>
                     </div>
                   )}
                   <button
