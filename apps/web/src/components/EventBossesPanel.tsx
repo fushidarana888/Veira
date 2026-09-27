@@ -1,5 +1,6 @@
 import { userFacingError } from '../lib/userError'
 import { useEffect, useMemo, useState } from 'react'
+import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 
@@ -125,6 +126,8 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
   const [busyMode, setBusyMode] = useState<'solo' | 'party' | null>(null)
   const [message, setMessage] = useState('')
 
+  const { beginAction, endAction } = useActionGate(setBusyMode, null, setMessage)
+
   async function loadData(silent = false) {
     if (!silent) setLoading(true)
 
@@ -166,7 +169,7 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
   const isLeader = party.party?.leader_character_id === characterId
 
   async function startBoss(boss: EventBoss, mode: 'solo' | 'party') {
-    setBusyMode(mode)
+    if (!beginAction(mode)) return
     setMessage('')
 
     const { error } = await supabase.rpc('start_event_boss', {
@@ -177,7 +180,7 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
 
     if (error) {
       setMessage(bossError(error.message))
-      setBusyMode(null)
+      endAction()
       return
     }
 
@@ -191,7 +194,7 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
         ? 'Пепельный Кузнец ждёт группу. Бой открыт для всех участников текущей пати.'
         : 'Бой с Пепельным Кузнецом начат. Продолжение находится в «Бои → Сейчас».',
     )
-    setBusyMode(null)
+    endAction()
   }
 
   return (
