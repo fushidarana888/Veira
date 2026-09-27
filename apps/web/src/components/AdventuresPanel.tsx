@@ -1008,7 +1008,12 @@ export function AdventuresPanel({
 
   function autobattleMessage(result: AutobattleResult, wholeDungeon: boolean) {
     if (result.status === 'completed') {
-      return 'Автозачистка завершена: подземелье полностью пройдено.'
+      if (result.boss_defeated) {
+        return result.boss_name
+          ? `Автозачистка завершена: хранитель «${result.boss_name}» побеждён, подземелье полностью пройдено.`
+          : 'Автозачистка завершена: финальный хранитель побеждён, подземелье полностью пройдено.'
+      }
+      return 'Автозачистка завершена, но подтверждение победы над хранителем не получено. Состояние подземелья перепроверено.'
     }
     if (result.status === 'victory') {
       return wholeDungeon
