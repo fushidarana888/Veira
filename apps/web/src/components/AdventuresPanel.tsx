@@ -5,6 +5,7 @@ import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 import { EventBossesPanel } from './EventBossesPanel'
+import { WorldPulsePanel } from './WorldPulsePanel'
 import type {
   AutobattleGuardMode,
   BowDistance,
@@ -623,6 +624,8 @@ export function AdventuresPanel({
         setMessage('В этом подземелье уже идёт бой.')
       } else if (raw.includes('ROOM_COMBAT_ALREADY_EXISTS')) {
         setMessage('Этот зал уже был разыгран.')
+      } else if (raw.includes('DUNGEON_EVENT_PENDING')) {
+        setMessage('Между залами произошло событие. Сначала выбери решение во вкладке «Приключения».')
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('У персонажа нет здоровья для начала боя.')
       } else {
@@ -2512,6 +2515,13 @@ export function AdventuresPanel({
 
       {mode === 'adventures' && adventureTab === 'locations' && (
         <div className="adventure-folder-content">
+          <WorldPulsePanel
+            characterId={characterId}
+            onProgressChanged={onProgressChanged}
+            onInventoryChanged={onInventoryChanged}
+            onAdventureChanged={() => loadAdventures(true)}
+          />
+
           <article className="panel dungeon-fatigue-rule">
             <span className="eyebrow">ЦИКЛ НАГРАД ПОДЗЕМЕЛЬЯ</span>
             <h3>Вход безлимитный, награды — первые 25 попыток</h3>
