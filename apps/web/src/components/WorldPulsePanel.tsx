@@ -78,12 +78,20 @@ type Discovery = {
   last_seen_at: string
 }
 
+type Trophy = {
+  slug: string
+  name: string
+  description: string
+  quantity: number
+}
+
 type WorldPulse = {
   merchant: WanderingMerchant | null
   rumors: WorldRumor[]
   maps: WorldPulseMap[]
   treasure_hunts: TreasureHunt[]
   discoveries: Discovery[]
+  trophies: Trophy[]
   discovery_count: number
   active_dungeon: {
     run_id: string
@@ -490,6 +498,21 @@ export function WorldPulsePanel({
             </div>
             <span className="badge">{pulse.discovery_count}</span>
           </div>
+
+          {(pulse.trophies?.length ?? 0) > 0 && (
+            <div className="trophy-case">
+              <span className="eyebrow">ТРОФЕИ</span>
+              <div className="trophy-case-grid">
+                {pulse.trophies.map((trophy) => (
+                  <div className="trophy-case-item" key={trophy.slug}>
+                    <strong>{trophy.name}</strong>
+                    <small>{trophy.description}</small>
+                    {trophy.quantity > 1 && <b>×{trophy.quantity}</b>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {visibleDiscoveries.length > 0 ? (
             <>
