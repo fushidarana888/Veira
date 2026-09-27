@@ -120,6 +120,7 @@ type Props = {
   onProgressChanged?: () => Promise<unknown> | void
   onInventoryChanged?: () => Promise<unknown> | void
   onAdventureChanged?: () => Promise<unknown> | void
+  compact?: boolean
 }
 
 function signed(value: number, suffix = '%') {
@@ -161,6 +162,7 @@ export function WorldPulsePanel({
   onProgressChanged,
   onInventoryChanged,
   onAdventureChanged,
+  compact = false,
 }: Props) {
   const [pulse, setPulse] = useState<WorldPulse | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -336,7 +338,7 @@ export function WorldPulsePanel({
 
   return (
     <div className="world-pulse-stack">
-      {(pulse.lost_spirits?.length ?? 0) > 0 && (
+      {!compact && (pulse.lost_spirits?.length ?? 0) > 0 && (
         <article className="panel lost-spirit-warning">
           <div className="section-heading">
             <div>
@@ -430,6 +432,7 @@ export function WorldPulsePanel({
 
       {message && <p className="gm-notice world-pulse-message" aria-live="polite">{message}</p>}
 
+      {!compact && (
       <div className="world-pulse-grid">
         <article className="panel world-pulse-card treasure-board">
           <div className="section-heading">
@@ -523,7 +526,9 @@ export function WorldPulsePanel({
           )}
         </article>
       </div>
+      )}
 
+      {!compact && (
       <div className="world-pulse-grid">
         <article className="panel world-pulse-card rumors-board">
           <div className="section-heading">
@@ -596,6 +601,7 @@ export function WorldPulsePanel({
           )}
         </article>
       </div>
+      )}
     </div>
   )
 }
