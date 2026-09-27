@@ -1,6 +1,7 @@
 import { userFacingError } from '../lib/userError'
 import { criticalHitCount } from '../lib/combatPresentation'
 import { useEffect, useMemo, useState } from 'react'
+import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 import { EventBossesPanel } from './EventBossesPanel'
@@ -202,6 +203,8 @@ export function AdventuresPanel({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+
+  const { beginAction, endAction } = useActionGate(setBusy, false, setMessage)
 
   async function loadPreparedSpells() {
     const spellResult = await supabase.rpc('get_character_spells', {
@@ -528,7 +531,7 @@ export function AdventuresPanel({
     inventoryChanged = false,
   ) {
     applyCombatSnapshot(next)
-    setBusy(false)
+    endAction()
 
     void refreshCombatDetails(next.id)
     void Promise.resolve(onProgressChanged?.())
@@ -544,7 +547,7 @@ export function AdventuresPanel({
   }
 
   async function startDungeon(site: CharacterAdventureSite) {
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data: runData, error } = await supabase.rpc('start_dungeon_run', {
@@ -568,14 +571,14 @@ export function AdventuresPanel({
         setMessage(userFacingError(raw))
       }
 
-      setBusy(false)
+      endAction()
       return
     }
 
     const createdRun = runData as { id: string } | null
     if (!createdRun?.id) {
       setMessage('Не удалось открыть первый зал подземелья.')
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -596,16 +599,16 @@ export function AdventuresPanel({
       }
 
       await loadAdventures(true)
-      setBusy(false)
+      endAction()
       return
     }
 
-    setBusy(false)
+    endAction()
     onOpenBattles?.()
   }
 
   async function startCombat(runId: string) {
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('start_dungeon_combat', {
@@ -626,19 +629,19 @@ export function AdventuresPanel({
         setMessage(userFacingError(raw))
       }
 
-      setBusy(false)
+      endAction()
       return
     }
 
     await loadAdventures(true)
     setMessage('Следующий зал начат.')
-    setBusy(false)
+    endAction()
   }
 
   async function performCombatAction(action: 'physical' | 'bow_draw' | 'magic' | 'guard') {
     if (!activeCombat) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('perform_combat_action', {
@@ -648,7 +651,7 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(userFacingError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -658,7 +661,7 @@ export function AdventuresPanel({
   async function setBowDistance(distance: BowDistance) {
     if (!activeCombat || !isBowProfile(bowProfile) || activeCombat.player_bow_draw_pending) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
     const { error } = await supabase.rpc('set_solo_bow_distance', {
       p_encounter_id: activeCombat.id,
@@ -667,7 +670,7 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(userFacingError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -675,7 +678,7 @@ export function AdventuresPanel({
       ...activeCombat,
       player_bow_distance: distance,
     })
-    setBusy(false)
+    endAction()
   }
 
   async function setSummonTarget(summon: CombatSummon, value: string) {
@@ -684,7 +687,7 @@ export function AdventuresPanel({
     const targetType = (separator >= 0 ? value.slice(0, separator) : value) as CombatSummon['target_type']
     const targetId = separator >= 0 ? value.slice(separator + 1) || null : null
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
     const { error } = await supabase.rpc('set_combat_summon_target', {
       p_character_id: characterId,
@@ -697,13 +700,13 @@ export function AdventuresPanel({
 
     if (error) setMessage(userFacingError(error.message))
     await refreshCombatDetails(activeCombat.id)
-    setBusy(false)
+    endAction()
   }
 
   async function castSpell(spell: CharacterSpell) {
     if (!activeCombat) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('cast_character_spell', {
@@ -724,7 +727,7 @@ export function AdventuresPanel({
       } else {
         setMessage(userFacingError(raw))
       }
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -734,7 +737,7 @@ export function AdventuresPanel({
   async function castScroll(scroll: CombatScroll) {
     if (!activeCombat) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('cast_spell_scroll', {
@@ -757,7 +760,7 @@ export function AdventuresPanel({
         setMessage(userFacingError(raw))
       }
 
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -768,7 +771,7 @@ export function AdventuresPanel({
   async function useCombatConsumable(item: CombatScroll) {
     if (!activeCombat) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('use_combat_consumable', {
@@ -787,7 +790,7 @@ export function AdventuresPanel({
       } else {
         setMessage(userFacingError(raw))
       }
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -798,7 +801,7 @@ export function AdventuresPanel({
   async function saveAutobattleSettings() {
     if (!autobattleSettings) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('save_character_autobattle_settings', {
@@ -824,7 +827,7 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(userFacingError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -847,7 +850,7 @@ export function AdventuresPanel({
 
     if (supportError) {
       setMessage(userFacingError(supportError.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -865,14 +868,14 @@ export function AdventuresPanel({
     const spellRuleError = spellRuleResults.find((result) => result.error)?.error
     if (spellRuleError) {
       setMessage(userFacingError(spellRuleError.message))
-      setBusy(false)
+      endAction()
       return
     }
 
     const saved = (Array.isArray(supportData) ? supportData[0] : supportData) as AutobattleSettings | null
     if (saved) setAutobattleSettings(saved)
     setMessage('Тактика автобоя сохранена.')
-    setBusy(false)
+    endAction()
   }
 
   function applyAutobattlePreset(preset: 'physical' | 'mage' | 'tank' | 'balanced') {
@@ -986,7 +989,7 @@ export function AdventuresPanel({
   async function runCombatAutobattle() {
     if (!activeCombat) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Автобой просчитывает текущий бой…')
 
     const { data, error } = await supabase.rpc('run_combat_autobattle', {
@@ -995,7 +998,7 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(userFacingError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1006,11 +1009,11 @@ export function AdventuresPanel({
     ])
     await loadAdventures(true)
     setMessage(autobattleMessage(result, false))
-    setBusy(false)
+    endAction()
   }
 
   async function runDungeonAutobattle(runId: string) {
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Автозачистка проходит подземелье…')
 
     const { data, error } = await supabase.rpc('run_dungeon_autobattle', {
@@ -1019,7 +1022,7 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(userFacingError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1030,13 +1033,13 @@ export function AdventuresPanel({
     ])
     await loadAdventures(true)
     setMessage(autobattleMessage(result, true))
-    setBusy(false)
+    endAction()
   }
 
   async function runCombatStyleAutobattle() {
     if (!activeCombat) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Veira повторяет твой изученный стиль боя…')
 
     const { data, error } = await supabase.rpc('run_combat_style_autobattle', {
@@ -1049,7 +1052,7 @@ export function AdventuresPanel({
           ? 'Стиль ещё изучен недостаточно. Заверши вручную хотя бы 3 боя и сделай в них не меньше 12 действий.'
           : userFacingError(error.message),
       )
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1064,11 +1067,11 @@ export function AdventuresPanel({
         ? 'Veira завершила бой в твоём стиле.'
         : autobattleMessage(result, false),
     )
-    setBusy(false)
+    endAction()
   }
 
   async function runDungeonStyleAutobattle(runId: string) {
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Veira проходит подземелье в твоём стиле…')
 
     const { data, error } = await supabase.rpc('run_dungeon_style_autobattle', {
@@ -1081,7 +1084,7 @@ export function AdventuresPanel({
           ? 'Стиль ещё изучен недостаточно. Сначала заверши вручную хотя бы 3 обычных боя.'
           : userFacingError(error.message),
       )
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1096,13 +1099,13 @@ export function AdventuresPanel({
         ? 'Veira полностью зачистила подземелье, повторяя твой стиль.'
         : autobattleMessage(result, true),
     )
-    setBusy(false)
+    endAction()
   }
 
   async function abandonEventBossSolo() {
     if (!window.confirm('Отступить от временной угрозы? Текущая попытка завершится без награды.')) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Отступаем от временной угрозы…')
 
     const { error } = await supabase.rpc('abandon_event_boss', {
@@ -1112,7 +1115,7 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(userFacingError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1122,13 +1125,13 @@ export function AdventuresPanel({
     ])
 
     setMessage('Текущая попытка события прекращена. Если событие ещё активно, к нему можно вернуться позже.')
-    setBusy(false)
+    endAction()
   }
 
   async function abandonHuntingCombat() {
     if (!window.confirm('Отступить от сильного монстра и завершить эту охоту? Давление региона не сбросится.')) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Отступаем с охоты…')
 
     const { error } = await supabase.rpc('abandon_hunting_combat', {
@@ -1137,7 +1140,7 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(userFacingError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1147,13 +1150,13 @@ export function AdventuresPanel({
     ])
 
     setMessage('Охота прекращена. Давление региона сохранено.')
-    setBusy(false)
+    endAction()
   }
 
   async function leaveDungeon(runId: string) {
     if (!window.confirm('Попытаться сбежать из подземелья? Шанс успеха — 80%. При провале ОЗ упадёт до 1, персонаж останется внутри, а повторить побег на этом этапе уже нельзя.')) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Пытаемся выбраться из подземелья…')
 
     const { data, error } = await supabase.rpc('attempt_leave_dungeon_run', {
@@ -1167,7 +1170,7 @@ export function AdventuresPanel({
           ? 'В этом зале попытка побега уже была. Следующая станет доступна только после прохождения следующего зала.'
           : raw,
       )
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1183,7 +1186,7 @@ export function AdventuresPanel({
         ? 'Побег удался. Персонаж покинул подземелье; прохождение можно начать заново позже.'
         : 'Побег провален. Персонаж остаётся в подземелье с 1 ОЗ. Повторить попытку можно будет только после прохождения следующего зала.',
     )
-    setBusy(false)
+    endAction()
   }
 
   if (loading && sites.length === 0) {
@@ -2097,7 +2100,7 @@ export function AdventuresPanel({
                 </div>
               )}
 
-              <div className="combat-actions">
+              <div className="combat-actions" aria-busy={busy}>
                 <button
                   className="autobattle-button"
                   type="button"
