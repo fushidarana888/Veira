@@ -92,6 +92,8 @@ type LostSpirit = {
   expires_at: string
   item_name: string
   character_item_id: string | null
+  anomaly: string | null
+  anomaly_name: string | null
 }
 
 type WorldPulse = {
@@ -350,7 +352,10 @@ export function WorldPulsePanel({
               <div className="lost-spirit-entry" key={spirit.id}>
                 <div>
                   <strong>{spirit.item_name}</strong>
-                  <span>дух в секторе #{spirit.sector_id}</span>
+                  <span>
+                    {spirit.anomaly_name ? spirit.anomaly_name + ' · ' : ''}
+                    дух в секторе #{spirit.sector_id}
+                  </span>
                 </div>
                 <small>
                   исчезнет {new Date(spirit.expires_at).toLocaleString('ru-RU', {
