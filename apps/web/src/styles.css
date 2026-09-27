@@ -11625,6 +11625,41 @@ textarea {
   margin: 0;
 }
 
+
+.lost-spirit-warning {
+  border-color: rgba(174, 91, 88, .52);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(143, 57, 61, .15), transparent 40%),
+    var(--panel);
+}
+
+.lost-spirit-list {
+  display: grid;
+  gap: 7px;
+}
+
+.lost-spirit-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px;
+  border: 1px solid rgba(174, 91, 88, .25);
+  border-radius: 10px;
+  background: rgba(143, 57, 61, .055);
+}
+
+.lost-spirit-entry > div {
+  display: grid;
+  gap: 2px;
+}
+
+.lost-spirit-entry span,
+.lost-spirit-entry small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .treasure-hunt-list,
 .treasure-map-list,
 .wandering-offer-list,
@@ -11911,6 +11946,11 @@ textarea {
 
   .treasure-map-entry {
     align-items: flex-start;
+  }
+
+  .lost-spirit-entry {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .trophy-case-grid,
