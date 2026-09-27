@@ -287,6 +287,12 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   const [historyMessage, setHistoryMessage] = useState('')
   const [equipment, setEquipment] = useState<CharacterEquipment[]>([])
   const [equipmentSets, setEquipmentSets] = useState<EquipmentSetState[]>([])
+  const [trophies, setTrophies] = useState<Array<{
+    slug: string
+    name: string
+    description: string
+    quantity: number
+  }>>([])
   const [inventoryHydrated, setInventoryHydrated] = useState(false)
   const [inventoryBusy, setInventoryBusy] = useState(false)
   const [raceDefinition, setRaceDefinition] = useState<RaceDefinition | null>(null)
@@ -370,6 +376,24 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
 
     setProgress(nextProgress)
     return nextProgress
+  }
+
+  async function loadTrophies() {
+    const { data, error } = await supabase.rpc('get_character_trophy_case', {
+      p_character_id: character.id,
+    })
+
+    if (error) return null
+
+    const next = (data as Array<{
+      slug: string
+      name: string
+      description: string
+      quantity: number
+    }> | null) ?? []
+
+    setTrophies(next)
+    return next
   }
 
   async function loadEquippedState() {
@@ -542,7 +566,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     void loadEquippedState()
 
     const cancelIdle = scheduleIdle(() => {
-      void Promise.all([loadRace(), loadReligionModifiers()])
+      void Promise.all([loadRace(), loadReligionModifiers(), loadTrophies()])
     })
 
     return cancelIdle
@@ -588,6 +612,9 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     await Promise.all([
       loadProgress(),
       loadReligionModifiers(),
+      tab === 'character' && characterTab === 'overview'
+        ? loadTrophies()
+        : Promise.resolve(),
       tab === 'character' && (characterTab === 'inventory' || characterTab === 'equipment')
         ? loadInventory()
         : loadEquippedState(),
@@ -1264,6 +1291,28 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                   <strong>{progress.gold.toLocaleString('ru-RU')}</strong>
                 </article>
               </section>
+
+              {trophies.length > 0 && (
+                <section className="panel character-trophy-showcase">
+                  <div className="section-heading">
+                    <div>
+                      <span className="eyebrow">ТРОФЕИ</span>
+                      <h2>Витрина охотника</h2>
+                      <p className="muted">Редкие хранители оставляют вещи, которые остаются частью истории персонажа.</p>
+                    </div>
+                    <span className="badge">{trophies.reduce((sum, trophy) => sum + trophy.quantity, 0)}</span>
+                  </div>
+                  <div className="character-trophy-grid">
+                    {trophies.slice(0, 6).map((trophy) => (
+                      <div className="character-trophy-item" key={trophy.slug}>
+                        <strong>{trophy.name}</strong>
+                        <small>{trophy.description}</small>
+                        {trophy.quantity > 1 && <b>×{trophy.quantity}</b>}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {raceDefinition && (
                 <section className="panel player-race-panel">
