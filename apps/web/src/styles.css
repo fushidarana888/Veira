@@ -11816,6 +11816,33 @@ textarea {
   margin-top: 8px;
 }
 
+
+.item-story-card {
+  display: grid;
+  gap: 4px;
+  margin-top: 9px;
+  padding: 10px 11px;
+  border: 1px solid rgba(152, 128, 99, .26);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(113, 92, 70, .09), rgba(255, 255, 255, .01));
+}
+
+.item-story-card strong {
+  color: #d6c3a4;
+}
+
+.item-story-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.item-story-card.compact {
+  padding: 8px 9px;
+}
+
 .trophy-case {
   display: grid;
   gap: 8px;
