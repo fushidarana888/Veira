@@ -180,6 +180,7 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
 
     if (error) {
       setMessage(bossError(error.message))
+      await loadData(true)
       endAction()
       return
     }
