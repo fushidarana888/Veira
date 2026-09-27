@@ -1333,6 +1333,14 @@ export function AdventuresPanel({
 
       {mode === 'battles' && (
         <div className="adventure-folder-content">
+          <WorldPulsePanel
+            characterId={characterId}
+            compact
+            onProgressChanged={onProgressChanged}
+            onInventoryChanged={onInventoryChanged}
+            onAdventureChanged={() => loadAdventures(true)}
+          />
+
           {!activeDungeon && !latestCombat && (
             <article className="panel adventure-empty-folder">
               <span className="eyebrow">СЕЙЧАС</span>
