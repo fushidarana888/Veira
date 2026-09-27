@@ -46,6 +46,18 @@ type PartyBossOption = {
   special_reward_name: string | null
 }
 
+type PartyDungeonModifier = {
+  slug: string
+  name: string
+  description: string
+  theme: string
+  enemy_hp_percent: number
+  enemy_attack_percent: number
+  enemy_defense_percent: number
+  reward_gold_percent: number
+  reward_xp_percent: number
+}
+
 type PartyRun = {
   id: string
   party_id: string
@@ -53,6 +65,7 @@ type PartyRun = {
   sector_id: number
   title: string
   danger_level: number
+  modifier: PartyDungeonModifier | null
   status: 'active' | 'completed' | 'abandoned'
   current_stage: string
   rooms_cleared: number
@@ -71,6 +84,7 @@ type PartyEncounter = {
   id: string
   room_index: number
   is_boss: boolean
+  is_rare_variant: boolean
   status: 'active' | 'victory' | 'defeat' | 'cancelled'
   round: number
   enemy_name: string
@@ -1332,6 +1346,33 @@ export function PartyDungeonPanel({
 
       {activeRun && (
         <>
+          {!activeRun.is_event_boss && activeRun.modifier && (
+            <div className="party-world-modifier">
+              <div>
+                <span className="eyebrow">МОДИФИКАТОР ПОХОДА</span>
+                <strong>{activeRun.modifier.name}</strong>
+                <p>{activeRun.modifier.description}</p>
+              </div>
+              <div className="party-world-modifier-stats">
+                {activeRun.modifier.enemy_hp_percent !== 0 && (
+                  <span>HP врагов {activeRun.modifier.enemy_hp_percent > 0 ? '+' : ''}{activeRun.modifier.enemy_hp_percent}%</span>
+                )}
+                {activeRun.modifier.enemy_attack_percent !== 0 && (
+                  <span>атака {activeRun.modifier.enemy_attack_percent > 0 ? '+' : ''}{activeRun.modifier.enemy_attack_percent}%</span>
+                )}
+                {activeRun.modifier.enemy_defense_percent !== 0 && (
+                  <span>защита {activeRun.modifier.enemy_defense_percent > 0 ? '+' : ''}{activeRun.modifier.enemy_defense_percent}%</span>
+                )}
+                {activeRun.modifier.reward_gold_percent !== 0 && (
+                  <span>золото +{activeRun.modifier.reward_gold_percent}%</span>
+                )}
+                {activeRun.modifier.reward_xp_percent !== 0 && (
+                  <span>опыт +{activeRun.modifier.reward_xp_percent}%</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeRun.is_event_boss ? (
             <div className="event-active-run-note">
               <strong>Особая награда считается отдельно для каждого участника.</strong>
@@ -1574,7 +1615,12 @@ export function PartyDungeonPanel({
                     <span className="eyebrow">
                       {activeRun.is_event_boss ? 'НЕДЕЛЬНЫЙ БОСС' : activeEncounter.is_boss ? 'ХРАНИТЕЛЬ' : 'ПРОТИВНИК'} · РАУНД {activeEncounter.round}
                     </span>
-                    <h3>{activeEncounter.enemy_name}</h3>
+                    <div className="party-enemy-name-line">
+                      <h3>{activeEncounter.enemy_name}</h3>
+                      {activeEncounter.is_rare_variant && (
+                        <span className="badge rare-boss-badge">РЕДКИЙ ХРАНИТЕЛЬ</span>
+                      )}
+                    </div>
                     <p className="muted">
                       УР. {activeEncounter.enemy_level} · атака: {damageLabels[activeEncounter.enemy_damage_type] ?? activeEncounter.enemy_damage_type}
                     </p>
