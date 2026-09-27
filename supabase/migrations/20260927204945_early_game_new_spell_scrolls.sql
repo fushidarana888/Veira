@@ -1,0 +1,59 @@
+-- Synced from live Supabase migration 20260927204945 (early_game_new_spell_scrolls)
+
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'cast_scroll_weakening_spark','Боевой свиток: '||s.name,'Одноразовый боевой свиток с заклинанием «'||s.name||'».','consumable','common',true,99,'{}'::jsonb,'[]'::jsonb,36,1,1,90,true,s.id,'cast',170
+from public.spell_definitions s where s.slug='weakening_spark'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'learn_scroll_weakening_spark','Свиток изучения: '||s.name,'Одноразовый свиток. Навсегда изучает заклинание «'||s.name||'».','consumable','uncommon',true,99,'{}'::jsonb,'[]'::jsonb,62,1,1,155,true,s.id,'learn',170
+from public.spell_definitions s where s.slug='weakening_spark'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'cast_scroll_sand_veil','Боевой свиток: '||s.name,'Одноразовый боевой свиток с заклинанием «'||s.name||'».','consumable','common',true,99,'{}'::jsonb,'[]'::jsonb,34,1,1,85,true,s.id,'cast',170
+from public.spell_definitions s where s.slug='sand_veil'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'learn_scroll_sand_veil','Свиток изучения: '||s.name,'Одноразовый свиток. Навсегда изучает заклинание «'||s.name||'».','consumable','uncommon',true,99,'{}'::jsonb,'[]'::jsonb,60,1,1,150,true,s.id,'learn',170
+from public.spell_definitions s where s.slug='sand_veil'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'cast_scroll_healing_spark','Боевой свиток: '||s.name,'Одноразовый боевой свиток с заклинанием «'||s.name||'».','consumable','common',true,99,'{}'::jsonb,'[]'::jsonb,42,2,2,105,true,s.id,'cast',170
+from public.spell_definitions s where s.slug='healing_spark'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'learn_scroll_healing_spark','Свиток изучения: '||s.name,'Одноразовый свиток. Навсегда изучает заклинание «'||s.name||'».','consumable','uncommon',true,99,'{}'::jsonb,'[]'::jsonb,72,2,2,180,true,s.id,'learn',170
+from public.spell_definitions s where s.slug='healing_spark'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'cast_scroll_venom_spore','Боевой свиток: '||s.name,'Одноразовый боевой свиток с заклинанием «'||s.name||'».','consumable','common',true,99,'{}'::jsonb,'[]'::jsonb,44,2,2,110,true,s.id,'cast',170
+from public.spell_definitions s where s.slug='venom_spore'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'learn_scroll_venom_spore','Свиток изучения: '||s.name,'Одноразовый свиток. Навсегда изучает заклинание «'||s.name||'».','consumable','uncommon',true,99,'{}'::jsonb,'[]'::jsonb,76,2,2,190,true,s.id,'learn',170
+from public.spell_definitions s where s.slug='venom_spore'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'cast_scroll_exposing_rune','Боевой свиток: '||s.name,'Одноразовый боевой свиток с заклинанием «'||s.name||'».','consumable','common',true,99,'{}'::jsonb,'[]'::jsonb,60,3,3,150,true,s.id,'cast',228
+from public.spell_definitions s where s.slug='exposing_rune'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'learn_scroll_exposing_rune','Свиток изучения: '||s.name,'Одноразовый свиток. Навсегда изучает заклинание «'||s.name||'».','consumable','uncommon',true,99,'{}'::jsonb,'[]'::jsonb,102,3,3,255,true,s.id,'learn',228
+from public.spell_definitions s where s.slug='exposing_rune'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'cast_scroll_combat_impulse','Боевой свиток: '||s.name,'Одноразовый боевой свиток с заклинанием «'||s.name||'».','consumable','common',true,99,'{}'::jsonb,'[]'::jsonb,58,3,3,145,true,s.id,'cast',228
+from public.spell_definitions s where s.slug='combat_impulse'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'learn_scroll_combat_impulse','Свиток изучения: '||s.name,'Одноразовый свиток. Навсегда изучает заклинание «'||s.name||'».','consumable','uncommon',true,99,'{}'::jsonb,'[]'::jsonb,100,3,3,250,true,s.id,'learn',228
+from public.spell_definitions s where s.slug='combat_impulse'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'cast_scroll_moon_frost','Боевой свиток: '||s.name,'Одноразовый боевой свиток с заклинанием «'||s.name||'».','consumable','common',true,99,'{}'::jsonb,'[]'::jsonb,72,4,4,180,true,s.id,'cast',230
+from public.spell_definitions s where s.slug='moon_frost'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+insert into public.item_definitions(slug,name,description,category,rarity,stackable,max_stack,stat_modifiers,effects,base_value,required_level,shop_tier,shop_price,shop_enabled,scroll_spell_id,scroll_mode,shop_sector_id)
+select 'learn_scroll_moon_frost','Свиток изучения: '||s.name,'Одноразовый свиток. Навсегда изучает заклинание «'||s.name||'».','consumable','uncommon',true,99,'{}'::jsonb,'[]'::jsonb,124,4,4,310,true,s.id,'learn',230
+from public.spell_definitions s where s.slug='moon_frost'
+on conflict(slug) do update set name=excluded.name,description=excluded.description,required_level=excluded.required_level,shop_tier=excluded.shop_tier,shop_price=excluded.shop_price,shop_enabled=excluded.shop_enabled,scroll_spell_id=excluded.scroll_spell_id,scroll_mode=excluded.scroll_mode,shop_sector_id=excluded.shop_sector_id,updated_at=now();
+
