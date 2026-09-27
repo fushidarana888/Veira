@@ -1,5 +1,6 @@
 import { userFacingError } from '../lib/userError'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 import { SettlementShop } from './SettlementShop'
@@ -494,6 +495,8 @@ export function WorldMap({
   const [loading, setLoading] = useState(() => !cachedMap)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+
+  const { beginAction, endAction } = useActionGate(setBusy, false, setMessage)
   const [mapSrc, setMapSrc] = useState(ORIGINAL_MAP_URL)
   const [showGameplayOverlay, setShowGameplayOverlay] = useState(true)
   const [mapZoom, setMapZoom] = useState(initialMapZoom)
@@ -884,7 +887,7 @@ export function WorldMap({
   async function cancelExploration(expeditionId: string) {
     if (!window.confirm('Отменить текущую экспедицию? Прогресс этого исследования будет потерян.')) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('cancel_sector_expedition', {
@@ -901,19 +904,19 @@ export function WorldMap({
         setMessage(userFacingError(raw))
       }
 
-      setBusy(false)
+      endAction()
       return
     }
 
     await loadMapData()
     setMessage('Экспедиция отменена. Можно выбрать другой сектор.')
-    setBusy(false)
+    endAction()
   }
 
   async function startExploration() {
     if (!selectedSector?.is_explorable) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('start_sector_exploration', {
@@ -935,19 +938,19 @@ export function WorldMap({
         setMessage(userFacingError(raw))
       }
 
-      setBusy(false)
+      endAction()
       return
     }
 
     setSelectedSectorId(null)
     await loadMapData()
-    setBusy(false)
+    endAction()
   }
 
   async function cancelSiteAction(actionId: string) {
     if (!window.confirm('Отменить это исследование? Уже прошедшее время будет потеряно.')) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('cancel_sector_site_action', {
@@ -963,19 +966,19 @@ export function WorldMap({
       } else {
         setMessage(userFacingError(raw))
       }
-      setBusy(false)
+      endAction()
       return
     }
 
     await loadMapData()
     setMessage('Исследование отменено.')
-    setBusy(false)
+    endAction()
   }
 
   async function startSiteAction(actionType: 'explore_ruins' | 'scout_dungeon') {
     if (!selectedSector?.is_discovered) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('start_sector_site_action', {
@@ -1004,7 +1007,7 @@ export function WorldMap({
         setMessage(userFacingError(raw))
       }
 
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1012,13 +1015,13 @@ export function WorldMap({
     if (actionType === 'explore_ruins') {
       setMessage('Исследование руин начато. По завершении будут выданы золото, опыт и случайная находка.')
     }
-    setBusy(false)
+    endAction()
   }
 
   async function startHunt() {
     if (!selectedSector?.is_discovered || selectedSector.content_type !== 'wilderness') return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('start_hunt', {
@@ -1041,7 +1044,7 @@ export function WorldMap({
       } else {
         setMessage(userFacingError(raw))
       }
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1054,7 +1057,7 @@ export function WorldMap({
       setMessage(
         `Охота удалась: получено ${result.item_name ?? 'ресурс'} ×${result.quantity ?? 1}. Давление региона: ${result.pressure}/6.`,
       )
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1062,12 +1065,12 @@ export function WorldMap({
       setMessage(
         `Добыча ушла. Ничего не получено. Давление региона: ${result.pressure}/6; шанс сильного монстра на следующей охоте продолжает расти.`,
       )
-      setBusy(false)
+      endAction()
       return
     }
 
     await Promise.resolve(onProgressChanged?.())
-    setBusy(false)
+    endAction()
     onOpenBattles?.()
   }
 
@@ -1081,7 +1084,7 @@ export function WorldMap({
       return
     }
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('start_event_boss', {
@@ -1111,7 +1114,7 @@ export function WorldMap({
       } else {
         setMessage(userFacingError(raw))
       }
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1119,7 +1122,7 @@ export function WorldMap({
       loadMapData(true),
       Promise.resolve(onProgressChanged?.()),
     ])
-    setBusy(false)
+    endAction()
     onOpenBattles?.()
   }
 
@@ -1129,7 +1132,7 @@ export function WorldMap({
       return
     }
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('start_event_boss', {
@@ -1167,7 +1170,7 @@ export function WorldMap({
       } else {
         setMessage(userFacingError(raw))
       }
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1175,12 +1178,12 @@ export function WorldMap({
       loadMapData(true),
       Promise.resolve(onProgressChanged?.()),
     ])
-    setBusy(false)
+    endAction()
     onOpenBattles?.()
   }
 
   async function startDeathSpiritCombat(spirit: DeathSpiritMapEntry) {
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { error } = await supabase.rpc('start_death_spirit_combat', {
@@ -1203,19 +1206,19 @@ export function WorldMap({
       } else {
         setMessage(userFacingError(raw))
       }
-      setBusy(false)
+      endAction()
       return
     }
 
     await loadMapData(true)
     setMessage('Бой с духом начат. Продолжай его в разделе «Бои».')
-    setBusy(false)
+    endAction()
   }
 
   async function enterDungeon() {
     if (!selectedSector?.is_discovered) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data: runData, error } = await supabase.rpc('start_dungeon_run', {
@@ -1239,14 +1242,14 @@ export function WorldMap({
         setMessage(userFacingError(raw))
       }
 
-      setBusy(false)
+      endAction()
       return
     }
 
     const createdRun = runData as { id: string } | null
     if (!createdRun?.id) {
       setMessage('Не удалось открыть первый зал подземелья.')
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -1267,11 +1270,11 @@ export function WorldMap({
       }
 
       await loadMapData(true)
-      setBusy(false)
+      endAction()
       return
     }
 
-    setBusy(false)
+    endAction()
     onOpenBattles?.()
   }
 
