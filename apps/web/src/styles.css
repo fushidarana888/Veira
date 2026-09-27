@@ -11602,6 +11602,28 @@ textarea {
     linear-gradient(135deg, rgba(112, 77, 48, .18), rgba(28, 24, 27, .48));
 }
 
+
+.elite-room-ready {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 12px 13px;
+  border: 1px solid rgba(178, 80, 68, .42);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(121, 48, 47, .16), rgba(44, 28, 27, .12));
+}
+
+.elite-room-ready strong {
+  color: #e0b49b;
+}
+
+.elite-room-ready p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .world-dungeon-event h3 {
   margin: 0;
 }
