@@ -6422,6 +6422,62 @@ textarea {
   font-size: 10px;
 }
 
+.party-world-modifier {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(179, 137, 86, .32);
+  border-radius: 13px;
+  padding: 11px 12px;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(179, 137, 86, .09), transparent 40%),
+    #10151c;
+}
+
+.party-world-modifier > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.party-world-modifier > div:first-child > p {
+  margin: 0;
+  color: #8f99a5;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.party-world-modifier-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.party-world-modifier-stats span {
+  border: 1px solid rgba(179, 137, 86, .25);
+  border-radius: 999px;
+  padding: 5px 7px;
+  background: rgba(179, 137, 86, .055);
+  color: #cfb58e;
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.party-enemy-name-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.party-enemy-name-line h3 {
+  margin: 3px 0 0;
+}
+
+.rare-boss-badge {
+  border-color: rgba(194, 101, 80, .48);
+  color: #e0a893;
+  background: rgba(142, 57, 47, .12);
+}
+
 .party-dungeon-progress {
   display: grid;
   grid-template-columns: auto minmax(160px, 1fr) auto;
