@@ -157,7 +157,9 @@ textarea {
   border-radius: 12px;
   padding: 10px 15px;
   cursor: pointer;
-  transition: transform .12s ease, background .16s ease, border-color .16s ease;
+  touch-action: manipulation;
+  user-select: none;
+  transition: transform .12s ease, background .16s ease, border-color .16s ease, opacity .16s ease, filter .16s ease;
 }
 
 .primary-button {
@@ -171,13 +173,19 @@ textarea {
   background: linear-gradient(180deg, #d0b488, #b99b6d);
 }
 
-.primary-button:active:not(:disabled), .ghost-button:active {
-  transform: translateY(1px);
+.primary-button:active:not(:disabled), .ghost-button:active:not(:disabled) {
+  transform: translateY(1px) scale(.985);
+}
+
+.primary-button:focus-visible, .ghost-button:focus-visible {
+  outline: 2px solid rgba(214, 184, 133, .72);
+  outline-offset: 2px;
 }
 
 .primary-button:disabled, .ghost-button:disabled {
   cursor: not-allowed;
-  opacity: .58;
+  opacity: .52;
+  filter: saturate(.72);
 }
 
 .ghost-button {
@@ -3393,6 +3401,44 @@ textarea {
 .dungeon-entry-actions .primary-button,
 .dungeon-entry-actions .ghost-button {
   flex: 1 1 150px;
+}
+
+
+.combat-actions[aria-busy="true"],
+.party-combat-actions[aria-busy="true"],
+.duel-actions[aria-busy="true"] {
+  position: relative;
+}
+
+.combat-actions[aria-busy="true"]::after,
+.party-combat-actions[aria-busy="true"]::after,
+.duel-actions[aria-busy="true"]::after {
+  content: "Обрабатываем действие…";
+  flex: 1 0 100%;
+  display: block;
+  border: 1px solid rgba(174, 142, 94, .32);
+  border-radius: 10px;
+  background: rgba(174, 142, 94, .08);
+  color: #cbb28a;
+  padding: 7px 10px;
+  font-size: 10px;
+  font-weight: 720;
+  letter-spacing: .02em;
+  text-align: center;
+  animation: action-pending-pulse 1.15s ease-in-out infinite alternate;
+}
+
+@keyframes action-pending-pulse {
+  from { opacity: .62; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combat-actions[aria-busy="true"]::after,
+  .party-combat-actions[aria-busy="true"]::after,
+  .duel-actions[aria-busy="true"]::after {
+    animation: none;
+  }
 }
 
 .combat-log {
