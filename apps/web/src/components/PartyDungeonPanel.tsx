@@ -1,6 +1,7 @@
 import { userFacingError } from '../lib/userError'
 import { criticalHitCount } from '../lib/combatPresentation'
 import { useEffect, useMemo, useState } from 'react'
+import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 import type { BowDistance, BowProfile, CombatEnemyTarget, CombatSummon } from '../types'
@@ -391,6 +392,8 @@ export function PartyDungeonPanel({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
+  const { beginAction, endAction } = useActionGate(setBusy, false, setMessage)
+
   function normalizeState(raw: Partial<PartyDungeonState> | null): PartyDungeonState {
     const value = raw ?? {}
     return {
@@ -556,7 +559,7 @@ export function PartyDungeonPanel({
   async function startRun() {
     if (!selectedSectorId) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Собираем группу у входа…')
 
     const { error } = await supabase.rpc('start_party_dungeon_run', {
@@ -566,19 +569,19 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
     await loadDynamicState(true)
     setMessage('Группа вошла в подземелье. Лидер может открыть первый зал.')
-    setBusy(false)
+    endAction()
   }
 
   async function startBoss() {
     if (!selectedBossId) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Группа готовится к бою с боссом…')
 
     const { error } = await supabase.rpc('start_event_boss', {
@@ -589,20 +592,20 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
     await loadDynamicState(true)
     setMessage('Бой с боссом начался. Награда будет рассчитана отдельно для каждого участника.')
-    setBusy(false)
+    endAction()
     onOpenBattles?.()
   }
 
   async function startRoom() {
     if (!state.run) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Открываем следующий зал…')
 
     const { error } = await supabase.rpc('start_party_dungeon_combat', {
@@ -612,19 +615,19 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
     await loadDynamicState(true)
     setMessage('Битва началась. В каждом раунде участники ходят от большей инициативы к меньшей; высокая инициатива также может дать дополнительный полный ход.')
-    setBusy(false)
+    endAction()
   }
 
   async function performAction(action: 'physical' | 'bow_draw' | 'magic' | 'guard') {
     if (!state.encounter) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('perform_party_combat_action', {
@@ -635,7 +638,7 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       await loadDynamicState(true)
       return
     }
@@ -663,12 +666,12 @@ export function PartyDungeonPanel({
       setMessage('Ход принят. Ждём остальных участников группы.')
     }
 
-    setBusy(false)
+    endAction()
   }
 
   async function setBowDistance(distance: BowDistance) {
     if (!state.encounter || !me || !isBowProfile(bowProfile) || me.bow_draw_pending || me.acted) return
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
     const { error } = await supabase.rpc('set_party_bow_distance', {
       p_character_id: characterId,
@@ -677,7 +680,7 @@ export function PartyDungeonPanel({
     })
     if (error) setMessage(coopError(error.message))
     await loadDynamicState(true)
-    setBusy(false)
+    endAction()
   }
 
   async function setPartySummonTarget(summon: CombatSummon, value: string) {
@@ -686,7 +689,7 @@ export function PartyDungeonPanel({
     const targetType = (separator >= 0 ? value.slice(0, separator) : value) as CombatSummon['target_type']
     const targetId = separator >= 0 ? value.slice(separator + 1) || null : null
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
     const { error } = await supabase.rpc('set_combat_summon_target', {
       p_character_id: characterId,
@@ -698,7 +701,7 @@ export function PartyDungeonPanel({
     })
     if (error) setMessage(coopError(error.message))
     await loadPartySummons(state.encounter.id)
-    setBusy(false)
+    endAction()
   }
 
   async function castPartySpell(spell: PartySpell) {
@@ -712,7 +715,7 @@ export function PartyDungeonPanel({
         : spellTargets[spell.id] ?? characterId
       : null
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('cast_party_character_spell', {
@@ -724,7 +727,7 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       await loadDynamicState(true)
       return
     }
@@ -751,7 +754,7 @@ export function PartyDungeonPanel({
       setMessage('Заклинание применено. Ждём ходы остальных участников.')
     }
 
-    setBusy(false)
+    endAction()
   }
 
   async function useLastSacrificeScroll() {
@@ -761,7 +764,7 @@ export function PartyDungeonPanel({
       'Использовать «Последнюю жертву»? Ты станешь Потерянным до конца всего похода и не сможешь быть воскрешён. Все остальные ЖИВЫЕ союзники полностью восстановят ОЗ и получат −30% входящего урона на 3 раунда. Свиток исчезнет.',
     )) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Свиток требует последней жертвы…')
 
     const { data, error } = await supabase.rpc('use_party_sacrifice_scroll', {
@@ -771,7 +774,7 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       await loadDynamicState(true)
       return
     }
@@ -790,13 +793,13 @@ export function PartyDungeonPanel({
       setMessage('Последняя жертва принесена. Ты Потерян до конца похода; живые союзники полностью исцелены и защищены на 3 раунда.')
     }
 
-    setBusy(false)
+    endAction()
   }
 
   async function skipStunnedTurn() {
     if (!state.encounter) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Оглушение не даёт действовать…')
 
     const { data, error } = await supabase.rpc('skip_party_stunned_turn', {
@@ -806,7 +809,7 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       await loadDynamicState(true)
       return
     }
@@ -827,13 +830,13 @@ export function PartyDungeonPanel({
       setMessage('Ход пропущен из-за оглушения. Ждём остальных участников.')
     }
 
-    setBusy(false)
+    endAction()
   }
 
   async function abandonEventBossParty() {
     if (!window.confirm('Отступить всей группой от Пепельного Кузнеца? Текущая попытка завершится без награды.')) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Группа отступает от недельного босса…')
 
     const { error } = await supabase.rpc('abandon_event_boss', {
@@ -843,7 +846,7 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       return
     }
 
@@ -852,7 +855,7 @@ export function PartyDungeonPanel({
       Promise.resolve(onProgressChanged?.()),
     ])
     setMessage('Группа отступила. До конца ротации Пепельного Кузнеца можно вызвать снова.')
-    setBusy(false)
+    endAction()
   }
 
   async function attemptEscape() {
@@ -862,7 +865,7 @@ export function PartyDungeonPanel({
       'Попытаться вывести всю группу из подземелья? Шанс успеха — 80%. При провале ОЗ ВСЕХ участников упадёт до 1, а повторить побег на этом этапе нельзя.',
     )) return
 
-    setBusy(true)
+    if (!beginAction(true)) return
     setMessage('Группа пытается отступить…')
 
     const { data, error } = await supabase.rpc('attempt_leave_party_dungeon_run', {
@@ -872,7 +875,7 @@ export function PartyDungeonPanel({
 
     if (error) {
       setMessage(coopError(error.message))
-      setBusy(false)
+      endAction()
       await loadDynamicState(true)
       return
     }
@@ -885,7 +888,7 @@ export function PartyDungeonPanel({
         ? 'Групповой побег удался. Отряд покинул подземелье.'
         : 'Побег провален. Все участники остаются внутри с 1 ОЗ.',
     )
-    setBusy(false)
+    endAction()
   }
 
   const run = state.run
@@ -1653,7 +1656,7 @@ export function PartyDungeonPanel({
                 </div>
               )}
 
-              <div className="party-combat-actions">
+              <div className="party-combat-actions" aria-busy={busy}>
                 {isBowProfile(bowProfile) ? (
                   me?.bow_draw_pending ? (
                     <button className="primary-button" type="button" disabled={!canAct} onClick={() => void performAction('physical')}>
