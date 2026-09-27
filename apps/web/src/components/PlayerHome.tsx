@@ -2184,6 +2184,7 @@ function EquipmentPanel({
   onUnequip: (slot: EquipmentSlot) => Promise<void>
 }) {
   const bySlot = new Map(equipment.map((entry) => [entry.slot, entry]))
+  const activeEquipmentSets = equipmentSets.filter((set) => set.equipped_pieces > 0)
 
   return (
     <section className="panel">
@@ -2196,9 +2197,9 @@ function EquipmentPanel({
 
       {message && <p className="form-message" aria-live="polite">{message}</p>}
 
-      {equipmentSets.length > 0 && (
+      {activeEquipmentSets.length > 0 && (
         <div className="equipment-set-list">
-          {equipmentSets.map((set) => (
+          {activeEquipmentSets.map((set) => (
             <article className="equipment-set-card" key={set.set_id}>
               <div className="equipment-set-heading">
                 <div>
