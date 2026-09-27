@@ -111,6 +111,7 @@ type WorldPulse = {
     sector_id: number
     modifier: WorldPulseModifier | null
     pending_event: WorldPulseDungeonEvent | null
+    elite_room_ready: boolean
   } | null
 }
 
@@ -392,6 +393,14 @@ export function WorldPulsePanel({
                 {modifier.reward_gold_percent !== 0 && <span>золото {signed(modifier.reward_gold_percent)}</span>}
                 {modifier.reward_xp_percent !== 0 && <span>опыт {signed(modifier.reward_xp_percent)}</span>}
               </div>
+            </div>
+          )}
+
+          {pulse.active_dungeon?.elite_room_ready && !dungeonEvent && (
+            <div className="elite-room-ready">
+              <span className="eyebrow">ОПАСНАЯ КОМНАТА</span>
+              <strong>Печать арены сломана</strong>
+              <p>Следующий противник будет значительно сильнее обычного. За победу гарантирован дополнительный древний трофей.</p>
             </div>
           )}
 
