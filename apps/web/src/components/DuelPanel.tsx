@@ -1,6 +1,7 @@
 import { userFacingError } from '../lib/userError'
 import { criticalHitCount } from '../lib/combatPresentation'
 import { useEffect, useMemo, useState } from 'react'
+import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 import type { BowDistance, BowProfile, CharacterSpell, CombatStatusEffectType } from '../types'
@@ -177,6 +178,8 @@ export function DuelPanel({ characterId }: Props) {
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
 
+  const { beginAction, endAction } = useActionGate(setBusy, '', setMessage)
+
   async function loadStaticCombatData() {
     const [spellsResult, bowProfileResult] = await Promise.all([
       supabase.rpc('get_character_spells', { p_character_id: characterId }),
@@ -291,7 +294,7 @@ export function DuelPanel({ characterId }: Props) {
     : []
 
   async function challenge(player: DuelPlayer) {
-    setBusy('challenge-' + player.character_id)
+    if (!beginAction('challenge-' + player.character_id)) return
     setMessage('')
 
     const { error } = await supabase.rpc('challenge_character_to_duel', {
@@ -306,11 +309,11 @@ export function DuelPanel({ characterId }: Props) {
       await loadDynamic(true)
     }
 
-    setBusy('')
+    endAction()
   }
 
   async function respond(duelId: string, accept: boolean) {
-    setBusy((accept ? 'accept-' : 'decline-') + duelId)
+    if (!beginAction((accept ? 'accept-' : 'decline-') + duelId)) return
     setMessage('')
 
     const { error } = await supabase.rpc('respond_to_duel', {
@@ -325,11 +328,11 @@ export function DuelPanel({ characterId }: Props) {
       await loadDynamic(true)
     }
 
-    setBusy('')
+    endAction()
   }
 
   async function cancelInvite(duelId: string) {
-    setBusy('cancel-' + duelId)
+    if (!beginAction('cancel-' + duelId)) return
     setMessage('')
 
     const { error } = await supabase.rpc('cancel_duel_invite', {
@@ -343,13 +346,13 @@ export function DuelPanel({ characterId }: Props) {
       await loadDynamic(true)
     }
 
-    setBusy('')
+    endAction()
   }
 
   async function act(action: 'physical' | 'bow_draw' | 'magic' | 'guard' | 'spell', spellId: string | null = null) {
     if (!details || !myTurn) return
 
-    setBusy('action')
+    if (!beginAction('action')) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('perform_pvp_duel_action', {
@@ -365,13 +368,13 @@ export function DuelPanel({ characterId }: Props) {
       await loadDynamic(true)
     }
 
-    setBusy('')
+    endAction()
   }
 
   async function setBowDistance(distance: BowDistance) {
     if (!details || !myTurn || !mine || !isBowProfile(bowProfile) || mine.bow_draw_pending) return
 
-    setBusy('action')
+    if (!beginAction('action')) return
     setMessage('')
     const { data, error } = await supabase.rpc('set_pvp_bow_distance', {
       p_duel_id: details.duel.id,
@@ -381,13 +384,13 @@ export function DuelPanel({ characterId }: Props) {
     if (error) setMessage(duelError(error.message))
     else setDetails((data as DuelDetails | null) ?? null)
 
-    setBusy('')
+    endAction()
   }
 
   async function surrender() {
     if (!details) return
 
-    setBusy('surrender')
+    if (!beginAction('surrender')) return
     setMessage('')
 
     const { error } = await supabase.rpc('surrender_pvp_duel', {
@@ -401,7 +404,7 @@ export function DuelPanel({ characterId }: Props) {
       await loadDynamic(true)
     }
 
-    setBusy('')
+    endAction()
   }
 
   if (loading) {
@@ -478,7 +481,7 @@ export function DuelPanel({ characterId }: Props) {
             </div>
           )}
 
-          <div className="duel-actions">
+          <div className="duel-actions" aria-busy={busy === 'action'}>
             {isBowProfile(bowProfile) ? (
               mine.bow_draw_pending ? (
                 <button className="primary-button" type="button" disabled={!myTurn || busy === 'action'} onClick={() => void act('physical')}>
