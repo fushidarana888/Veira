@@ -85,6 +85,15 @@ type Trophy = {
   quantity: number
 }
 
+type LostSpirit = {
+  id: string
+  sector_id: number
+  created_at: string
+  expires_at: string
+  item_name: string
+  character_item_id: string | null
+}
+
 type WorldPulse = {
   merchant: WanderingMerchant | null
   rumors: WorldRumor[]
@@ -92,6 +101,7 @@ type WorldPulse = {
   treasure_hunts: TreasureHunt[]
   discoveries: Discovery[]
   trophies: Trophy[]
+  lost_spirits: LostSpirit[]
   discovery_count: number
   active_dungeon: {
     run_id: string
@@ -325,6 +335,37 @@ export function WorldPulsePanel({
 
   return (
     <div className="world-pulse-stack">
+      {(pulse.lost_spirits?.length ?? 0) > 0 && (
+        <article className="panel lost-spirit-warning">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">ПОТЕРЯННОЕ СНАРЯЖЕНИЕ</span>
+              <h3>Твои духи всё ещё существуют</h3>
+              <p className="muted">Победи собственного духа до истечения времени, иначе удерживаемая вещь исчезнет навсегда.</p>
+            </div>
+            <span className="badge">{pulse.lost_spirits.length}</span>
+          </div>
+          <div className="lost-spirit-list">
+            {pulse.lost_spirits.map((spirit) => (
+              <div className="lost-spirit-entry" key={spirit.id}>
+                <div>
+                  <strong>{spirit.item_name}</strong>
+                  <span>дух в секторе #{spirit.sector_id}</span>
+                </div>
+                <small>
+                  исчезнет {new Date(spirit.expires_at).toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </small>
+              </div>
+            ))}
+          </div>
+        </article>
+      )}
+
       {(modifier || dungeonEvent) && (
         <article className={'panel world-pulse-dungeon ' + (dungeonEvent ? 'has-event' : '')}>
           <div className="section-heading">
