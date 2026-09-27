@@ -363,9 +363,16 @@ export function DuelPanel({ characterId }: Props) {
 
     if (error) {
       setMessage(duelError(error.message))
-    } else {
-      setDetails((data as DuelDetails | null) ?? null)
       await loadDynamic(true)
+    } else {
+      const next = (data as DuelDetails | null) ?? null
+      if (next) {
+        setDetails(next)
+      }
+      await loadDynamic(true)
+      if (!next) {
+        setMessage('Ответ хода пришёл неполным — дуэль синхронизирована с сервером.')
+      }
     }
 
     endAction()
@@ -381,8 +388,14 @@ export function DuelPanel({ characterId }: Props) {
       p_distance: distance,
     })
 
-    if (error) setMessage(duelError(error.message))
-    else setDetails((data as DuelDetails | null) ?? null)
+    if (error) {
+      setMessage(duelError(error.message))
+      await loadDynamic(true)
+    } else {
+      const next = (data as DuelDetails | null) ?? null
+      if (next) setDetails(next)
+      else await loadDynamic(true)
+    }
 
     endAction()
   }
