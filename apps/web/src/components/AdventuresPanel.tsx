@@ -651,11 +651,22 @@ export function AdventuresPanel({
 
     if (error) {
       setMessage(userFacingError(error.message))
+      await loadAdventures(true)
+      await refreshCombatDetails(activeCombat.id)
       endAction()
       return
     }
 
-    finishInstantCombatUpdate(data as CombatEncounter)
+    const next = data as CombatEncounter | null
+    if (!next?.id) {
+      await loadAdventures(true)
+      await refreshCombatDetails(activeCombat.id)
+      setMessage('Ответ боя потерялся по дороге, поэтому состояние боя было перепроверено.')
+      endAction()
+      return
+    }
+
+    finishInstantCombatUpdate(next)
   }
 
   async function setBowDistance(distance: BowDistance) {
@@ -727,11 +738,22 @@ export function AdventuresPanel({
       } else {
         setMessage(userFacingError(raw))
       }
+      await loadAdventures(true)
+      await refreshCombatDetails(activeCombat.id)
       endAction()
       return
     }
 
-    finishInstantCombatUpdate(data as CombatEncounter)
+    const next = data as CombatEncounter | null
+    if (!next?.id) {
+      await loadAdventures(true)
+      await refreshCombatDetails(activeCombat.id)
+      setMessage('Ответ заклинания не пришёл полностью — состояние боя обновлено с сервера.')
+      endAction()
+      return
+    }
+
+    finishInstantCombatUpdate(next)
   }
 
   async function castScroll(scroll: CombatScroll) {
@@ -760,12 +782,23 @@ export function AdventuresPanel({
         setMessage(userFacingError(raw))
       }
 
+      await loadAdventures(true)
+      await refreshCombatDetails(activeCombat.id)
+      endAction()
+      return
+    }
+
+    const next = data as CombatEncounter | null
+    if (!next?.id) {
+      await loadAdventures(true)
+      await refreshCombatDetails(activeCombat.id)
+      setMessage('Состояние боя перепроверено: повторно нажимать свиток не нужно, пока не увидишь результат.')
       endAction()
       return
     }
 
     consumeLocalCombatItem(scroll.id)
-    finishInstantCombatUpdate(data as CombatEncounter, true)
+    finishInstantCombatUpdate(next, true)
   }
 
   async function useCombatConsumable(item: CombatScroll) {
@@ -790,12 +823,23 @@ export function AdventuresPanel({
       } else {
         setMessage(userFacingError(raw))
       }
+      await loadAdventures(true)
+      await refreshCombatDetails(activeCombat.id)
+      endAction()
+      return
+    }
+
+    const next = data as CombatEncounter | null
+    if (!next?.id) {
+      await loadAdventures(true)
+      await refreshCombatDetails(activeCombat.id)
+      setMessage('Ответ расходника не пришёл полностью — бой синхронизирован с сервером.')
       endAction()
       return
     }
 
     consumeLocalCombatItem(item.id)
-    finishInstantCombatUpdate(data as CombatEncounter, true)
+    finishInstantCombatUpdate(next, true)
   }
 
   async function saveAutobattleSettings() {
