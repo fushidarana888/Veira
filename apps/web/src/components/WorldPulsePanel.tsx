@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { userFacingError } from '../lib/userError'
+import { useActionGate } from '../lib/actionGate'
 
 type WorldPulseModifier = {
   slug: string
@@ -164,6 +165,7 @@ export function WorldPulsePanel({
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [expandedDiscoveries, setExpandedDiscoveries] = useState(false)
+  const { beginAction, endAction } = useActionGate(setBusy, null, setMessage)
 
   async function loadPulse(silent = false) {
     const { data, error } = await supabase.rpc('get_world_pulse', {
@@ -196,8 +198,7 @@ export function WorldPulsePanel({
   }
 
   async function resolveDungeonEvent(runId: string, choiceSlug: string) {
-    if (busy) return
-    setBusy('event:' + choiceSlug)
+    if (!beginAction('event:' + choiceSlug)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('resolve_dungeon_event', {
@@ -212,19 +213,18 @@ export function WorldPulsePanel({
           ? 'Для этого решения не хватает золота.'
           : userFacingError(raw, 'Событие не удалось разрешить.'),
       )
-      setBusy(null)
+      endAction()
       return
     }
 
     const result = data as { result?: string } | null
     setMessage(result?.result || 'Решение принято. Путь дальше открыт.')
     await refreshAfterAction(true)
-    setBusy(null)
+    endAction()
   }
 
   async function activateMap(item: WorldPulseMap) {
-    if (busy) return
-    setBusy('map:' + item.character_item_id)
+    if (!beginAction('map:' + item.character_item_id)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('activate_treasure_map', {
@@ -241,7 +241,7 @@ export function WorldPulsePanel({
             ? 'На карте пока не из чего выбрать цель: исследуй больше мира.'
             : userFacingError(raw, 'Не удалось прочитать карту.'),
       )
-      setBusy(null)
+      endAction()
       return
     }
 
@@ -250,12 +250,11 @@ export function WorldPulsePanel({
       ? `Карта расшифрована. Тайник отмечен в районе «${result.target_name}».`
       : 'Карта расшифрована. Новая цель появилась в журнале.')
     await refreshAfterAction(true)
-    setBusy(null)
+    endAction()
   }
 
   async function claimTreasure(hunt: TreasureHunt) {
-    if (busy || !hunt.ready) return
-    setBusy('hunt:' + hunt.id)
+    if (!hunt.ready || !beginAction('hunt:' + hunt.id)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('claim_treasure_hunt', {
@@ -269,7 +268,7 @@ export function WorldPulsePanel({
           ? 'После активации карты нужно заново завершить экспедицию в отмеченный сектор.'
           : userFacingError(raw, 'Тайник пока не удалось забрать.'),
       )
-      setBusy(null)
+      endAction()
       return
     }
 
@@ -286,12 +285,11 @@ export function WorldPulsePanel({
       + '.',
     )
     await refreshAfterAction(true)
-    setBusy(null)
+    endAction()
   }
 
   async function buyMerchantItem(offer: MerchantOffer) {
-    if (busy || offer.bought) return
-    setBusy('merchant:' + offer.item_definition_id)
+    if (offer.bought || !beginAction('merchant:' + offer.item_definition_id)) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('buy_wandering_merchant_item', {
@@ -308,14 +306,14 @@ export function WorldPulsePanel({
             ? 'Сегодня ты уже забрал этот товар.'
             : userFacingError(raw, 'Покупка не удалась.'),
       )
-      setBusy(null)
+      endAction()
       return
     }
 
     const result = data as { item_name?: string; price?: number } | null
     setMessage(`Куплено: ${result?.item_name ?? offer.name} за ${result?.price ?? offer.price} золота.`)
     await refreshAfterAction(true)
-    setBusy(null)
+    endAction()
   }
 
   const visibleDiscoveries = useMemo(
