@@ -11781,6 +11781,46 @@ textarea {
   margin-top: 8px;
 }
 
+.trophy-case {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+
+.trophy-case-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.trophy-case-item {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid rgba(201, 160, 95, .23);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 80% 20%, rgba(201, 160, 95, .09), transparent 50%),
+    rgba(255, 255, 255, .012);
+}
+
+.trophy-case-item small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.trophy-case-item b {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #ccb68f;
+  font-size: 10px;
+}
+
 @media (max-width: 820px) {
   .world-pulse-grid {
     grid-template-columns: 1fr;
@@ -11825,5 +11865,9 @@ textarea {
 
   .treasure-map-entry {
     align-items: flex-start;
+  }
+
+  .trophy-case-grid {
+    grid-template-columns: 1fr;
   }
 }
