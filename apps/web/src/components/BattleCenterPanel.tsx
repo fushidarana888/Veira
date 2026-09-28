@@ -320,24 +320,24 @@ export function BattleCenterPanel({
       </article>
 
       <div className="battle-center-tabs" role="tablist" aria-label="Разделы боевого центра">
-        <button className={tab === 'current' ? 'active' : ''} type="button" onClick={() => setTab('current')}>
+        <button className={tab === 'current' ? 'active' : ''} type="button" role="tab" aria-selected={tab === 'current'} onClick={() => setTab('current')}>
           Сейчас
           {currentKind && <b>{overview.active_kind ? '1' : 'ИТОГ'}</b>}
         </button>
-        <button className={tab === 'group' ? 'active' : ''} type="button" onClick={() => setTab('group')}>
+        <button className={tab === 'group' ? 'active' : ''} type="button" role="tab" aria-selected={tab === 'group'} onClick={() => setTab('group')}>
           Группа
           {overview.party_active && <b>LIVE</b>}
         </button>
-        <button className={tab === 'history' ? 'active' : ''} type="button" onClick={() => setTab('history')}>
+        <button className={tab === 'history' ? 'active' : ''} type="button" role="tab" aria-selected={tab === 'history'} onClick={() => setTab('history')}>
           История
           {overview.history_count > 0 && <b>{overview.history_count}</b>}
         </button>
-        <button className={tab === 'duels' ? 'active' : ''} type="button" onClick={() => setTab('duels')}>
+        <button className={tab === 'duels' ? 'active' : ''} type="button" role="tab" aria-selected={tab === 'duels'} onClick={() => setTab('duels')}>
           Дуэли
         </button>
       </div>
 
-      {message && <p className="gm-notice" aria-live="polite">{message}</p>}
+      {message && <p className="gm-notice" role="status" aria-live="polite">{message}</p>}
 
       {tab === 'current' && (
         <>
