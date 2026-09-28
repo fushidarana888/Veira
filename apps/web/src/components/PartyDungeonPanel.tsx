@@ -1052,7 +1052,9 @@ export function PartyDungeonPanel({
         : 'ПОХОД ЗАВЕРШЁН'
 
     return (
-      <article className={'panel party-dungeon-panel party-combat-final ' + (victory ? 'victory' : defeat ? 'defeat' : 'ended')}>
+      <article className={'panel party-dungeon-panel party-combat-final '
+        + (run.is_event_boss ? 'event-boss-final ' : '')
+        + (victory ? 'victory' : defeat ? 'defeat' : 'ended')}>
         <div className="party-combat-final-head">
           <div>
             <span className="eyebrow">{resultTitle}</span>
@@ -1073,9 +1075,12 @@ export function PartyDungeonPanel({
         </div>
 
         <div className="party-combat-final-summary">
-          <span><strong>{encounter.enemy_name}</strong><small>последний противник</small></span>
-          <span><strong>{run.rooms_cleared}/{run.total_rooms}</strong><small>залов пройдено</small></span>
-          <span><strong>{encounter.round}</strong><small>раундов в финале</small></span>
+          <span><strong>{encounter.enemy_name}</strong><small>{run.is_event_boss ? 'босс' : 'последний противник'}</small></span>
+          <span>
+            <strong>{run.is_event_boss ? bossKindTitle(run.event_boss?.boss_kind) : run.rooms_cleared + '/' + run.total_rooms}</strong>
+            <small>{run.is_event_boss ? 'тип события' : 'залов пройдено'}</small>
+          </span>
+          <span><strong>{encounter.round}</strong><small>{run.is_event_boss ? 'раундов боя' : 'раундов в финале'}</small></span>
         </div>
 
         {state.members.length > 0 && (
