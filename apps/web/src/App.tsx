@@ -192,8 +192,8 @@ export function App() {
 
   if (state.loading) {
     return (
-      <main className="loading-screen">
-        <div className="loading-mark">V</div>
+      <main className="loading-screen" aria-busy="true" aria-live="polite">
+        <div className="loading-mark" aria-hidden="true">V</div>
         <p>Загружаем Veira…</p>
       </main>
     )
@@ -210,7 +210,7 @@ export function App() {
   if (state.error) {
     return (
       <main className="shell">
-        <section className="panel error-panel">
+        <section className="panel error-panel" role="alert">
           <span className="eyebrow">ОШИБКА</span>
           <h1>Не удалось загрузить аккаунт</h1>
           <p className="muted">{state.error}</p>
@@ -264,8 +264,8 @@ export function App() {
 
 function AppSectionLoading() {
   return (
-    <main className="loading-screen">
-      <div className="loading-mark">V</div>
+    <main className="loading-screen" aria-busy="true" aria-live="polite">
+      <div className="loading-mark" aria-hidden="true">V</div>
       <p>Открываем раздел…</p>
     </main>
   )
