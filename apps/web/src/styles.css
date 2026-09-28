@@ -12383,3 +12383,18 @@ textarea {
     display: grid;
   }
 }
+
+
+/* Scheduled world-boss loot on the map */
+.world-boss-loot-line {
+  display: grid;
+  gap: 3px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.world-boss-loot-line > span,
+.world-boss-loot-line > small {
+  color: var(--muted);
+}
