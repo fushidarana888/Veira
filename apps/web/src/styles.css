@@ -12400,3 +12400,248 @@ textarea {
 }
 
 
+
+
+/* Global player polish pass */
+::selection {
+  background: rgba(182, 155, 114, .28);
+  color: #fff8ee;
+}
+
+button:focus-visible,
+select:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid rgba(214, 184, 133, .72);
+  outline-offset: 2px;
+}
+
+select {
+  color-scheme: dark;
+}
+
+.game-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+}
+
+.avatar-placeholder {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.avatar-placeholder > span {
+  position: relative;
+  z-index: 0;
+}
+
+.avatar-placeholder > img {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  background: #151922;
+}
+
+.avatar-placeholder.has-image {
+  border-color: rgba(182, 155, 114, .5);
+  box-shadow:
+    0 0 0 1px rgba(182, 155, 114, .06),
+    0 10px 26px rgba(0, 0, 0, .22);
+}
+
+.subnav button,
+.battle-center-tabs button,
+.event-boss-tabs button,
+.adventure-folder-tabs button,
+.adventure-location-tabs button {
+  transition:
+    color .16s ease,
+    background .16s ease,
+    border-color .16s ease,
+    transform .12s ease;
+}
+
+.subnav button:active,
+.battle-center-tabs button:active,
+.event-boss-tabs button:active,
+.adventure-folder-tabs button:active,
+.adventure-location-tabs button:active {
+  transform: translateY(1px) scale(.985);
+}
+
+.bottom-nav {
+  z-index: 80;
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  padding: 6px;
+  border-color: rgba(72, 79, 91, .76);
+  background:
+    linear-gradient(180deg, rgba(24, 28, 36, .96), rgba(12, 15, 20, .96));
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.bottom-nav button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 5px 4px 4px;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.05;
+  transition:
+    color .16s ease,
+    background .16s ease,
+    transform .12s ease;
+}
+
+.bottom-nav button::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: transparent;
+  transform: translateX(-50%) scaleX(.35);
+  transition: transform .16s ease, background .16s ease;
+}
+
+.bottom-nav button.active {
+  background:
+    linear-gradient(180deg, rgba(182, 155, 114, .11), rgba(182, 155, 114, .035));
+  color: #f0e5d3;
+}
+
+.bottom-nav button.active::after {
+  background: var(--accent-strong);
+  transform: translateX(-50%) scaleX(1);
+}
+
+.bottom-nav button:active {
+  transform: scale(.96);
+}
+
+.bottom-nav-icon {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .92;
+}
+
+.bottom-nav-label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loading-mark {
+  position: relative;
+  isolation: isolate;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .28);
+  animation: veira-loading-breathe 1.8s ease-in-out infinite;
+}
+
+.loading-mark::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(211, 184, 137, .18), transparent 55%);
+  pointer-events: none;
+}
+
+.lazy-panel-fallback {
+  position: relative;
+  overflow: hidden;
+}
+
+.lazy-panel-fallback::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 22px;
+  height: 4px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(182, 155, 114, .08),
+      rgba(182, 155, 114, .42),
+      rgba(182, 155, 114, .08)
+    );
+  background-size: 200% 100%;
+  animation: veira-loading-sweep 1.4s linear infinite;
+}
+
+@keyframes veira-loading-breathe {
+  0%, 100% { transform: translateY(0); filter: brightness(.95); }
+  50% { transform: translateY(-3px); filter: brightness(1.08); }
+}
+
+@keyframes veira-loading-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (max-width: 560px) {
+  .game-shell {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .bottom-nav {
+    bottom: max(7px, env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 12px);
+    border-radius: 16px;
+  }
+
+  .bottom-nav button {
+    min-height: 50px;
+    font-size: 9px;
+  }
+
+  .bottom-nav-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .top-actions .ghost-button {
+    min-height: 38px;
+    padding: 7px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-mark,
+  .lazy-panel-fallback::after {
+    animation: none;
+  }
+
+  .subnav button,
+  .battle-center-tabs button,
+  .event-boss-tabs button,
+  .adventure-folder-tabs button,
+  .adventure-location-tabs button,
+  .bottom-nav button,
+  .bottom-nav button::after {
+    transition: none;
+  }
+}
