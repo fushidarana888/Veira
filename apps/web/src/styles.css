@@ -12098,3 +12098,120 @@ textarea {
     margin: 10px 0;
   }
 }
+
+
+/* Adventure hub: separate places, world activity and bosses */
+.adventure-location-tabs {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(12, 15, 20, .72);
+}
+
+.adventure-location-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 10px;
+  padding: 7px 11px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.adventure-location-tabs button.active {
+  background: rgba(182, 155, 114, .14);
+  color: var(--text);
+}
+
+.adventure-location-tabs button b {
+  min-width: 22px;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: rgba(255,255,255,.05);
+  color: var(--muted);
+  font-size: .76rem;
+  text-align: center;
+}
+
+.adventure-location-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.compact-prepared-spells {
+  margin: 0;
+}
+
+.adventure-rules-details {
+  padding: 0;
+  overflow: hidden;
+}
+
+.adventure-rules-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+}
+
+.adventure-rules-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.adventure-rules-details > summary > div {
+  display: grid;
+  gap: 4px;
+}
+
+.adventure-rules-details > summary > span {
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+.adventure-rules-details[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.adventure-rules-body {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.adventure-rules-body > p {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .adventure-folder-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .adventure-location-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .adventure-location-tabs button {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+@media (max-width: 460px) {
+  .adventure-folder-tabs {
+    grid-template-columns: 1fr;
+  }
+}
