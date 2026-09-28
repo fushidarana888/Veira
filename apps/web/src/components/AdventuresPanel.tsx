@@ -38,7 +38,8 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
 }
 
-type AdventureTab = 'locations' | 'bosses'
+type AdventureTab = 'locations' | 'world' | 'bosses'
+type LocationTab = 'dungeons' | 'ruins'
 
 type CombatScroll = {
   id: string
@@ -200,6 +201,7 @@ export function AdventuresPanel({
   const [bowProfile, setBowProfile] = useState<BowProfile | null>(null)
   const [combatToolkitLoaded, setCombatToolkitLoaded] = useState(false)
   const [adventureTab, setAdventureTab] = useState<AdventureTab>('locations')
+  const [locationTab, setLocationTab] = useState<LocationTab>('dungeons')
   const [autobattleEditorMode, setAutobattleEditorMode] = useState<'normal' | 'boss'>('normal')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -1297,7 +1299,7 @@ export function AdventuresPanel({
               <span className="eyebrow">ПРИКЛЮЧЕНИЯ</span>
               <h2>Центр приключений</h2>
               <p className="muted">
-                Здесь выбираются места и особые угрозы. После входа всё прохождение подземелья — бои, победы между залами, следующий зал, побег и награды — находится только в «Бои → Сейчас».
+                Приключения разделены по задачам: места для входа и исследования, живой мир для слухов и находок, боссы для особых угроз. Само прохождение подземелья остаётся в «Бои → Сейчас».
               </p>
             </div>
             <div className="adventure-counters">
@@ -1310,6 +1312,9 @@ export function AdventuresPanel({
             <button className={adventureTab === 'locations' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'locations'} onClick={() => setAdventureTab('locations')}>
               <span>Места</span>
               <b>{ruins.length + dungeons.length}</b>
+            </button>
+            <button className={adventureTab === 'world' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'world'} onClick={() => setAdventureTab('world')}>
+              <span>Живой мир</span>
             </button>
             <button className={adventureTab === 'bosses' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'bosses'} onClick={() => setAdventureTab('bosses')}>
               <span>Боссы</span>
@@ -2527,7 +2532,7 @@ export function AdventuresPanel({
         </div>
       )}
 
-      {mode === 'adventures' && adventureTab === 'locations' && (
+      {mode === 'adventures' && adventureTab === 'world' && (
         <div className="adventure-folder-content">
           <WorldPulsePanel
             characterId={characterId}
@@ -2536,137 +2541,171 @@ export function AdventuresPanel({
             onInventoryChanged={onInventoryChanged}
             onAdventureChanged={() => loadAdventures(true)}
           />
+        </div>
+      )}
 
-          <article className="panel dungeon-fatigue-rule">
-            <span className="eyebrow">ЦИКЛ НАГРАД ПОДЗЕМЕЛЬЯ</span>
-            <h3>Вход безлимитный, награды — первые 25 попыток</h3>
-            <p className="muted">
-              Для каждого подземелья отдельно запускается 18-часовой цикл с первого входа. Первые 25 попыток в этом цикле
-              используют обычную шкалу снижения опыта и золота. Начиная с 26-й попытки вход остаётся доступен без ограничений,
-              но персонаж получает 0 опыта, 0 золота и 0 личного лута. После окончания 18 часов следующий вход начинает новый цикл с 1-й попытки.
-            </p>
-            <div className="dungeon-fatigue-scale">
-              <span><b>1-я</b><small>100% XP · 100% золота</small></span>
-              <span><b>2-я</b><small>90% XP · 75% золота</small></span>
-              <span><b>3-я</b><small>80% XP · 55% золота</small></span>
-              <span><b>4-я</b><small>65% XP · 40% золота</small></span>
-              <span><b>5-я</b><small>50% XP · 30% золота</small></span>
-              <span><b>6-я</b><small>35% XP · 20% золота</small></span>
-              <span><b>7-я</b><small>20% XP · 15% золота</small></span>
-              <span><b>8-я</b><small>10% XP · 10% золота</small></span>
-              <span><b>9+</b><small>0% XP · 5% золота</small></span>
-            </div>
-          </article>
-
-          <div className="adventure-site-grid">
-        <article className="panel">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">РУИНЫ</span>
-              <h2>Найденные руины</h2>
-            </div>
-            <span className="badge">{ruins.length}</span>
+      {mode === 'adventures' && adventureTab === 'locations' && (
+        <div className="adventure-folder-content">
+          <div className="adventure-location-tabs" role="tablist" aria-label="Типы найденных мест">
+            <button
+              className={locationTab === 'dungeons' ? 'active' : ''}
+              type="button"
+              role="tab"
+              aria-selected={locationTab === 'dungeons'}
+              onClick={() => setLocationTab('dungeons')}
+            >
+              <span>Подземелья</span>
+              <b>{dungeons.length}</b>
+            </button>
+            <button
+              className={locationTab === 'ruins' ? 'active' : ''}
+              type="button"
+              role="tab"
+              aria-selected={locationTab === 'ruins'}
+              onClick={() => setLocationTab('ruins')}
+            >
+              <span>Руины</span>
+              <b>{ruins.length}</b>
+            </button>
           </div>
 
-          <div className="adventure-site-list">
-            {ruins.length === 0 && (
-              <p className="muted">Руины пока не обнаружены.</p>
-            )}
-
-            {ruins.map((site) => (
-              <div className="adventure-site-row" key={'ruins-' + site.sector_id}>
-                <div>
-                  <strong>{site.title}</strong>
-                  <span>сектор #{site.sector_id}</span>
-                </div>
-                <span className={'badge ' + (site.site_status === 'explored' || site.site_status === 'cleared' ? 'ready' : '')}>
-                  {site.site_status === 'cleared'
-                    ? 'зачищено'
-                    : site.site_status === 'explored'
-                      ? 'исследовано'
-                      : 'требует исследования'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">ПОДЗЕМЕЛЬЯ</span>
-              <h2>Найденные входы</h2>
-            </div>
-            <span className="badge">{dungeons.length}</span>
-          </div>
-
-          <div className="dungeon-reward-preview">
-            <span>Боевой набор · {preparedSpells.length}/3</span>
-            <strong>{preparedSpells.length > 0 ? preparedSpells.map((spell) => spell.name).join(' · ') : 'без заклинаний'}</strong>
-            <small>
-              {preparedSpells.length === 1
-                ? 'Концентрация активна. Набор фиксируется после входа в подземелье.'
-                : 'Набор фиксируется после входа в подземелье. Изменить его можно заранее в разделе «Магия».'}
-            </small>
-          </div>
-
-          <div className="adventure-site-list">
-            {dungeons.length === 0 && (
-              <p className="muted">Подземелья пока не обнаружены.</p>
-            )}
-
-            {dungeons.map((site) => {
-              const scouted = site.site_status === 'scouted' || site.site_status === 'cleared'
-              const active = site.run_status === 'active'
-
-              return (
-                <div className="adventure-site-row dungeon-row" key={'dungeon-' + site.sector_id}>
+          {locationTab === 'dungeons' && (
+            <>
+              <article className="panel adventure-location-panel">
+                <div className="section-heading">
                   <div>
-                    <strong>{site.title}</strong>
-                    <span>сектор #{site.sector_id}</span>
+                    <span className="eyebrow">ПОДЗЕМЕЛЬЯ</span>
+                    <h2>Найденные входы</h2>
+                    <p className="muted">Здесь только подготовка и вход. После начала поход сразу переходи в «Бои → Сейчас».</p>
                   </div>
+                  <span className="badge">{dungeons.length}</span>
+                </div>
 
-                  <div className="adventure-site-actions">
-                    <span className={'badge ' + (scouted ? 'ready' : '')}>
+                <div className="dungeon-reward-preview compact-prepared-spells">
+                  <span>Боевой набор · {preparedSpells.length}/3</span>
+                  <strong>{preparedSpells.length > 0 ? preparedSpells.map((spell) => spell.name).join(' · ') : 'без заклинаний'}</strong>
+                  <small>
+                    {preparedSpells.length === 1
+                      ? 'Концентрация активна. Набор фиксируется после входа.'
+                      : 'Набор фиксируется после входа. Изменить его можно заранее в разделе «Магия».'}
+                  </small>
+                </div>
+
+                <div className="adventure-site-list">
+                  {dungeons.length === 0 && (
+                    <p className="muted">Подземелья пока не обнаружены.</p>
+                  )}
+
+                  {dungeons.map((site) => {
+                    const scouted = site.site_status === 'scouted' || site.site_status === 'cleared'
+                    const active = site.run_status === 'active'
+
+                    return (
+                      <div className="adventure-site-row dungeon-row" key={'dungeon-' + site.sector_id}>
+                        <div>
+                          <strong>{site.title}</strong>
+                          <span>сектор #{site.sector_id}</span>
+                        </div>
+
+                        <div className="adventure-site-actions">
+                          <span className={'badge ' + (scouted ? 'ready' : '')}>
+                            {site.site_status === 'cleared'
+                              ? 'зачищено'
+                              : scouted
+                                ? 'вход разведан'
+                                : 'вход не разведан'}
+                          </span>
+
+                          {scouted && !active && !activeDungeon && (
+                            <button
+                              className="primary-button"
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void startDungeon(site)}
+                            >
+                              {site.site_status === 'cleared' ? 'Пройти снова' : 'Войти'}
+                            </button>
+                          )}
+
+                          {active && (
+                            <>
+                              <span className="badge">идёт в «Боях»</span>
+                              <button className="ghost-button" type="button" disabled={busy} onClick={onOpenBattles}>
+                                Открыть
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </article>
+
+              <details className="panel dungeon-fatigue-rule adventure-rules-details">
+                <summary>
+                  <div>
+                    <span className="eyebrow">ПРАВИЛА НАГРАД</span>
+                    <strong>18-часовой цикл и повторные прохождения</strong>
+                  </div>
+                  <span>Подробнее</span>
+                </summary>
+                <div className="adventure-rules-body">
+                  <p className="muted">
+                    Для каждого подземелья отдельно запускается 18-часовой цикл с первого входа. Первые 25 попыток используют обычную шкалу снижения опыта и золота. Начиная с 26-й попытки вход остаётся доступен без ограничений, но персонаж получает 0 опыта, 0 золота и 0 личного лута.
+                  </p>
+                  <div className="dungeon-fatigue-scale">
+                    <span><b>1-я</b><small>100% XP · 100% золота</small></span>
+                    <span><b>2-я</b><small>90% XP · 75% золота</small></span>
+                    <span><b>3-я</b><small>80% XP · 55% золота</small></span>
+                    <span><b>4-я</b><small>65% XP · 40% золота</small></span>
+                    <span><b>5-я</b><small>50% XP · 30% золота</small></span>
+                    <span><b>6-я</b><small>35% XP · 20% золота</small></span>
+                    <span><b>7-я</b><small>20% XP · 15% золота</small></span>
+                    <span><b>8-я</b><small>10% XP · 10% золота</small></span>
+                    <span><b>9+</b><small>0% XP · 5% золота</small></span>
+                  </div>
+                </div>
+              </details>
+            </>
+          )}
+
+          {locationTab === 'ruins' && (
+            <article className="panel adventure-location-panel">
+              <div className="section-heading">
+                <div>
+                  <span className="eyebrow">РУИНЫ</span>
+                  <h2>Найденные руины</h2>
+                  <p className="muted">Исследованные и найденные точки мира без боевого интерфейса подземелья.</p>
+                </div>
+                <span className="badge">{ruins.length}</span>
+              </div>
+
+              <div className="adventure-site-list">
+                {ruins.length === 0 && (
+                  <p className="muted">Руины пока не обнаружены.</p>
+                )}
+
+                {ruins.map((site) => (
+                  <div className="adventure-site-row" key={'ruins-' + site.sector_id}>
+                    <div>
+                      <strong>{site.title}</strong>
+                      <span>сектор #{site.sector_id}</span>
+                    </div>
+                    <span className={'badge ' + (site.site_status === 'explored' || site.site_status === 'cleared' ? 'ready' : '')}>
                       {site.site_status === 'cleared'
                         ? 'зачищено'
-                        : scouted
-                          ? 'вход разведан'
-                          : 'вход не разведан'}
+                        : site.site_status === 'explored'
+                          ? 'исследовано'
+                          : 'требует исследования'}
                     </span>
-
-                    {scouted && !active && !activeDungeon && (
-                      <button
-                        className="primary-button"
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void startDungeon(site)}
-                      >
-                        {site.site_status === 'cleared' ? 'Пройти снова' : 'Войти'}
-                      </button>
-                    )}
-
-                    {active && (
-                      <>
-                        <span className="badge">идёт в «Боях»</span>
-                        <button
-                          className="ghost-button"
-                          type="button"
-                          disabled={busy}
-                          onClick={onOpenBattles}
-                        >
-                          Открыть
-                        </button>
-                      </>
-                    )}
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        </article>
-          </div>
+                ))}
+              </div>
+            </article>
+          )}
         </div>
+      )}
       )}
     </section>
   )
