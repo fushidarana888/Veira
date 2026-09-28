@@ -833,6 +833,13 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     const definition = normalizeDefinition(item.item_definitions)
     if (!definition?.equip_group) return
 
+    if (progress.level < definition.required_level) {
+      setInventoryMessage(
+        `«${definition.name}» пока нельзя надеть: нужен ${definition.required_level} уровень, сейчас ${progress.level}.`,
+      )
+      return
+    }
+
     let slot: EquipmentSlot
 
     if (definition.equip_group === 'accessory') {
@@ -1564,6 +1571,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
             <InventoryPanel
               items={items}
               equippedItemIds={equippedItemIds}
+              characterLevel={progress.level}
               busy={inventoryBusy}
               message={inventoryMessage}
               onEquip={equipItem}
@@ -1952,6 +1960,7 @@ const inventoryRarityRank: Record<ItemDefinition['rarity'], number> = {
 function InventoryPanel({
   items,
   equippedItemIds,
+  characterLevel,
   busy,
   message,
   onEquip,
@@ -1962,6 +1971,7 @@ function InventoryPanel({
 }: {
   items: CharacterItem[]
   equippedItemIds: Set<string>
+  characterLevel: number
   busy: boolean
   message: string
   onEquip: (item: CharacterItem) => Promise<void>
@@ -2121,6 +2131,7 @@ function InventoryPanel({
             if (!definition) return null
 
             const equipped = equippedItemIds.has(item.id)
+            const lockedByLevel = definition.required_level > characterLevel
             const modifiers = Object.entries(definition.stat_modifiers ?? {})
               .filter((entry): entry is [string, number] =>
                 typeof entry[1] === 'number'
@@ -2137,7 +2148,14 @@ function InventoryPanel({
             const story = itemStory(item)
 
             return (
-              <article className={'item-card rarity-' + definition.rarity} key={item.id}>
+              <article
+                className={
+                  'item-card rarity-' + definition.rarity
+                  + (lockedByLevel ? ' level-locked' : '')
+                  + (equipped ? ' is-equipped' : '')
+                }
+                key={item.id}
+              >
                 <div className="item-card-top">
                   <div className="item-icon" aria-hidden="true">
                     {getItemGlyph(definition.category)}
@@ -2263,18 +2281,22 @@ function InventoryPanel({
                 <div className="item-actions">
                   {definition.equip_group ? (
                     <>
-                      <span className="muted item-state">
+                      <span className={'item-state ' + (lockedByLevel ? 'level-warning' : 'muted')}>
                         {equipped
                           ? 'Надето · сними для обмена'
-                          : `Требуется ур. ${definition.required_level} · обмен ${itemExchangeValue(definition)} золота`}
+                          : lockedByLevel
+                            ? `Нужен ${definition.required_level} ур. · сейчас ${characterLevel}`
+                            : `Можно надеть · обмен ${itemExchangeValue(definition)} золота`}
                       </span>
                       <button
-                        className={equipped ? 'ghost-button' : 'primary-button'}
+                        className={equipped || lockedByLevel ? 'ghost-button' : 'primary-button'}
                         type="button"
-                        disabled={busy || equipped}
+                        disabled={busy || equipped || lockedByLevel}
+                        aria-disabled={busy || equipped || lockedByLevel}
+                        title={lockedByLevel ? `Нужен ${definition.required_level} уровень` : undefined}
                         onClick={() => void onEquip(item)}
                       >
-                        {equipped ? 'Надето' : 'Экипировать'}
+                        {equipped ? 'Надето' : lockedByLevel ? `Нужен ${definition.required_level} ур.` : 'Экипировать'}
                       </button>
                       <button
                         className="ghost-button item-history-button"
