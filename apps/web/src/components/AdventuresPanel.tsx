@@ -2706,7 +2706,6 @@ export function AdventuresPanel({
           )}
         </div>
       )}
-      )}
     </section>
   )
 }
