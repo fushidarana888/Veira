@@ -50,12 +50,6 @@ type EventBoss = {
   special_every_n: number
   phase2_hp_percent: number
   phase2_name: string
-  mechanics: {
-    end_of_month_challenge?: boolean
-    target_party_level?: number
-    design_goal?: string
-    counterplay?: string[]
-  }
   special_reward_name: string | null
   special_reward_description: string | null
   reward_material_name: string | null
@@ -353,25 +347,6 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
                     </span>
                   </div>
                 </div>
-
-                {boss.boss_kind === 'monthly' && boss.mechanics?.counterplay?.length > 0 && (
-                  <div className="monthly-boss-counterplay">
-                    <div className="monthly-boss-counterplay-head">
-                      <div>
-                        <span className="eyebrow">КОНТР-ИГРА</span>
-                        <strong>Победа через состав и решения</strong>
-                      </div>
-                      {boss.mechanics.target_party_level && (
-                        <span className="badge">цель к концу месяца · ур. {boss.mechanics.target_party_level}+</span>
-                      )}
-                    </div>
-                    <div className="monthly-boss-counterplay-grid">
-                      {boss.mechanics.counterplay.map((tip) => (
-                        <span key={tip}>{tip}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {boss.reward_material_name && boss.featured_loot?.length > 0 ? (
                   <div className="event-boss-loot-system">
