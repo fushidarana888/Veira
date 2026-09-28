@@ -12398,3 +12398,47 @@ textarea {
 .world-boss-loot-line > small {
   color: var(--muted);
 }
+
+
+/* Monthly boss counterplay */
+.monthly-boss-counterplay {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(182, 155, 114, .22);
+  border-radius: 13px;
+  background: rgba(182, 155, 114, .045);
+}
+
+.monthly-boss-counterplay-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.monthly-boss-counterplay-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.monthly-boss-counterplay-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 7px;
+}
+
+.monthly-boss-counterplay-grid > span {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 700px) {
+  .monthly-boss-counterplay-head {
+    display: grid;
+  }
+}
