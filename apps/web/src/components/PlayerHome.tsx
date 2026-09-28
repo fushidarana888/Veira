@@ -1653,7 +1653,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               <span className="eyebrow">СООБЩЕСТВА</span>
               <h2>Объединения игроков</h2>
               <p className="muted">
-                Гильдии и будущие социальные объединения теперь собраны в одном разделе.
+                Гильдии, участники, заявки и управление сообществами собраны в одном разделе.
               </p>
             </div>
             <button
