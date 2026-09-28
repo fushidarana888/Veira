@@ -337,7 +337,7 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
                   <div>
                     <strong>{boss.special_name}</strong>
                     <span>
-                      Особый приём срабатывает по ритму боя — примерно каждые {boss.special_every_n} хода врага. Следи за телеграфом и подстраивай защиту.
+                      Особый приём входит в опасное окно примерно каждые {boss.special_every_n} хода врага. Телеграф показывает приближение угрозы, но не гарантирует точный следующий ход.
                     </span>
                   </div>
                   <div>
