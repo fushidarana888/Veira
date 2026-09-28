@@ -1144,21 +1144,27 @@ export function PartyDungeonPanel({
   }
 
   return (
-    <article className="panel party-dungeon-panel">
+    <article className={'panel party-dungeon-panel ' + (activeRun?.is_event_boss ? 'event-boss-battle-panel' : '')}>
       <div className="section-heading">
         <div>
           <span className="eyebrow">
-            {activeRun?.is_event_boss ? 'НЕДЕЛЬНЫЙ БОСС · ПАТИ 2–4' : 'КООПЕРАТИВ · 2–4 ИГРОКА'}
+            {activeRun?.is_event_boss
+              ? `${bossKindTitle(activeBoss?.boss_kind)} · ГРУППОВОЙ БОЙ`
+              : 'КООПЕРАТИВ · 2–4 ИГРОКА'}
           </span>
           <h2>{activeRun ? activeRun.title : 'Групповой поход'}</h2>
           <p className="muted">
             {activeRun?.is_event_boss
-              ? 'Один общий бой. Каждый живой участник делает по одному действию за раунд, затем Пепельный Кузнец отвечает.'
+              ? activeBoss?.description || 'Общий бой с событийным боссом. Очередь действий определяется инициативой каждого участника.'
               : 'Бой — весь поход по подземелью. Битва — отдельный зал. За раунд каждый живой герой делает одно действие, затем противник отвечает.'}
           </p>
         </div>
         <span className="badge">
-          {activeRun ? activeRun.member_count + ' в походе' : partyMemberCount + ' / 4'}
+          {activeRun?.is_event_boss && activeEncounter
+            ? 'раунд ' + activeEncounter.round
+            : activeRun
+              ? activeRun.member_count + ' в походе'
+              : partyMemberCount + ' / 4'}
         </span>
       </div>
 
@@ -1424,9 +1430,22 @@ export function PartyDungeonPanel({
           )}
 
           {activeRun.is_event_boss ? (
-            <div className="event-active-run-note">
-              <strong>Особая награда считается отдельно для каждого участника.</strong>
-              <span>Клеймо закалки III выдаётся персонажу только за его первую победу текущей недельной ротации. Повторные победы дают небольшое золото и опыт.</span>
+            <div className="event-active-run-note event-boss-live-summary">
+              <div>
+                <span className="eyebrow">ТЕКУЩАЯ РОТАЦИЯ</span>
+                <strong>Награда считается отдельно для каждого участника</strong>
+                <span>
+                  {activeBoss?.reward_material_name
+                    ? `За победу гарантированно выдаётся ${activeBoss.reward_material_quantity} × ${activeBoss.reward_material_name}. `
+                    : ''}
+                  Первая победа: {activeBoss?.first_reward_gold ?? 0} золота · {activeBoss?.first_reward_experience ?? 0} опыта.
+                  Повтор: {activeBoss?.repeat_reward_gold ?? 0} золота · {activeBoss?.repeat_reward_experience ?? 0} опыта.
+                </span>
+              </div>
+              <div className="event-boss-live-deadline">
+                <span>Ротация до</span>
+                <strong>{formatBossDeadline(activeBoss?.ends_at)}</strong>
+              </div>
             </div>
           ) : (
             <div className="party-dungeon-progress">
@@ -1466,6 +1485,16 @@ export function PartyDungeonPanel({
                   <small>Переросший персонаж получает меньше базовой награды; поверх этого отдельно действует снижение за повторные зачистки текущего 18-часового цикла.</small>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeRun.is_event_boss && (
+            <div className="event-boss-roster-heading">
+              <div>
+                <span className="eyebrow">ОТРЯД</span>
+                <strong>{activeRun.member_count} участника в бою</strong>
+              </div>
+              <span>инициатива определяет очередь</span>
             </div>
           )}
 
@@ -1659,11 +1688,11 @@ export function PartyDungeonPanel({
             </div>
           ) : (
             <div className="party-combat-shell">
-              <div className="party-enemy-card">
+              <div className={'party-enemy-card ' + (activeRun.is_event_boss ? 'event-boss-enemy-card' : '')}>
                 <div className="party-enemy-head">
                   <div>
                     <span className="eyebrow">
-                      {activeRun.is_event_boss ? 'НЕДЕЛЬНЫЙ БОСС' : activeEncounter.is_boss ? 'ХРАНИТЕЛЬ' : 'ПРОТИВНИК'} · РАУНД {activeEncounter.round}
+                      {activeRun.is_event_boss ? bossKindTitle(activeBoss?.boss_kind) : activeEncounter.is_boss ? 'ХРАНИТЕЛЬ' : 'ПРОТИВНИК'} · РАУНД {activeEncounter.round}
                     </span>
                     <div className="party-enemy-name-line">
                       <h3>{activeEncounter.enemy_name}</h3>
@@ -1674,12 +1703,56 @@ export function PartyDungeonPanel({
                     <p className="muted">
                       УР. {activeEncounter.enemy_level} · атака: {damageLabels[activeEncounter.enemy_damage_type] ?? activeEncounter.enemy_damage_type}
                     </p>
+                    {activeRun.is_event_boss && (
+                      <div className="event-boss-live-stats">
+                        <span>АТК <b>{activeEncounter.enemy_attack}</b></span>
+                        <span>ЗАЩ <b>{activeEncounter.enemy_defense}</b></span>
+                        <span>ИНИЦ <b>{activeEncounter.enemy_initiative}</b></span>
+                        <span>РЕК. УР. <b>{activeBoss?.recommended_level ?? '—'}+</b></span>
+                      </div>
+                    )}
                   </div>
                   <strong>{activeEncounter.enemy_hp_current} / {activeEncounter.enemy_hp_max} ОЗ</strong>
                 </div>
                 <div className="party-enemy-hp-meter">
                   <span style={{ width: hpPercent(activeEncounter.enemy_hp_current, activeEncounter.enemy_hp_max) + '%' }} />
                 </div>
+                {activeRun.is_event_boss && activeBoss && (
+                  <div className="event-boss-live-mechanics">
+                    <div className={activeEncounter.enemy_danger_pending ? 'danger' : ''}>
+                      <span>{activeEncounter.enemy_danger_pending ? 'ОПАСНОЕ ОКНО' : 'ОСОБЫЙ ПРИЁМ'}</span>
+                      <strong>{activeBoss.special_name}</strong>
+                      <small>
+                        {activeEncounter.enemy_danger_pending
+                          ? 'Подготовка уже началась. Приём может сработать в одно из ближайших действий босса; точный момент неизвестен.'
+                          : `Опасное окно возникает примерно каждые ${activeBoss.special_every_n} действия босса.`}
+                      </small>
+                    </div>
+                    <div className={
+                      activeBoss.phase2_hp_percent > 0
+                      && activeEncounter.enemy_hp_current * 100 <= activeEncounter.enemy_hp_max * activeBoss.phase2_hp_percent
+                        ? 'phase active'
+                        : 'phase'
+                    }>
+                      <span>ФАЗА II · {activeBoss.phase2_hp_percent}% ОЗ</span>
+                      <strong>{activeBoss.phase2_name}</strong>
+                    </div>
+                  </div>
+                )}
+
+                {activeRun.is_event_boss && Object.entries(activeEncounter.enemy_resistances ?? {})
+                  .filter(([, value]) => Number(value) !== 0).length > 0 && (
+                  <div className="event-boss-live-resists">
+                    {Object.entries(activeEncounter.enemy_resistances ?? {})
+                      .filter(([, value]) => Number(value) !== 0)
+                      .map(([type, value]) => (
+                        <span className={Number(value) < 0 ? 'weak' : 'resist'} key={type}>
+                          {damageLabels[type] ?? type} {Number(value) > 0 ? '+' : ''}{value}%
+                        </span>
+                      ))}
+                  </div>
+                )}
+
                 {enemyStatuses.length > 0 && (
                   <div className="party-status-list enemy">
                     {enemyStatuses.map((status) => (
@@ -1690,6 +1763,16 @@ export function PartyDungeonPanel({
                   </div>
                 )}
               </div>
+
+              {activeRun.is_event_boss && activeEncounter.enemy_danger_pending && (
+                <div className="event-boss-danger-window" role="status" aria-live="polite">
+                  <span>ОПАСНОЕ ОКНО</span>
+                  <strong>{activeBoss?.special_name ?? 'Особый приём'}</strong>
+                  <p>
+                    Босс готовит сильное действие, но момент удара не фиксирован. Можно защищаться, попытаться сорвать подготовку оглушением или продолжить давление, чтобы ослабить приём.
+                  </p>
+                </div>
+              )}
 
               <div className="party-initiative-order">
                 <div className="party-initiative-order-head">
@@ -1751,6 +1834,14 @@ export function PartyDungeonPanel({
                   )}
                 </div>
               )}
+
+              <div className="party-action-heading">
+                <div>
+                  <span className="eyebrow">ТВОЁ ДЕЙСТВИЕ</span>
+                  <strong>{isMyTurn ? 'Выбери ход' : 'Ожидание очереди'}</strong>
+                </div>
+                {activeRun.is_event_boss && activeEncounter.enemy_danger_pending && <span className="danger">босс готовит приём</span>}
+              </div>
 
               <div className="party-combat-actions" aria-busy={busy}>
                 {isBowProfile(bowProfile) ? (
