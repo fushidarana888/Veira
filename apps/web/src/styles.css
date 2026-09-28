@@ -12063,3 +12063,38 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Dungeon events belong to the active run, not the adventure browser */
+.world-pulse-stack.embedded {
+  margin: 14px 0;
+}
+
+.world-pulse-dungeon.embedded {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.world-pulse-dungeon.embedded > .section-heading {
+  display: none;
+}
+
+.world-pulse-dungeon.embedded .world-modifier-card {
+  margin-bottom: 10px;
+}
+
+.world-dungeon-event.summary {
+  opacity: .78;
+}
+
+.world-dungeon-event.summary .eyebrow {
+  color: var(--muted);
+}
+
+@media (max-width: 560px) {
+  .world-pulse-stack.embedded {
+    margin: 10px 0;
+  }
+}
