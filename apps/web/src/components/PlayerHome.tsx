@@ -1938,6 +1938,16 @@ function LazyPanelFallback({ title }: { title: string }) {
 }
 
 type InventoryFilter = 'all' | 'weapon' | 'armor' | 'accessory' | 'consumable' | 'material' | 'other'
+type InventorySort = 'rarity' | 'level' | 'name'
+
+const inventoryRarityRank: Record<ItemDefinition['rarity'], number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  epic: 3,
+  legendary: 4,
+  unique: 5,
+}
 
 function InventoryPanel({
   items,
@@ -1961,6 +1971,8 @@ function InventoryPanel({
   onHistory: (item: CharacterItem) => Promise<void>
 }) {
   const [filter, setFilter] = useState<InventoryFilter>('all')
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState<InventorySort>('rarity')
 
   const categoryCounts = useMemo(() => {
     const counts: Record<InventoryFilter, number> = {
@@ -1987,15 +1999,55 @@ function InventoryPanel({
     return counts
   }, [items])
 
-  const visibleItems = useMemo(() => items.filter((item) => {
-    if (filter === 'all') return true
-    const definition = normalizeDefinition(item.item_definitions)
-    if (!definition) return false
-    if (filter === 'other') {
-      return !['weapon', 'armor', 'accessory', 'consumable', 'material'].includes(definition.category)
-    }
-    return definition.category === filter
-  }), [filter, items])
+  const visibleItems = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase('ru-RU')
+
+    return items
+      .filter((item) => {
+        const definition = normalizeDefinition(item.item_definitions)
+        if (!definition) return false
+
+        const categoryMatches = filter === 'all'
+          || (filter === 'other'
+            ? !['weapon', 'armor', 'accessory', 'consumable', 'material'].includes(definition.category)
+            : definition.category === filter)
+
+        if (!categoryMatches) return false
+        if (!normalizedQuery) return true
+
+        return [
+          item.custom_name ?? '',
+          definition.name,
+          definition.description,
+          rarityLabels[definition.rarity],
+          definition.weapon_family ? weaponFamilyLabels[definition.weapon_family] : '',
+          ...itemAffixes(item).map((affix) => affix.name),
+        ]
+          .join(' ')
+          .toLocaleLowerCase('ru-RU')
+          .includes(normalizedQuery)
+      })
+      .sort((left, right) => {
+        const leftDefinition = normalizeDefinition(left.item_definitions)
+        const rightDefinition = normalizeDefinition(right.item_definitions)
+        if (!leftDefinition || !rightDefinition) return 0
+
+        if (sort === 'name') {
+          return (left.custom_name || leftDefinition.name)
+            .localeCompare(right.custom_name || rightDefinition.name, 'ru-RU')
+        }
+
+        if (sort === 'level') {
+          return rightDefinition.required_level - leftDefinition.required_level
+            || inventoryRarityRank[rightDefinition.rarity] - inventoryRarityRank[leftDefinition.rarity]
+        }
+
+        return inventoryRarityRank[rightDefinition.rarity] - inventoryRarityRank[leftDefinition.rarity]
+          || rightDefinition.required_level - leftDefinition.required_level
+          || (left.custom_name || leftDefinition.name)
+            .localeCompare(right.custom_name || rightDefinition.name, 'ru-RU')
+      })
+  }, [filter, items, query, sort])
 
   const filters: Array<[InventoryFilter, string]> = [
     ['all', 'Все'],
@@ -2017,7 +2069,28 @@ function InventoryPanel({
         <span className="badge">{items.length} ячеек</span>
       </div>
 
-      {message && <p className="form-message" aria-live="polite">{message}</p>}
+      {message && <p className="form-message" role="status" aria-live="polite">{message}</p>}
+
+      <div className="inventory-toolbar">
+        <label className="inventory-search">
+          <span>Поиск</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Название, редкость, аффикс…"
+            aria-label="Поиск по инвентарю"
+          />
+        </label>
+        <label className="inventory-sort">
+          <span>Сортировка</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value as InventorySort)}>
+            <option value="rarity">Сначала редкие</option>
+            <option value="level">По уровню</option>
+            <option value="name">По названию</option>
+          </select>
+        </label>
+      </div>
 
       <div className="inventory-filter-tabs" role="tablist" aria-label="Фильтр инвентаря">
         {filters.map(([key, label]) => (
@@ -2038,7 +2111,9 @@ function InventoryPanel({
       {items.length === 0 ? (
         <p className="muted">Инвентарь пуст.</p>
       ) : visibleItems.length === 0 ? (
-        <p className="muted">В этой категории пока ничего нет.</p>
+        <p className="muted">
+          {query.trim() ? 'По этому запросу предметов не найдено.' : 'В этой категории пока ничего нет.'}
+        </p>
       ) : (
         <div className="inventory-grid">
           {visibleItems.map((item) => {
