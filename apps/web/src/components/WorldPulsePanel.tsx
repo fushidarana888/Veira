@@ -369,6 +369,7 @@ export function WorldPulsePanel({
 
   const modifier = pulse.active_dungeon?.modifier ?? null
   const dungeonEvent = pulse.active_dungeon?.pending_event ?? null
+  const merchant = pulse.merchant
   const DungeonContainer = embedded ? 'div' : 'article'
 
   return (
@@ -533,26 +534,26 @@ export function WorldPulsePanel({
           <div className="section-heading">
             <div>
               <span className="eyebrow">СТРАНСТВУЮЩИЙ ТОРГОВЕЦ</span>
-              <h3>{pulse.merchant?.location_name ?? 'Сегодня его никто не видел'}</h3>
-              {pulse.merchant && (
+              <h3>{merchant?.location_name ?? 'Сегодня его никто не видел'}</h3>
+              {merchant && (
                 <p className="muted wandering-merchant-hint">
-                  Личный ассортимент на день · редкие товары действительно редки · можно купить {pulse.merchant.purchase_limit} товара за ротацию.
+                  Личный ассортимент на день · редкие товары действительно редки · можно купить {merchant.purchase_limit} товара за ротацию.
                 </p>
               )}
             </div>
-            {pulse.merchant && (
+            {merchant && (
               <div className="wandering-merchant-meta">
-                <span className="badge">сектор #{pulse.merchant.sector_id}</span>
-                <span className={'badge ' + (pulse.merchant.purchases_remaining > 0 ? 'ready' : '')}>
-                  покупок {pulse.merchant.purchases_used}/{pulse.merchant.purchase_limit}
+                <span className="badge">сектор #{merchant.sector_id}</span>
+                <span className={'badge ' + (merchant.purchases_remaining > 0 ? 'ready' : '')}>
+                  покупок {pulse.merchant.purchases_used}/{merchant.purchase_limit}
                 </span>
               </div>
             )}
           </div>
 
-          {pulse.merchant && pulse.merchant.offers.length > 0 ? (
+          {merchant && merchant.offers.length > 0 ? (
             <div className="wandering-offer-list">
-              {pulse.merchant.offers.map((offer) => (
+              {merchant.offers.map((offer) => (
                 <div className={'wandering-offer rarity-' + offer.rarity} key={offer.item_definition_id}>
                   <div>
                     <span>{rarityLabel(offer.rarity)}</span>
@@ -562,12 +563,12 @@ export function WorldPulsePanel({
                   <button
                     className="ghost-button"
                     type="button"
-                    disabled={Boolean(busy) || offer.bought || pulse.merchant.purchases_remaining <= 0}
+                    disabled={Boolean(busy) || offer.bought || merchant.purchases_remaining <= 0}
                     onClick={() => void buyMerchantItem(offer)}
                   >
                     {offer.bought
                       ? 'Куплено'
-                      : pulse.merchant.purchases_remaining <= 0
+                      : merchant.purchases_remaining <= 0
                         ? 'Лимит исчерпан'
                         : busy === 'merchant:' + offer.item_definition_id
                           ? 'Покупаем…'
