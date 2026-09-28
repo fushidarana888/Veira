@@ -94,6 +94,19 @@ type HuntResult = {
   encounter_id?: string
 }
 
+type WorldAnomaly = {
+  event_id: string
+  event_slug: string
+  boss_name: string
+  title: string
+  description: string
+  sector_id: number
+  grid_col: number
+  grid_row: number
+  starts_at: string
+  ends_at: string
+}
+
 type SectorIncursion = {
   event_id: string
   name: string
@@ -154,6 +167,7 @@ type WorldMapCacheEntry = {
   strongEnemies: WorldStrongEnemy[]
   huntingState: HuntingState | null
   incursions: SectorIncursion[]
+  anomalies: WorldAnomaly[]
   explorationSpeed: ExplorationSpeedState
 }
 
@@ -334,6 +348,7 @@ const MapSectorButton = memo(function MapSectorButton({
   deathSpiritCount,
   strongEnemyCount,
   incursionCount,
+  anomalyCount,
   onSelect,
 }: {
   sector: CharacterMapSector
@@ -344,6 +359,7 @@ const MapSectorButton = memo(function MapSectorButton({
   deathSpiritCount: number
   strongEnemyCount: number
   incursionCount: number
+  anomalyCount: number
   onSelect: (sectorId: number) => void
 }) {
   const contentType =
@@ -365,6 +381,7 @@ const MapSectorButton = memo(function MapSectorButton({
     deathSpiritCount > 0 ? 'has-death-spirit' : '',
     strongEnemyCount > 0 ? 'has-strong-enemy' : '',
     incursionCount > 0 ? 'has-sector-incursion' : '',
+    anomalyCount > 0 ? 'has-world-anomaly' : '',
   ].filter(Boolean).join(' ')
 
   return (
@@ -406,6 +423,15 @@ const MapSectorButton = memo(function MapSectorButton({
           aria-label={incursionCount > 1 ? `Захваченные события: ${incursionCount}` : 'Захваченный сектор'}
         >
           !
+        </span>
+      )}
+      {showGameplayOverlay && anomalyCount > 0 && (
+        <span
+          className="sector-world-anomaly-mark"
+          title={anomalyCount > 1 ? `Предвестники мировых угроз: ${anomalyCount}` : 'Предвестник мировой угрозы'}
+          aria-label={anomalyCount > 1 ? `Предвестники мировых угроз: ${anomalyCount}` : 'Предвестник мировой угрозы'}
+        >
+          ✦
         </span>
       )}
       {showGameplayOverlay && deathSpiritCount > 0 && (
@@ -481,6 +507,7 @@ export function WorldMap({
   const [strongEnemies, setStrongEnemies] = useState<WorldStrongEnemy[]>(() => cachedMap?.strongEnemies ?? [])
   const [huntingState, setHuntingState] = useState<HuntingState | null>(() => cachedMap?.huntingState ?? null)
   const [incursions, setIncursions] = useState<SectorIncursion[]>(() => cachedMap?.incursions ?? [])
+  const [anomalies, setAnomalies] = useState<WorldAnomaly[]>(() => cachedMap?.anomalies ?? [])
   const [explorationSpeed, setExplorationSpeed] = useState<ExplorationSpeedState>(
     () => cachedMap?.explorationSpeed ?? {
       speed_percent: 0,
@@ -527,6 +554,7 @@ export function WorldMap({
       strongEnemyResult,
       huntingStateResult,
       incursionResult,
+      anomalyResult,
     ] = await Promise.all([
       supabase.rpc('get_character_map_state', {
         p_character_id: characterId,
@@ -580,6 +608,9 @@ export function WorldMap({
       supabase.rpc('get_visible_sector_incursions', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_visible_world_anomalies', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
@@ -594,7 +625,8 @@ export function WorldMap({
       deathSpiritResult.error ??
       strongEnemyResult.error ??
       huntingStateResult.error ??
-      incursionResult.error
+      incursionResult.error ??
+      anomalyResult.error
 
     if (error) {
       if (!silent) setMessage(userFacingError(error.message, 'Не удалось обновить карту.'))
@@ -614,6 +646,7 @@ export function WorldMap({
       strongEnemies: (strongEnemyResult.data as WorldStrongEnemy[] | null) ?? [],
       huntingState: ((huntingStateResult.data as HuntingState[] | null) ?? [])[0] ?? null,
       incursions: (incursionResult.data as SectorIncursion[] | null) ?? [],
+      anomalies: (anomalyResult.data as WorldAnomaly[] | null) ?? [],
       explorationSpeed: ((explorationSpeedResult.data as ExplorationSpeedState[] | null) ?? [])[0] ?? {
         speed_percent: 0,
         religion_percent: 0,
@@ -636,6 +669,7 @@ export function WorldMap({
     setStrongEnemies(nextCache.strongEnemies)
     setHuntingState(nextCache.huntingState)
     setIncursions(nextCache.incursions)
+    setAnomalies(nextCache.anomalies)
     setExplorationSpeed(nextCache.explorationSpeed)
     if (!silent) setLoading(false)
   }
@@ -732,6 +766,16 @@ export function WorldMap({
     }
     return grouped
   }, [incursions])
+
+  const anomaliesBySector = useMemo(() => {
+    const grouped = new Map<number, WorldAnomaly[]>()
+    for (const anomaly of anomalies) {
+      const entries = grouped.get(anomaly.sector_id) ?? []
+      entries.push(anomaly)
+      grouped.set(anomaly.sector_id, entries)
+    }
+    return grouped
+  }, [anomalies])
 
   const discoveredCount = useMemo(
     () => sectors.filter((sector) => sector.is_discovered).length,
@@ -865,6 +909,9 @@ export function WorldMap({
 
   const selectedIncursions = selectedSector
     ? incursionsBySector.get(selectedSector.id) ?? []
+    : []
+  const selectedAnomalies = selectedSector
+    ? anomaliesBySector.get(selectedSector.id) ?? []
     : []
 
   const selectSector = useCallback((sectorId: number) => {
@@ -1508,6 +1555,10 @@ export function WorldMap({
               <span className="map-legend-icon sector-incursion">!</span>
               Захваченный сектор
             </span>
+            <span className="map-legend-item world-anomaly">
+              <span className="map-legend-icon world-anomaly">✦</span>
+              Предвестник мировой угрозы
+            </span>
           </div>
         )}
       </div>
@@ -1548,6 +1599,7 @@ export function WorldMap({
                 deathSpiritCount={deathSpiritsBySector.get(sector.id)?.length ?? 0}
                 strongEnemyCount={strongEnemiesBySector.get(sector.id)?.length ?? 0}
                 incursionCount={incursionsBySector.get(sector.id)?.length ?? 0}
+                anomalyCount={anomaliesBySector.get(sector.id)?.length ?? 0}
                 onSelect={selectSector}
               />
             ))}
@@ -1586,6 +1638,28 @@ export function WorldMap({
               {selectedSector.player_description ||
                 'Этот сектор уже нанесён на карту, но подробное описание пока не задано.'}
             </p>
+
+            {selectedAnomalies.length > 0 && (
+              <div className="world-anomaly-list">
+                {selectedAnomalies.map((anomaly) => (
+                  <div className="world-anomaly-card" key={anomaly.event_id + ':' + anomaly.sector_id}>
+                    <div className="world-anomaly-head">
+                      <div>
+                        <span className="eyebrow">ПРЕДВЕСТНИК МИРОВОЙ УГРОЗЫ</span>
+                        <strong>{anomaly.title}</strong>
+                      </div>
+                      <span className="badge">
+                        через <Countdown endsAt={anomaly.starts_at} />
+                      </span>
+                    </div>
+                    <p>{anomaly.description}</p>
+                    <small>
+                      Мир пока не называет источник прямо. Временная аномалия исчезнет, когда мировая угроза начнётся.
+                    </small>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {selectedIncursions.length > 0 && (
               <div className="sector-incursion-list">
