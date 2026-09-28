@@ -35,6 +35,29 @@ type Props = {
 
 type Tab = 'world' | 'character' | 'adventures' | 'battles' | 'more'
 type CharacterTab = 'overview' | 'religion' | 'inventory' | 'equipment' | 'magic' | 'crafting'
+type MoreView = 'menu' | 'guide' | 'communities'
+type NavIconName = 'world' | 'character' | 'adventures' | 'battles' | 'more'
+
+const playerTabs: Tab[] = ['world', 'character', 'adventures', 'battles', 'more']
+const characterTabs: CharacterTab[] = ['overview', 'religion', 'inventory', 'equipment', 'magic', 'crafting']
+
+function readStoredPlayerTab(): Tab {
+  try {
+    const value = window.sessionStorage.getItem('veira:player-tab') as Tab | null
+    return value && playerTabs.includes(value) ? value : 'character'
+  } catch {
+    return 'character'
+  }
+}
+
+function readStoredCharacterTab(): CharacterTab {
+  try {
+    const value = window.sessionStorage.getItem('veira:character-tab') as CharacterTab | null
+    return value && characterTabs.includes(value) ? value : 'overview'
+  } catch {
+    return 'overview'
+  }
+}
 
 type ItemHistoryEvent = {
   event_id: number
@@ -292,9 +315,9 @@ function itemStory(item: CharacterItem) {
 }
 
 export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) {
-  const [tab, setTab] = useState<Tab>('character')
-  const [characterTab, setCharacterTab] = useState<CharacterTab>('overview')
-  const [moreView, setMoreView] = useState<'menu' | 'guide' | 'communities'>('menu')
+  const [tab, setTab] = useState<Tab>(readStoredPlayerTab)
+  const [characterTab, setCharacterTab] = useState<CharacterTab>(readStoredCharacterTab)
+  const [moreView, setMoreView] = useState<MoreView>('menu')
   const [items, setItems] = useState<CharacterItem[]>([])
   const [historyItem, setHistoryItem] = useState<CharacterItem | null>(null)
   const [historyEvents, setHistoryEvents] = useState<ItemHistoryEvent[]>([])
@@ -1030,6 +1053,33 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     if (tab === 'more') void loadCustomization()
   }, [tab, character.id])
 
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem('veira:player-tab', tab)
+      window.sessionStorage.setItem('veira:character-tab', characterTab)
+    } catch {
+      // Session storage is a convenience only; navigation must keep working without it.
+    }
+  }, [tab, characterTab])
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [tab, characterTab, moreView])
+
+  useEffect(() => {
+    if (!historyItem) return
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setHistoryItem(null)
+    }
+
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [historyItem])
+
   async function changeRace() {
     if (!customizationState) return
 
@@ -1195,8 +1245,18 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     <main className="shell game-shell">
       <header className="topbar">
         <div className="identity">
-          <div className="avatar-placeholder" aria-hidden="true">
-            {character.name.slice(0, 1).toUpperCase()}
+          <div className={'avatar-placeholder ' + (character.avatar_url ? 'has-image' : '')} aria-hidden="true">
+            <span>{character.name.slice(0, 1).toUpperCase()}</span>
+            {character.avatar_url && (
+              <img
+                src={character.avatar_url}
+                alt=""
+                draggable={false}
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none'
+                }}
+              />
+            )}
           </div>
           <div>
             <span className="eyebrow">{characterRaceName}</span>
@@ -1802,7 +1862,6 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
             </div>
           </section>
 
-          <Placeholder title="Ещё" text="Здесь позже появятся достижения, журнал и остальные настройки Veira." />
         </div>
       )}
 
@@ -1850,11 +1909,12 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
       )}
 
       <nav className="bottom-nav" aria-label="Основная навигация">
-        <NavButton active={tab === 'world'} onClick={() => setTab('world')}>Мир</NavButton>
-        <NavButton active={tab === 'character'} onClick={() => setTab('character')}>Персонаж</NavButton>
-        <NavButton active={tab === 'adventures'} onClick={() => setTab('adventures')}>Приключения</NavButton>
-        <NavButton active={tab === 'battles'} onClick={() => setTab('battles')}>Бои</NavButton>
+        <NavButton icon="world" active={tab === 'world'} onClick={() => setTab('world')}>Мир</NavButton>
+        <NavButton icon="character" active={tab === 'character'} onClick={() => setTab('character')}>Персонаж</NavButton>
+        <NavButton icon="adventures" active={tab === 'adventures'} onClick={() => setTab('adventures')}>Приключения</NavButton>
+        <NavButton icon="battles" active={tab === 'battles'} onClick={() => setTab('battles')}>Бои</NavButton>
         <NavButton
+          icon="more"
           active={tab === 'more'}
           onClick={() => {
             setTab('more')
@@ -2471,29 +2531,73 @@ function CombatStat({
   )
 }
 
-function Placeholder({ title, text }: { title: string; text: string }) {
-  return (
-    <section className="panel placeholder-panel">
-      <span className="eyebrow">СКОРО</span>
-      <h2>{title}</h2>
-      <p className="muted">{text}</p>
-    </section>
-  )
-}
-
 function NavButton({
   active,
   onClick,
+  icon,
   children,
 }: {
   active: boolean
   onClick: () => void
+  icon: NavIconName
   children: string
 }) {
   return (
-    <button type="button" className={active ? 'active' : ''} onClick={onClick}>
-      {children}
+    <button
+      type="button"
+      className={active ? 'active' : ''}
+      aria-current={active ? 'page' : undefined}
+      onClick={onClick}
+    >
+      <NavIcon name={icon} />
+      <span className="bottom-nav-label">{children}</span>
     </button>
+  )
+}
+
+function NavIcon({ name }: { name: NavIconName }) {
+  if (name === 'world') {
+    return (
+      <svg className="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M15.7 8.3 13.5 13.5 8.3 15.7l2.2-5.2 5.2-2.2Z" />
+      </svg>
+    )
+  }
+
+  if (name === 'character') {
+    return (
+      <svg className="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="8.5" r="3.2" />
+        <path d="M5.8 19c.7-3.4 3-5.1 6.2-5.1s5.5 1.7 6.2 5.1" />
+      </svg>
+    )
+  }
+
+  if (name === 'adventures') {
+    return (
+      <svg className="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" />
+        <path d="m18.5 15 .7 2 .3.8.8.3 2 .7-2 .7-.8.3-.3.8-.7 2-.7-2-.3-.8-.8-.3-2-.7 2-.7.8-.3.3-.8.7-2Z" />
+      </svg>
+    )
+  }
+
+  if (name === 'battles') {
+    return (
+      <svg className="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m7 4 10 16M17 4 7 20" />
+        <path d="m5.5 3 3 1.5-2 2L5.5 3Zm13 0-3 1.5 2 2L18.5 3Z" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg className="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="6" cy="12" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="18" cy="12" r="1.4" />
+    </svg>
   )
 }
 
