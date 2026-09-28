@@ -545,7 +545,7 @@ export function WorldPulsePanel({
               <div className="wandering-merchant-meta">
                 <span className="badge">сектор #{merchant.sector_id}</span>
                 <span className={'badge ' + (merchant.purchases_remaining > 0 ? 'ready' : '')}>
-                  покупок {pulse.merchant.purchases_used}/{merchant.purchase_limit}
+                  покупок {merchant.purchases_used}/{merchant.purchase_limit}
                 </span>
               </div>
             )}
