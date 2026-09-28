@@ -12687,3 +12687,418 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Modern event boss party battle */
+.event-boss-battle-panel {
+  gap: 18px;
+  border-color: rgba(166, 92, 74, .42);
+  background:
+    radial-gradient(circle at 88% -8%, rgba(157, 80, 61, .18), transparent 36%),
+    radial-gradient(circle at 5% 0%, rgba(177, 137, 83, .08), transparent 30%),
+    linear-gradient(180deg, rgba(18, 20, 27, .98), rgba(10, 13, 18, .99));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .025),
+    0 18px 50px rgba(0, 0, 0, .26);
+}
+
+.event-boss-battle-panel > .section-heading {
+  align-items: flex-start;
+  padding: 4px 2px 2px;
+}
+
+.event-boss-battle-panel > .section-heading h2 {
+  margin-top: 4px;
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: -.025em;
+}
+
+.event-boss-battle-panel > .section-heading p {
+  max-width: 760px;
+  line-height: 1.55;
+}
+
+.event-boss-battle-panel > .section-heading > .badge {
+  min-width: 82px;
+  justify-content: center;
+  border-color: rgba(205, 157, 91, .36);
+  background: rgba(142, 96, 39, .08);
+  color: #d9b77e;
+}
+
+.event-boss-live-summary {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 16px;
+  border-color: rgba(184, 135, 72, .32);
+  background:
+    linear-gradient(135deg, rgba(179, 125, 61, .09), rgba(118, 63, 54, .055)),
+    rgba(13, 16, 21, .74);
+}
+
+.event-boss-live-summary > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.event-boss-live-summary .eyebrow {
+  color: #ba9564;
+  font-size: 8px;
+}
+
+.event-boss-live-deadline {
+  display: grid;
+  min-width: 130px;
+  gap: 3px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(191, 150, 91, .18);
+  text-align: right;
+}
+
+.event-boss-live-deadline span {
+  color: #777f89;
+  font-size: 8px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.event-boss-live-deadline strong {
+  color: #ead4ae;
+  font-size: 12px;
+}
+
+.event-boss-roster-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: -4px;
+  padding: 0 2px;
+}
+
+.event-boss-roster-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.event-boss-roster-heading strong {
+  color: #e2e5e8;
+  font-size: 12px;
+}
+
+.event-boss-roster-heading > span {
+  color: #747f89;
+  font-size: 9px;
+}
+
+.event-boss-battle-panel .party-combat-members {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.event-boss-battle-panel .party-combat-member {
+  border-color: rgba(81, 91, 104, .58);
+  background:
+    linear-gradient(180deg, rgba(20, 25, 32, .94), rgba(12, 16, 22, .98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .02);
+}
+
+.event-boss-battle-panel .party-combat-member.self {
+  border-color: rgba(161, 119, 169, .56);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(138, 93, 149, .11), transparent 34%),
+    linear-gradient(180deg, rgba(20, 25, 32, .96), rgba(12, 16, 22, .99));
+}
+
+.event-boss-battle-panel .party-combat-shell {
+  gap: 14px;
+  padding: 15px;
+  border-color: rgba(117, 83, 78, .40);
+  background:
+    linear-gradient(180deg, rgba(11, 14, 19, .97), rgba(8, 11, 16, .99));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .018);
+}
+
+.event-boss-enemy-card {
+  gap: 12px;
+  padding: 17px 18px;
+  border-color: rgba(173, 89, 75, .46);
+  background:
+    radial-gradient(circle at 86% 0%, rgba(174, 82, 67, .16), transparent 38%),
+    linear-gradient(145deg, rgba(82, 37, 35, .13), rgba(17, 20, 26, .97) 48%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .025),
+    0 14px 34px rgba(0, 0, 0, .18);
+}
+
+.event-boss-enemy-card .party-enemy-name-line h3 {
+  font-size: clamp(20px, 2.6vw, 29px);
+  letter-spacing: -.025em;
+}
+
+.event-boss-enemy-card .party-enemy-head > strong {
+  color: #f0b8ad;
+  font-size: 14px;
+}
+
+.event-boss-enemy-card .party-enemy-hp-meter {
+  height: 11px;
+  border: 1px solid rgba(255, 255, 255, .035);
+  background: rgba(34, 39, 48, .92);
+}
+
+.event-boss-enemy-card .party-enemy-hp-meter > span {
+  background: linear-gradient(90deg, #8d4f4a, #b86e63);
+  box-shadow: 0 0 18px rgba(184, 110, 99, .14);
+}
+
+.event-boss-live-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.event-boss-live-stats span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-height: 25px;
+  padding: 4px 8px;
+  border: 1px solid rgba(140, 119, 97, .22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .018);
+  color: #7f8994;
+  font-size: 8px;
+  font-weight: 720;
+  letter-spacing: .035em;
+}
+
+.event-boss-live-stats b {
+  color: #d8dde2;
+  font-size: 9px;
+}
+
+.event-boss-live-mechanics {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(170px, .65fr);
+  gap: 8px;
+}
+
+.event-boss-live-mechanics > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 11px;
+  border: 1px solid rgba(114, 102, 95, .26);
+  border-radius: 11px;
+  background: rgba(7, 10, 14, .42);
+}
+
+.event-boss-live-mechanics > div > span {
+  color: #8c8277;
+  font-size: 7.5px;
+  font-weight: 760;
+  letter-spacing: .08em;
+}
+
+.event-boss-live-mechanics > div > strong {
+  color: #e4ddd2;
+  font-size: 10px;
+}
+
+.event-boss-live-mechanics > div > small {
+  color: #838c96;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.event-boss-live-mechanics > div.danger {
+  border-color: rgba(196, 103, 79, .46);
+  background:
+    linear-gradient(135deg, rgba(148, 57, 43, .14), rgba(71, 31, 30, .05));
+  box-shadow: inset 0 0 0 1px rgba(209, 120, 95, .03);
+}
+
+.event-boss-live-mechanics > div.danger > span,
+.event-boss-live-mechanics > div.danger > strong {
+  color: #e6a08d;
+}
+
+.event-boss-live-mechanics > div.phase.active {
+  border-color: rgba(180, 126, 72, .42);
+  background: rgba(143, 90, 41, .09);
+}
+
+.event-boss-live-mechanics > div.phase.active > strong {
+  color: #e0bc82;
+}
+
+.event-boss-live-resists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.event-boss-live-resists span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(113, 123, 136, .20);
+  color: #929ca7;
+  font-size: 8px;
+}
+
+.event-boss-live-resists span.resist {
+  border-color: rgba(133, 109, 91, .28);
+  color: #b89b82;
+}
+
+.event-boss-live-resists span.weak {
+  border-color: rgba(92, 139, 124, .28);
+  color: #91c0ae;
+}
+
+.event-boss-danger-window {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border: 1px solid rgba(201, 99, 76, .50);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(202, 83, 58, .14), transparent 42%),
+    linear-gradient(135deg, rgba(134, 47, 39, .13), rgba(50, 24, 27, .06));
+}
+
+.event-boss-danger-window > span {
+  color: #dd8a77;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .11em;
+}
+
+.event-boss-danger-window > strong {
+  color: #f0b3a5;
+  font-size: 13px;
+}
+
+.event-boss-danger-window p {
+  max-width: 820px;
+  margin: 0;
+  color: #a58f8a;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.event-boss-battle-panel .party-initiative-order {
+  border-color: rgba(117, 124, 134, .23);
+  background: rgba(255, 255, 255, .012);
+}
+
+.party-action-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 1px 2px 0;
+}
+
+.party-action-heading > div {
+  display: grid;
+  gap: 1px;
+}
+
+.party-action-heading strong {
+  color: #dde2e6;
+  font-size: 11px;
+}
+
+.party-action-heading > span.danger {
+  color: #df907c;
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.event-boss-battle-panel .party-combat-actions {
+  position: sticky;
+  z-index: 30;
+  bottom: 86px;
+  padding: 9px;
+  border: 1px solid rgba(85, 94, 107, .42);
+  border-radius: 13px;
+  background: rgba(11, 14, 19, .92);
+  box-shadow:
+    0 16px 30px rgba(0, 0, 0, .30),
+    inset 0 1px 0 rgba(255, 255, 255, .025);
+  backdrop-filter: blur(14px);
+}
+
+.event-boss-battle-panel .party-combat-actions button {
+  min-height: 42px;
+}
+
+.event-boss-final {
+  border-color: rgba(174, 125, 75, .42);
+  background:
+    radial-gradient(circle at 86% 0%, rgba(183, 126, 68, .13), transparent 38%),
+    linear-gradient(180deg, rgba(18, 21, 27, .98), rgba(10, 13, 18, .99));
+}
+
+.event-boss-final.victory .party-combat-final-head {
+  border-color: rgba(179, 132, 75, .30);
+}
+
+@media (max-width: 760px) {
+  .event-boss-live-summary,
+  .event-boss-live-mechanics {
+    grid-template-columns: 1fr;
+  }
+
+  .event-boss-live-deadline {
+    min-width: 0;
+    padding-top: 9px;
+    padding-left: 0;
+    border-top: 1px solid rgba(191, 150, 91, .14);
+    border-left: 0;
+    text-align: left;
+  }
+
+  .event-boss-battle-panel .party-combat-members {
+    grid-template-columns: 1fr;
+  }
+
+  .event-boss-battle-panel .party-combat-actions {
+    bottom: 78px;
+  }
+}
+
+@media (max-width: 560px) {
+  .event-boss-battle-panel {
+    gap: 13px;
+  }
+
+  .event-boss-enemy-card {
+    padding: 13px;
+  }
+
+  .event-boss-enemy-card .party-enemy-head {
+    display: grid;
+  }
+
+  .event-boss-roster-heading,
+  .party-action-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .event-boss-battle-panel .party-combat-actions {
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .event-boss-battle-panel .party-combat-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+}
