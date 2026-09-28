@@ -97,24 +97,30 @@ export function AuthScreen() {
       </section>
 
       <section className="auth-card">
-        <div className="segmented" aria-label="Режим авторизации">
+        <div className="segmented" role="tablist" aria-label="Режим авторизации">
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === 'login'}
             className={mode === 'login' ? 'active' : ''}
+            disabled={busy}
             onClick={() => { setMode('login'); setMessage('') }}
           >
             Вход
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === 'register'}
             className={mode === 'register' ? 'active' : ''}
+            disabled={busy}
             onClick={() => { setMode('register'); setMessage('') }}
           >
             Регистрация
           </button>
         </div>
 
-        <form onSubmit={submit} className="form-stack">
+        <form onSubmit={submit} className="form-stack" aria-busy={busy}>
           {mode === 'register' && (
             <label>
               <span>Имя аккаунта</span>
@@ -123,6 +129,7 @@ export function AuthScreen() {
                 onChange={(event) => setDisplayName(event.target.value)}
                 maxLength={40}
                 autoComplete="nickname"
+                disabled={busy}
                 placeholder="Например, Fushi"
               />
             </label>
@@ -135,6 +142,7 @@ export function AuthScreen() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="email"
+              disabled={busy}
               placeholder="you@example.com"
             />
           </label>
@@ -146,6 +154,9 @@ export function AuthScreen() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              minLength={6}
+              maxLength={72}
+              disabled={busy}
               placeholder="Минимум 6 символов"
             />
           </label>
@@ -162,7 +173,7 @@ export function AuthScreen() {
           )}
         </form>
 
-        {message && <p className="form-message" aria-live="polite">{message}</p>}
+        {message && <p className="form-message" role="status" aria-live="polite">{message}</p>}
       </section>
     </main>
   )
