@@ -165,28 +165,34 @@ export function WorldPulsePanel({
   compact = false,
 }: Props) {
   const [pulse, setPulse] = useState<WorldPulse | null>(null)
+  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [expandedDiscoveries, setExpandedDiscoveries] = useState(false)
   const { beginAction, endAction } = useActionGate(setBusy, null, setMessage)
 
   async function loadPulse(silent = false) {
+    if (!silent) setLoading(true)
+
     const { data, error } = await supabase.rpc('get_world_pulse', {
       p_character_id: characterId,
     })
 
     if (error) {
       if (!silent) setMessage(userFacingError(error.message, 'Не удалось обновить события мира.'))
+      setLoading(false)
       return null
     }
 
     const next = (data as WorldPulse | null) ?? null
     setPulse(next)
+    setLoading(false)
     return next
   }
 
   useEffect(() => {
     setPulse(null)
+    setLoading(true)
     setMessage('')
     void loadPulse()
   }, [characterId])
@@ -326,9 +332,15 @@ export function WorldPulsePanel({
 
   if (!pulse) {
     return (
-      <article className="panel world-pulse-panel world-pulse-loading">
+      <article className="panel world-pulse-panel world-pulse-loading" aria-busy={loading}>
         <span className="eyebrow">ЖИВОЙ МИР</span>
-        <h3>Собираем слухи и следы…</h3>
+        <h3>{loading ? 'Собираем слухи и следы…' : 'Мировой пульс не ответил'}</h3>
+        {!loading && message && <p className="muted" aria-live="polite">{message}</p>}
+        {!loading && (
+          <button className="ghost-button" type="button" onClick={() => void loadPulse()}>
+            Повторить
+          </button>
+        )}
       </article>
     )
   }
