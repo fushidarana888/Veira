@@ -12234,3 +12234,72 @@ textarea {
     justify-content: flex-start;
   }
 }
+
+
+/* Scheduled boss loot: direct chance + guaranteed material crafting */
+.event-boss-loot-system {
+  display: grid;
+  gap: 10px;
+}
+
+.event-boss-material-reward {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: rgba(182, 155, 114, .06);
+}
+
+.event-boss-material-reward > div:first-child {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.event-boss-material-reward p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.event-boss-featured-loot {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 9px;
+}
+
+.event-boss-loot-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,.018);
+}
+
+.event-boss-loot-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.event-boss-loot-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.event-boss-loot-card p,
+.event-boss-loot-card small {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .event-boss-material-reward,
+  .event-boss-loot-head {
+    display: grid;
+  }
+}
