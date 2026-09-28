@@ -61,6 +61,10 @@ type WanderingMerchant = {
   sector_id: number
   location_name: string
   offers: MerchantOffer[]
+  purchase_limit: number
+  purchases_used: number
+  purchases_remaining: number
+  rotation_date: string
 }
 
 type WorldRumor = {
@@ -308,7 +312,11 @@ export function WorldPulsePanel({
   }
 
   async function buyMerchantItem(offer: MerchantOffer) {
-    if (offer.bought || !beginAction('merchant:' + offer.item_definition_id)) return
+    if (
+      offer.bought
+      || (pulse?.merchant?.purchases_remaining ?? 0) <= 0
+      || !beginAction('merchant:' + offer.item_definition_id)
+    ) return
     setMessage('')
 
     const { data, error } = await supabase.rpc('buy_wandering_merchant_item', {
@@ -323,7 +331,9 @@ export function WorldPulsePanel({
           ? 'У странствующего торговца не получится торговаться в долг — не хватает золота.'
           : raw.includes('WANDERING_ITEM_ALREADY_BOUGHT')
             ? 'Сегодня ты уже забрал этот товар.'
-            : userFacingError(raw, 'Покупка не удалась.'),
+            : raw.includes('WANDERING_DAILY_LIMIT_REACHED')
+              ? 'На сегодня лимит исчерпан: у странствующего торговца можно купить не больше двух товаров за ротацию.'
+              : userFacingError(raw, 'Покупка не удалась.'),
       )
       endAction()
       return
@@ -524,8 +534,20 @@ export function WorldPulsePanel({
             <div>
               <span className="eyebrow">СТРАНСТВУЮЩИЙ ТОРГОВЕЦ</span>
               <h3>{pulse.merchant?.location_name ?? 'Сегодня его никто не видел'}</h3>
+              {pulse.merchant && (
+                <p className="muted wandering-merchant-hint">
+                  Личный ассортимент на день · редкие товары действительно редки · можно купить {pulse.merchant.purchase_limit} товара за ротацию.
+                </p>
+              )}
             </div>
-            {pulse.merchant && <span className="badge">сектор #{pulse.merchant.sector_id}</span>}
+            {pulse.merchant && (
+              <div className="wandering-merchant-meta">
+                <span className="badge">сектор #{pulse.merchant.sector_id}</span>
+                <span className={'badge ' + (pulse.merchant.purchases_remaining > 0 ? 'ready' : '')}>
+                  покупок {pulse.merchant.purchases_used}/{pulse.merchant.purchase_limit}
+                </span>
+              </div>
+            )}
           </div>
 
           {pulse.merchant && pulse.merchant.offers.length > 0 ? (
@@ -540,20 +562,22 @@ export function WorldPulsePanel({
                   <button
                     className="ghost-button"
                     type="button"
-                    disabled={Boolean(busy) || offer.bought}
+                    disabled={Boolean(busy) || offer.bought || pulse.merchant.purchases_remaining <= 0}
                     onClick={() => void buyMerchantItem(offer)}
                   >
                     {offer.bought
                       ? 'Куплено'
-                      : busy === 'merchant:' + offer.item_definition_id
-                        ? 'Покупаем…'
-                        : offer.price + ' золота'}
+                      : pulse.merchant.purchases_remaining <= 0
+                        ? 'Лимит исчерпан'
+                        : busy === 'merchant:' + offer.item_definition_id
+                          ? 'Покупаем…'
+                          : offer.price + ' золота'}
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="muted">Он появляется только в уже открытых тобой поселениях и меняет ассортимент каждый день.</p>
+            <p className="muted">Он появляется только в уже открытых тобой поселениях. Место и ассортимент меняются каждый день отдельно для каждого персонажа.</p>
           )}
         </article>
       </div>
