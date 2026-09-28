@@ -5,7 +5,7 @@ const SLOW_ACTION_MS = 2600
 
 export function useActionGate<T>(
   setBusy: Dispatch<SetStateAction<T>>,
-  idleValue: T,
+  idleValue: NoInfer<T>,
   setMessage?: Dispatch<SetStateAction<string>>,
 ) {
   const lockedRef = useRef(false)
