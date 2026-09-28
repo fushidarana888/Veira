@@ -22,6 +22,18 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
 }
 
+type WorldBossFeaturedLoot = {
+  slug: string
+  name: string
+  description: string
+  rarity: string
+  required_level: number
+  chance_percent: number
+  craft_cost: number
+  unique_property_name: string | null
+  unique_property_description: string | null
+}
+
 type WorldStrongEnemy = {
   event_id: string
   slug: string
@@ -57,9 +69,15 @@ type WorldStrongEnemy = {
       dash_chance_3?: number
       dash_chance_4?: number
     }
+    scheduled?: boolean
+    world_boss?: boolean
+    spawn_policy?: string
   }
   reward_name: string | null
   reward_description: string | null
+  reward_material_name: string | null
+  reward_material_quantity: number
+  featured_loot: WorldBossFeaturedLoot[]
   reward_gold: number
   reward_experience: number
   victories: number
@@ -1848,6 +1866,7 @@ export function WorldMap({
                 {selectedStrongEnemies.map((enemy) => {
                   const wounds = enemy.mechanics.wound_rupture
                   const rage = enemy.mechanics.rage_hunt
+                  const scheduledWorldBoss = Boolean(enemy.mechanics?.scheduled && enemy.mechanics?.world_boss)
                   const runActive = enemy.run_status === 'active'
 
                   return (
@@ -1855,7 +1874,13 @@ export function WorldMap({
                       <div className="world-strong-enemy-head">
                         <div>
                           <span className="eyebrow">
-                            {enemy.defeated ? 'ПЕРВАЯ НАГРАДА ПОЛУЧЕНА' : 'СИЛЬНЫЙ ВРАГ · СОЛО ИЛИ ПАТИ'}
+                            {scheduledWorldBoss
+                              ? enemy.defeated
+                                ? 'МИРОВОЙ БОСС · ПЕРВАЯ НАГРАДА ПОЛУЧЕНА'
+                                : 'МИРОВОЙ БОСС · СОЛО ИЛИ ПАТИ'
+                              : enemy.defeated
+                                ? 'ПЕРВАЯ НАГРАДА ПОЛУЧЕНА'
+                                : 'СИЛЬНЫЙ ВРАГ · СОЛО ИЛИ ПАТИ'}
                           </span>
                           <strong>{enemy.name}</strong>
                           <small>Исчезнет через <Countdown endsAt={enemy.ends_at} /></small>
@@ -1900,9 +1925,34 @@ export function WorldMap({
 
                       <div className="world-strong-enemy-reward">
                         <span className="eyebrow">
-                          {enemy.defeated ? 'ПОВТОРНЫЕ ПОБЕДЫ' : 'ПЕРВАЯ ПОБЕДА'}
+                          {scheduledWorldBoss
+                            ? 'ДОБЫЧА МИРОВОГО БОССА'
+                            : enemy.defeated
+                              ? 'ПОВТОРНЫЕ ПОБЕДЫ'
+                              : 'ПЕРВАЯ ПОБЕДА'}
                         </span>
-                        {enemy.defeated ? (
+
+                        {scheduledWorldBoss ? (
+                          <>
+                            {enemy.reward_material_name && (
+                              <strong>
+                                Каждая победа: {enemy.reward_material_name} ×{enemy.reward_material_quantity}
+                              </strong>
+                            )}
+                            <small>
+                              {enemy.defeated
+                                ? 'Золото и опыт за первую победу уже получены, но материал и шанс уникальной добычи остаются.'
+                                : 'Первая победа: ' + enemy.reward_experience + ' опыта · ' + enemy.reward_gold + ' золота.'}
+                            </small>
+                            {enemy.featured_loot?.map((loot) => (
+                              <div className="world-boss-loot-line" key={loot.slug}>
+                                <b>{loot.name}</b>
+                                <span>{loot.chance_percent}% сразу · гарант за {loot.craft_cost} материалов</span>
+                                <small>{loot.unique_property_description || loot.description}</small>
+                              </div>
+                            ))}
+                          </>
+                        ) : enemy.defeated ? (
                           <>
                             <strong>Без золота и опыта</strong>
                             <small>Первую награду ты уже получил. Сражаться с боссом можно сколько угодно.</small>
