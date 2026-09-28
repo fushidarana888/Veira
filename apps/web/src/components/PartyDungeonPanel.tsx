@@ -58,6 +58,24 @@ type PartyDungeonModifier = {
   reward_xp_percent: number
 }
 
+type PartyEventBossMeta = {
+  boss_kind: string
+  name: string
+  description: string
+  recommended_level: number
+  ends_at: string
+  special_every_n: number
+  phase2_hp_percent: number
+  special_name: string
+  phase2_name: string
+  reward_material_name: string | null
+  reward_material_quantity: number
+  first_reward_gold: number
+  first_reward_experience: number
+  repeat_reward_gold: number
+  repeat_reward_experience: number
+}
+
 type PartyRun = {
   id: string
   party_id: string
@@ -77,6 +95,7 @@ type PartyRun = {
   sacrifice_scroll_used: boolean
   is_event_boss: boolean
   event_boss_id: string | null
+  event_boss: PartyEventBossMeta | null
   started_at: string
 }
 
@@ -93,7 +112,10 @@ type PartyEncounter = {
   enemy_hp_max: number
   enemy_attack: number
   enemy_defense: number
+  enemy_initiative: number
   enemy_damage_type: string
+  enemy_resistances: Record<string, number>
+  enemy_danger_pending: boolean
   enemy_bloodshed_stacks: number
   acted_character_ids: string[]
   next_actor_character_id: string | null
@@ -232,6 +254,7 @@ const damageLabels: Record<string, string> = {
 
 const bossKindLabels: Record<string, string> = {
   weekly: 'еженедельный',
+  monthly: 'месячный',
   world_enemy: 'мировой',
   sector_incursion: 'вторжение',
   raid: 'рейдовый',
@@ -241,6 +264,26 @@ const bossKindLabels: Record<string, string> = {
 
 function bossKindLabel(kind: string) {
   return bossKindLabels[kind] ?? kind.replaceAll('_', ' ')
+}
+
+function bossKindTitle(kind: string | null | undefined) {
+  if (kind === 'weekly') return 'НЕДЕЛЬНЫЙ БОСС'
+  if (kind === 'monthly') return 'МЕСЯЧНЫЙ БОСС'
+  if (kind === 'world_enemy') return 'МИРОВОЙ БОСС'
+  if (kind === 'sector_incursion') return 'ВТОРЖЕНИЕ'
+  if (kind === 'raid') return 'РЕЙДОВЫЙ БОСС'
+  if (kind === 'seasonal') return 'СЕЗОННЫЙ БОСС'
+  return 'СОБЫТИЙНЫЙ БОСС'
+}
+
+function formatBossDeadline(value: string | null | undefined) {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
 }
 
 const terrainLabels: Record<string, string> = {
@@ -909,6 +952,7 @@ export function PartyDungeonPanel({
   const encounter = state.encounter
   const activeRun = run?.status === 'active' ? run : null
   const activeEncounter = activeRun && encounter?.status === 'active' ? encounter : null
+  const activeBoss = activeRun?.is_event_boss ? activeRun.event_boss : null
   const me = state.members.find((member) => member.character_id === characterId) ?? null
   const myStatuses = state.statuses.filter(
     (status) => status.target_type === 'member' && status.target_character_id === characterId,
@@ -972,7 +1016,7 @@ export function PartyDungeonPanel({
 
   if (loading) {
     return (
-      <article className="panel party-dungeon-panel">
+      <article className={'panel party-dungeon-panel ' + (activeRun?.is_event_boss ? 'event-boss-battle-panel' : '')}>
         <span className="eyebrow">КООПЕРАТИВНЫЙ ДАНЖ</span>
         <h3>Проверяем состояние отряда…</h3>
       </article>
@@ -1001,7 +1045,11 @@ export function PartyDungeonPanel({
 
     const victory = run.status === 'completed' || encounter.status === 'victory'
     const defeat = encounter.status === 'defeat'
-    const resultTitle = victory ? 'ПОБЕДА' : defeat ? 'ПОРАЖЕНИЕ' : 'ПОХОД ЗАВЕРШЁН'
+    const resultTitle = victory
+      ? run.is_event_boss ? 'БОСС ПОВЕРЖЕН' : 'ПОБЕДА'
+      : defeat
+        ? 'ПОРАЖЕНИЕ'
+        : 'ПОХОД ЗАВЕРШЁН'
 
     return (
       <article className={'panel party-dungeon-panel party-combat-final ' + (victory ? 'victory' : defeat ? 'defeat' : 'ended')}>
@@ -1011,7 +1059,9 @@ export function PartyDungeonPanel({
             <h2>{run.title}</h2>
             <p className="muted">
               {victory
-                ? 'Групповой бой завершён победой. Результат останется здесь, пока ты не выйдешь из «Бои → Сейчас».'
+                ? run.is_event_boss
+                  ? `Группа победила «${encounter.enemy_name}». Награды уже начислены каждому участнику отдельно.`
+                  : 'Групповой бой завершён победой. Результат останется здесь, пока ты не выйдешь из «Бои → Сейчас».'
                 : defeat
                   ? 'Отряд проиграл бой. Результат останется здесь, пока ты не выйдешь из «Бои → Сейчас».'
                   : 'Групповой поход завершён. Результат останется здесь, пока ты не выйдешь из «Бои → Сейчас».'}
