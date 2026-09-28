@@ -1360,7 +1360,7 @@ export function WorldMap({
           <h2>Исследование мира</h2>
           <p className="muted">
             Карта разделена на {TOTAL_SECTORS} секторов. Базовое время открытия соседнего сектора — 4 часа.
-            Сейчас твоя скорость исследования {explorationSpeed.speed_percent > 0 ? `+${explorationSpeed.speed_percent}%` : 'без бонуса'}:
+            Скорость можно ускорять экипировкой исследователя и другими бонусами. Сейчас у тебя {explorationSpeed.speed_percent > 0 ? `+${explorationSpeed.speed_percent}%` : 'нет бонуса'}:
             сектор — {formatDuration(explorationSpeed.sector_seconds)}, руины — {formatDuration(explorationSpeed.ruins_seconds)},
             разведка подземелья — {formatDuration(explorationSpeed.dungeon_scout_seconds)}. Исследование пассивное: параллельно можно дуэлиться, крафтить и заниматься социальными или учебными активностями.
           </p>
