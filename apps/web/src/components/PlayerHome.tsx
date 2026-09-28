@@ -833,9 +833,10 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     const definition = normalizeDefinition(item.item_definitions)
     if (!definition?.equip_group) return
 
-    if (progress.level < definition.required_level) {
+    const characterLevel = progress?.level ?? 1
+    if (characterLevel < definition.required_level) {
       setInventoryMessage(
-        `«${definition.name}» пока нельзя надеть: нужен ${definition.required_level} уровень, сейчас ${progress.level}.`,
+        `«${definition.name}» пока нельзя надеть: нужен ${definition.required_level} уровень, сейчас ${characterLevel}.`,
       )
       return
     }
