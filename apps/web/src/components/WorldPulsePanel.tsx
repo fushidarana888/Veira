@@ -120,7 +120,10 @@ type Props = {
   onProgressChanged?: () => Promise<unknown> | void
   onInventoryChanged?: () => Promise<unknown> | void
   onAdventureChanged?: () => Promise<unknown> | void
+  onPendingEventChange?: (pending: boolean) => void
   compact?: boolean
+  embedded?: boolean
+  dungeonEventMode?: 'interactive' | 'summary'
 }
 
 function signed(value: number, suffix = '%') {
@@ -162,7 +165,10 @@ export function WorldPulsePanel({
   onProgressChanged,
   onInventoryChanged,
   onAdventureChanged,
+  onPendingEventChange,
   compact = false,
+  embedded = false,
+  dungeonEventMode = 'interactive',
 }: Props) {
   const [pulse, setPulse] = useState<WorldPulse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -196,6 +202,10 @@ export function WorldPulsePanel({
     setMessage('')
     void loadPulse()
   }, [characterId])
+
+  useEffect(() => {
+    onPendingEventChange?.(Boolean(pulse?.active_dungeon?.pending_event))
+  }, [pulse?.active_dungeon?.pending_event?.id, onPendingEventChange])
 
   async function refreshAfterAction(inventory = false) {
     await Promise.all([
@@ -331,6 +341,8 @@ export function WorldPulsePanel({
   )
 
   if (!pulse) {
+    if (embedded) return null
+
     return (
       <article className="panel world-pulse-panel world-pulse-loading" aria-busy={loading}>
         <span className="eyebrow">ЖИВОЙ МИР</span>
@@ -347,9 +359,10 @@ export function WorldPulsePanel({
 
   const modifier = pulse.active_dungeon?.modifier ?? null
   const dungeonEvent = pulse.active_dungeon?.pending_event ?? null
+  const DungeonContainer = embedded ? 'div' : 'article'
 
   return (
-    <div className="world-pulse-stack">
+    <div className={'world-pulse-stack' + (embedded ? ' embedded' : '')}>
       {!compact && (pulse.lost_spirits?.length ?? 0) > 0 && (
         <article className="panel lost-spirit-warning">
           <div className="section-heading">
@@ -385,7 +398,7 @@ export function WorldPulsePanel({
       )}
 
       {(modifier || dungeonEvent) && (
-        <article className={'panel world-pulse-dungeon ' + (dungeonEvent ? 'has-event' : '')}>
+        <DungeonContainer className={(embedded ? '' : 'panel ') + 'world-pulse-dungeon ' + (embedded ? 'embedded ' : '') + (dungeonEvent ? 'has-event' : '')}>
           <div className="section-heading">
             <div>
               <span className="eyebrow">ТЕКУЩИЙ ПОХОД</span>
@@ -419,27 +432,33 @@ export function WorldPulsePanel({
           )}
 
           {dungeonEvent && (
-            <div className="world-dungeon-event">
+            <div className={'world-dungeon-event' + (dungeonEventMode === 'summary' ? ' summary' : '')}>
               <span className="eyebrow">СОБЫТИЕ · ПОСЛЕ ЗАЛА {dungeonEvent.room_index}</span>
               <h3>{dungeonEvent.name}</h3>
               <p>{dungeonEvent.description}</p>
-              <div className="world-event-actions">
-                {dungeonEvent.choices.map((choice) => (
-                  <button
-                    className={choice.slug === 'leave' ? 'ghost-button' : 'primary-button'}
-                    type="button"
-                    key={choice.slug}
-                    disabled={Boolean(busy)}
-                    onClick={() => void resolveDungeonEvent(dungeonEvent.run_id, choice.slug)}
-                  >
-                    {busy === 'event:' + choice.slug ? 'Решаем…' : choice.label}
-                  </button>
-                ))}
-              </div>
-              <small>Следующий зал не откроется, пока решение не принято. Автобой выбирает безопасный вариант сам.</small>
+              {dungeonEventMode === 'interactive' ? (
+                <>
+                  <div className="world-event-actions">
+                    {dungeonEvent.choices.map((choice) => (
+                      <button
+                        className={choice.slug === 'leave' ? 'ghost-button' : 'primary-button'}
+                        type="button"
+                        key={choice.slug}
+                        disabled={Boolean(busy)}
+                        onClick={() => void resolveDungeonEvent(dungeonEvent.run_id, choice.slug)}
+                      >
+                        {busy === 'event:' + choice.slug ? 'Решаем…' : choice.label}
+                      </button>
+                    ))}
+                  </div>
+                  <small>Следующий зал заблокирован до решения. Автобой выбирает безопасный вариант сам.</small>
+                </>
+              ) : (
+                <small>Событие ждёт решения в «Бои → Сейчас». Здесь оно показано только как часть живого мира.</small>
+              )}
             </div>
           )}
-        </article>
+        </DungeonContainer>
       )}
 
       {message && <p className="gm-notice world-pulse-message" aria-live="polite">{message}</p>}
