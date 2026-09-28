@@ -12645,3 +12645,45 @@ select {
     transition: none;
   }
 }
+
+
+/* Inventory toolbar polish */
+.inventory-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, .34fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.inventory-toolbar label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.inventory-toolbar label > span {
+  color: #8e97a3;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.inventory-toolbar input,
+.inventory-toolbar select {
+  min-height: 42px;
+}
+
+.inventory-toolbar input[type="search"]::-webkit-search-cancel-button {
+  filter: invert(.8);
+}
+
+.inventory-filter-tabs {
+  margin-bottom: 14px;
+}
+
+@media (max-width: 620px) {
+  .inventory-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
