@@ -89,8 +89,8 @@ const kindLabels: Record<EventBossKind, { title: string; eyebrow: string; descri
     description: 'Новый противник появляется автоматически каждую неделю. Победы дают материал босса, а уникальную вещь можно выбить сразу или гарантированно создать.',
   },
   monthly: {
-    title: 'Месячные боссы',
-    eyebrow: 'МЕСЯЧНАЯ УГРОЗА',
+    title: 'Мировые боссы',
+    eyebrow: 'МИРОВАЯ УГРОЗА',
     description: 'Крупные мировые угрозы появляются по календарю реже и остаются дольше. У них несколько легендарных направлений добычи.',
   },
 }
@@ -269,7 +269,7 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
             aria-selected={kind === entry}
             onClick={() => setKind(entry)}
           >
-            {entry === 'weekly' ? 'Недельные' : 'Месячные'}
+            {entry === 'weekly' ? 'Недельные' : 'Мировые'}
           </button>
         ))}
       </div>
