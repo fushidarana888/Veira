@@ -204,6 +204,7 @@ export function AdventuresPanel({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [dungeonEventPending, setDungeonEventPending] = useState(false)
 
   const { beginAction, endAction } = useActionGate(setBusy, false, setMessage)
 
@@ -625,7 +626,7 @@ export function AdventuresPanel({
       } else if (raw.includes('ROOM_COMBAT_ALREADY_EXISTS')) {
         setMessage('Этот зал уже был разыгран.')
       } else if (raw.includes('DUNGEON_EVENT_PENDING')) {
-        setMessage('Между залами произошло событие. Сначала выбери решение во вкладке «Приключения».')
+        setMessage('Между залами произошло событие. Решение находится прямо здесь, в текущем прохождении.')
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('У персонажа нет здоровья для начала боя.')
       } else {
@@ -1333,14 +1334,6 @@ export function AdventuresPanel({
 
       {mode === 'battles' && (
         <div className="adventure-folder-content">
-          <WorldPulsePanel
-            characterId={characterId}
-            compact
-            onProgressChanged={onProgressChanged}
-            onInventoryChanged={onInventoryChanged}
-            onAdventureChanged={() => loadAdventures(true)}
-          />
-
           {!activeDungeon && !latestCombat && (
             <article className="panel adventure-empty-folder">
               <span className="eyebrow">СЕЙЧАС</span>
@@ -1839,8 +1832,21 @@ export function AdventuresPanel({
             </details>
           )}
 
+          {!activeDeathSpirit && !activeHunting && !activeEventBoss && (
+            <WorldPulsePanel
+              characterId={characterId}
+              compact
+              embedded
+              dungeonEventMode="interactive"
+              onPendingEventChange={setDungeonEventPending}
+              onProgressChanged={onProgressChanged}
+              onInventoryChanged={onInventoryChanged}
+              onAdventureChanged={() => loadAdventures(true)}
+            />
+          )}
+
           {!activeCombat ? (
-            activeEventBoss ? (
+            dungeonEventPending ? null : activeEventBoss ? (
               <div className="event-active-run-note">
                 <strong>Бой события готовится…</strong>
                 <span>Если поле боя не появилось автоматически, обнови состояние приключений.</span>
@@ -2525,6 +2531,7 @@ export function AdventuresPanel({
         <div className="adventure-folder-content">
           <WorldPulsePanel
             characterId={characterId}
+            dungeonEventMode="summary"
             onProgressChanged={onProgressChanged}
             onInventoryChanged={onInventoryChanged}
             onAdventureChanged={() => loadAdventures(true)}
