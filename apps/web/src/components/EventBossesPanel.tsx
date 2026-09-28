@@ -19,6 +19,18 @@ type PartyOverview = {
   }>
 }
 
+type FeaturedBossLoot = {
+  slug: string
+  name: string
+  description: string
+  rarity: string
+  required_level: number
+  chance_percent: number
+  craft_cost: number
+  unique_property_name: string | null
+  unique_property_description: string | null
+}
+
 type EventBoss = {
   event_id: string
   slug: string
@@ -40,6 +52,9 @@ type EventBoss = {
   phase2_name: string
   special_reward_name: string | null
   special_reward_description: string | null
+  reward_material_name: string | null
+  reward_material_quantity: number
+  featured_loot: FeaturedBossLoot[]
   first_reward_gold: number
   first_reward_experience: number
   repeat_reward_gold: number
@@ -71,12 +86,12 @@ const kindLabels: Record<EventBossKind, { title: string; eyebrow: string; descri
   weekly: {
     title: 'Недельные боссы',
     eyebrow: 'НЕДЕЛЬНАЯ УГРОЗА',
-    description: 'Временные боссы с полезными наградами. Особая награда выдаётся один раз за текущую недельную ротацию.',
+    description: 'Новый противник появляется автоматически каждую неделю. Победы дают материал босса, а уникальную вещь можно выбить сразу или гарантированно создать.',
   },
   monthly: {
     title: 'Месячные боссы',
     eyebrow: 'МЕСЯЧНАЯ УГРОЗА',
-    description: 'Более редкие и сложные противники с долгой ротацией. Первый месячный босс пока не объявлен.',
+    description: 'Крупные мировые угрозы появляются по календарю реже и остаются дольше. У них несколько легендарных направлений добычи.',
   },
 }
 
@@ -192,8 +207,8 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
 
     setMessage(
       mode === 'party'
-        ? 'Пепельный Кузнец ждёт группу. Бой открыт для всех участников текущей пати.'
-        : 'Бой с Пепельным Кузнецом начат. Продолжение находится в «Бои → Сейчас».',
+        ? `${boss.name} ждёт группу. Бой открыт для всех участников текущей пати.`
+        : `Бой с «${boss.name}» начат. Продолжение находится в «Бои → Сейчас».`,
     )
     endAction()
   }
@@ -217,8 +232,8 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
           <span>Можно идти одному или существующей пати из 2–4 персонажей. Групповой бой запускает лидер.</span>
         </div>
         <div>
-          <strong>Особая награда</strong>
-          <span>Главная награда ротации выдаётся персонажу только за первую победу. Повторные убийства дают небольшую обычную награду.</span>
+          <strong>Добыча без мёртвого RNG</strong>
+          <span>Каждая победа даёт материал текущего босса. Уникалка может выпасть сразу, но после накопления материалов её можно создать гарантированно.</span>
         </div>
         <div>
           <strong>Без карты</strong>
@@ -322,34 +337,72 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
                   <div>
                     <strong>{boss.special_name}</strong>
                     <span>
-                      Тяжёлый телеграфируемый удар каждые {boss.special_every_n} хода врага. Защита перед ударом сильно повышает шанс пережить его.
+                      Особый приём срабатывает по ритму боя — примерно каждые {boss.special_every_n} хода врага. Следи за телеграфом и подстраивай защиту.
                     </span>
                   </div>
                   <div>
                     <strong>{boss.phase2_name}</strong>
                     <span>
-                      Ниже {boss.phase2_hp_percent}% ОЗ горн разгорается, и Кузнец начинает бить сильнее.
+                      Ниже {boss.phase2_hp_percent}% ОЗ начинается вторая фаза «{boss.phase2_name}»: поведение и давление босса усиливаются.
                     </span>
                   </div>
                 </div>
 
-                <div className={'event-boss-reward ' + (boss.special_reward_claimed ? 'claimed' : '')}>
-                  <div>
-                    <span className="eyebrow">ПЕРВАЯ ПОБЕДА РОТАЦИИ</span>
-                    <strong>{boss.special_reward_name ?? 'Особая награда'}</strong>
-                    <p>{boss.special_reward_description}</p>
-                  </div>
-                  <div className="event-boss-reward-values">
-                    <span>{boss.first_reward_gold} золота</span>
-                    <span>{boss.first_reward_experience} опыта</span>
-                    <span>{boss.special_reward_claimed ? 'особая награда уже получена' : 'особая награда доступна'}</span>
-                  </div>
-                </div>
+                {boss.reward_material_name && boss.featured_loot?.length > 0 ? (
+                  <div className="event-boss-loot-system">
+                    <div className="event-boss-material-reward">
+                      <div>
+                        <span className="eyebrow">КАЖДАЯ ПОБЕДА</span>
+                        <strong>{boss.reward_material_name}</strong>
+                        <p>
+                          Гарантированно ×{boss.reward_material_quantity}. Материал не пропадает с окончанием ротации и используется в рецептах этого босса.
+                        </p>
+                      </div>
+                      <div className="event-boss-reward-values">
+                        <span>первая победа · {boss.first_reward_gold} золота · {boss.first_reward_experience} опыта</span>
+                        <span>повтор · {boss.repeat_reward_gold} золота · {boss.repeat_reward_experience} опыта</span>
+                        {boss.victories > 0 && <span>побед в этой ротации · {boss.victories}</span>}
+                      </div>
+                    </div>
 
-                <div className="event-boss-repeat-reward">
-                  Повторная победа: {boss.repeat_reward_gold} золота · {boss.repeat_reward_experience} опыта.
-                  {boss.victories > 0 ? ` Побед этой ротации: ${boss.victories}.` : ''}
-                </div>
+                    <div className="event-boss-featured-loot">
+                      {boss.featured_loot.map((loot) => (
+                        <div className={'event-boss-loot-card rarity-' + loot.rarity} key={loot.slug}>
+                          <div className="event-boss-loot-head">
+                            <div>
+                              <span className="eyebrow">УНИКАЛЬНАЯ ДОБЫЧА · УР. {loot.required_level}</span>
+                              <strong>{loot.name}</strong>
+                            </div>
+                            <span className="badge">{loot.chance_percent}% сразу</span>
+                          </div>
+                          <p>{loot.unique_property_description || loot.description}</p>
+                          <small>
+                            Не выпало — рецепт гарантирует предмет за {loot.craft_cost} × {boss.reward_material_name}.
+                          </small>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className={'event-boss-reward ' + (boss.special_reward_claimed ? 'claimed' : '')}>
+                      <div>
+                        <span className="eyebrow">ПЕРВАЯ ПОБЕДА РОТАЦИИ</span>
+                        <strong>{boss.special_reward_name ?? 'Особая награда'}</strong>
+                        <p>{boss.special_reward_description}</p>
+                      </div>
+                      <div className="event-boss-reward-values">
+                        <span>{boss.first_reward_gold} золота</span>
+                        <span>{boss.first_reward_experience} опыта</span>
+                        <span>{boss.special_reward_claimed ? 'особая награда уже получена' : 'особая награда доступна'}</span>
+                      </div>
+                    </div>
+                    <div className="event-boss-repeat-reward">
+                      Повторная победа: {boss.repeat_reward_gold} золота · {boss.repeat_reward_experience} опыта.
+                      {boss.victories > 0 ? ` Побед этой ротации: ${boss.victories}.` : ''}
+                    </div>
+                  </>
+                )}
 
                 <div className="event-boss-actions">
                   <button
