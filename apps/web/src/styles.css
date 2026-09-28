@@ -11823,6 +11823,19 @@ textarea {
     var(--panel);
 }
 
+.wandering-merchant-hint {
+  margin: 5px 0 0;
+  max-width: 560px;
+  line-height: 1.45;
+}
+
+.wandering-merchant-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .wandering-offer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -12213,5 +12226,11 @@ textarea {
 @media (max-width: 460px) {
   .adventure-folder-tabs {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .wandering-merchant-meta {
+    justify-content: flex-start;
   }
 }
