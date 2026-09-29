@@ -27,6 +27,12 @@ if (nativePlatform) {
   window.addEventListener('online', syncConnectionBanner)
   window.addEventListener('offline', syncConnectionBanner)
 
+  void NativeApp.addListener('appStateChange', ({ isActive }) => {
+    if (!isActive) return
+    syncConnectionBanner()
+    window.dispatchEvent(new Event('veira:native-resume'))
+  })
+
   void StatusBar.setStyle({ style: Style.Light })
   void StatusBar.setBackgroundColor({ color: '#0b0e13' })
   void StatusBar.setOverlaysWebView({ overlay: false })

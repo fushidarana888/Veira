@@ -69,12 +69,14 @@ export function useSmartRefresh(
     const onFocus = () => void run()
     const onOnline = () => void run()
     const onPageShow = () => void run()
+    const onNativeResume = () => void run()
 
     if (refreshOnFocus) {
       document.addEventListener('visibilitychange', onVisible)
       window.addEventListener('focus', onFocus)
       window.addEventListener('online', onOnline)
       window.addEventListener('pageshow', onPageShow)
+      window.addEventListener('veira:native-resume', onNativeResume)
     }
 
     startTimer()
@@ -86,6 +88,7 @@ export function useSmartRefresh(
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('online', onOnline)
       window.removeEventListener('pageshow', onPageShow)
+      window.removeEventListener('veira:native-resume', onNativeResume)
     }
   }, [enabled, intervalMs, minGapMs, refreshOnFocus])
 }

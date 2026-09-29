@@ -186,6 +186,23 @@ export function App() {
     }
   }, [loadAccount])
 
+  useEffect(() => {
+    if (!state.user || !state.error) return
+
+    const retryAccountLoad = () => {
+      if (!navigator.onLine) return
+      void loadAccount(state.user)
+    }
+
+    window.addEventListener('online', retryAccountLoad)
+    window.addEventListener('veira:native-resume', retryAccountLoad)
+
+    return () => {
+      window.removeEventListener('online', retryAccountLoad)
+      window.removeEventListener('veira:native-resume', retryAccountLoad)
+    }
+  }, [loadAccount, state.error, state.user])
+
   async function signOut() {
     await supabase.auth.signOut()
   }

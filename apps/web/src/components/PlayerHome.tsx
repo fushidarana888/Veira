@@ -1085,12 +1085,18 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
   useEffect(() => {
     if (!historyItem) return
 
+    const previousBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setHistoryItem(null)
     }
 
     window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
   }, [historyItem])
 
   useEffect(() => {

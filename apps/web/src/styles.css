@@ -26,8 +26,11 @@ body {
     linear-gradient(180deg, #0b0d11 0%, #090b0e 100%);
 }
 
-button, input, textarea { font: inherit; }
-button { -webkit-tap-highlight-color: transparent; }
+button, input, textarea, select { font: inherit; }
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 
 input, textarea {
   width: 100%;
@@ -10341,15 +10344,25 @@ textarea {
   z-index: 120;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding:
+    calc(12px + env(safe-area-inset-top, 0px))
+    calc(12px + env(safe-area-inset-right, 0px))
+    calc(12px + env(safe-area-inset-bottom, 0px))
+    calc(12px + env(safe-area-inset-left, 0px));
+  overscroll-behavior: contain;
   background: rgba(4, 6, 10, 0.72);
   backdrop-filter: blur(8px);
 }
 
 .item-history-dialog {
   width: min(760px, 100%);
-  max-height: min(82vh, 820px);
+  max-height: min(
+    calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)),
+    820px
+  );
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .item-history-heading {
@@ -13285,6 +13298,7 @@ html.native-app #root {
 }
 
 html.native-app body {
+  overflow-x: hidden;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -13306,7 +13320,7 @@ html.native-app .bottom-nav {
 .native-connection-banner {
   position: fixed;
   z-index: 2000;
-  top: 8px;
+  top: calc(8px + env(safe-area-inset-top, 0px));
   left: 50%;
   max-width: calc(100% - 24px);
   transform: translateX(-50%);
@@ -13381,5 +13395,24 @@ html.native-app .bottom-nav {
     width: 100%;
     min-width: 0;
     text-align: left;
+  }
+}
+
+
+/* Mobile form comfort: avoids WebView zoom/jumps and keeps native controls consistent. */
+@media (max-width: 560px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .item-history-overlay {
+    place-items: stretch;
+  }
+
+  .item-history-dialog {
+    width: 100%;
+    align-self: center;
   }
 }
