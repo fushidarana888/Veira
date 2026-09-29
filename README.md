@@ -45,3 +45,19 @@ All new signups default to `player`. A GM account must be promoted by an adminis
 ## Next modules
 
 Character editing and avatars, inventory/equipment, personal world map and expeditions, combat engine, parties/dungeons, guilds, raid bosses and the full GM live-control panel.
+
+
+## Android app
+
+Veira also ships as a native Android application through Capacitor. The Android build uses the same React/Vite client and the same Supabase backend as the web version.
+
+Useful commands:
+
+```bash
+npm run build:mobile
+npm run android:add
+npm run android:sync
+npm run android:open
+```
+
+GitHub Actions builds a debug APK automatically for changes that affect the client. Gameplay data and server-side balance continue to come from Supabase, so most content/balance updates do not require rebuilding the Android package.

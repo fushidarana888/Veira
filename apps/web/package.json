@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "build:mobile": "tsc -b && vite build --mode mobile"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "@veira/game-core": "0.1.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "@capacitor/core": "^7.4.3"
   },
   "devDependencies": {
     "@types/react": "^19.1.12",

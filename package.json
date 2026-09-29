@@ -1,10 +1,21 @@
 {
   "name": "veira",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "npm run dev -w @veira/web",
     "build": "npm run build -w @veira/web",
-    "typecheck": "npm run typecheck -w @veira/web"
+    "typecheck": "npm run typecheck -w @veira/web",
+    "build:mobile": "npm run build:mobile -w @veira/web",
+    "android:add": "npx cap add android",
+    "android:sync": "npm run build:mobile && npx cap sync android",
+    "android:open": "npm run android:sync && npx cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3"
   }
 }
