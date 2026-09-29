@@ -13273,3 +13273,31 @@ select {
     text-overflow: clip;
   }
 }
+
+
+/* Native Android shell */
+html.native-app,
+html.native-app body,
+html.native-app #root {
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #0b0e13;
+}
+
+html.native-app body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.native-app button,
+html.native-app [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.native-app .game-shell {
+  min-height: 100dvh;
+}
+
+html.native-app .bottom-nav {
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
+}

@@ -1088,6 +1088,36 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [historyItem])
 
+  useEffect(() => {
+    const handleNativeBack = (event: Event) => {
+      if (historyItem) {
+        setHistoryItem(null)
+        event.preventDefault()
+        return
+      }
+
+      if (tab === 'more' && moreView !== 'menu') {
+        setMoreView('menu')
+        event.preventDefault()
+        return
+      }
+
+      if (tab === 'character' && characterTab !== 'overview') {
+        setCharacterTab('overview')
+        event.preventDefault()
+        return
+      }
+
+      if (tab !== 'character') {
+        setTab('character')
+        event.preventDefault()
+      }
+    }
+
+    window.addEventListener('veira:native-back', handleNativeBack)
+    return () => window.removeEventListener('veira:native-back', handleNativeBack)
+  }, [characterTab, historyItem, moreView, tab])
+
   async function changeRace() {
     if (!customizationState) return
 

@@ -10,6 +10,22 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
   },
+  plugins: {
+    SplashScreen: {
+      launchAutoHide: false,
+      backgroundColor: '#0b0e13',
+      showSpinner: false,
+    },
+    StatusBar: {
+      style: 'LIGHT',
+      backgroundColor: '#0b0e13',
+      overlaysWebView: false,
+    },
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true,
+    },
+  },
 }
 
 export default config
