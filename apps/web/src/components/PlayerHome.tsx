@@ -1,4 +1,5 @@
 import { userFacingError } from '../lib/userError'
+import { Capacitor } from '@capacitor/core'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { addStatModifiers, armorDamageReductionPercent, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
@@ -40,6 +41,10 @@ type NavIconName = 'world' | 'character' | 'adventures' | 'battles' | 'more'
 
 const playerTabs: Tab[] = ['world', 'character', 'adventures', 'battles', 'more']
 const characterTabs: CharacterTab[] = ['overview', 'religion', 'inventory', 'equipment', 'magic', 'crafting']
+
+const isNativeApp = Capacitor.isNativePlatform()
+const appBuildNumber = import.meta.env.VITE_BUILD_NUMBER || ''
+const appBuildSha = import.meta.env.VITE_BUILD_SHA || ''
 
 function readStoredPlayerTab(): Tab {
   try {
@@ -1767,6 +1772,22 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               <p className="form-message" aria-live="polite">{securityMessage}</p>
             )}
           </section>
+
+          {isNativeApp && (
+            <section className="panel native-build-panel">
+              <div>
+                <span className="eyebrow">ANDROID</span>
+                <h2>Veira для Android</h2>
+                <p className="muted">
+                  Нативная тестовая сборка. При сообщении о баге можно приложить номер сборки — так проще понять, какая версия установлена.
+                </p>
+              </div>
+              <div className="native-build-meta">
+                <span>Сборка <strong>{appBuildNumber || 'локальная'}</strong></span>
+                {appBuildSha && <code>{appBuildSha.slice(0, 8)}</code>}
+              </div>
+            </section>
+          )}
 
           <section className="panel character-customization-panel">
             <div className="section-heading">

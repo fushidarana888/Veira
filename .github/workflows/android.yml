@@ -40,6 +40,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://iqaawaweihvcapzwiecf.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_APhdwg2MR03wLBdDu4FN2Q_GNjI2X2S
+          VITE_BUILD_NUMBER: ${{ github.run_number }}
+          VITE_BUILD_SHA: ${{ github.sha }}
         run: npm run build:mobile
 
       - name: Generate Android project

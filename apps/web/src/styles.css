@@ -13326,3 +13326,60 @@ html.native-app .bottom-nav {
 .native-connection-banner[hidden] {
   display: none;
 }
+
+
+.native-build-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.native-build-panel > div:first-child {
+  min-width: 0;
+}
+
+.native-build-panel h2 {
+  margin: 4px 0 6px;
+}
+
+.native-build-panel p {
+  max-width: 720px;
+  margin: 0;
+}
+
+.native-build-meta {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 5px;
+  min-width: 112px;
+  text-align: right;
+}
+
+.native-build-meta span {
+  color: #8e97a3;
+  font-size: 10px;
+}
+
+.native-build-meta strong,
+.native-build-meta code {
+  color: #d8c6a7;
+}
+
+.native-build-meta code {
+  font-size: 10px;
+  letter-spacing: .04em;
+}
+
+@media (max-width: 620px) {
+  .native-build-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .native-build-meta {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+}
