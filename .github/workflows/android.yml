@@ -53,6 +53,15 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Generate Veira app icon and splash
+        run: >
+          npx capacitor-assets generate --android
+          --iconBackgroundColor '#0b0e13'
+          --iconBackgroundColorDark '#0b0e13'
+          --splashBackgroundColor '#0b0e13'
+          --splashBackgroundColorDark '#0b0e13'
+          --logoSplashScale 0.23
+
       - name: Build debug APK
         working-directory: android
         run: |
