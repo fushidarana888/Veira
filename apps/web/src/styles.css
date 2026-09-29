@@ -13301,3 +13301,28 @@ html.native-app .game-shell {
 html.native-app .bottom-nav {
   bottom: max(8px, env(safe-area-inset-bottom, 0px));
 }
+
+
+.native-connection-banner {
+  position: fixed;
+  z-index: 2000;
+  top: 8px;
+  left: 50%;
+  max-width: calc(100% - 24px);
+  transform: translateX(-50%);
+  padding: 7px 11px;
+  border: 1px solid rgba(190, 116, 87, .34);
+  border-radius: 999px;
+  background: rgba(44, 24, 23, .94);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .34);
+  color: #e2a48f;
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: .025em;
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.native-connection-banner[hidden] {
+  display: none;
+}

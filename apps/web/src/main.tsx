@@ -12,6 +12,21 @@ const nativePlatform = Capacitor.isNativePlatform()
 if (nativePlatform) {
   document.documentElement.classList.add('native-app')
 
+  const connectionBanner = document.createElement('div')
+  connectionBanner.className = 'native-connection-banner'
+  connectionBanner.setAttribute('role', 'status')
+  connectionBanner.setAttribute('aria-live', 'polite')
+  connectionBanner.textContent = 'Нет соединения · Veira ждёт сеть'
+  connectionBanner.hidden = navigator.onLine
+  document.body.appendChild(connectionBanner)
+
+  const syncConnectionBanner = () => {
+    connectionBanner.hidden = navigator.onLine
+  }
+
+  window.addEventListener('online', syncConnectionBanner)
+  window.addEventListener('offline', syncConnectionBanner)
+
   void StatusBar.setStyle({ style: Style.Light })
   void StatusBar.setBackgroundColor({ color: '#0b0e13' })
   void StatusBar.setOverlaysWebView({ overlay: false })
