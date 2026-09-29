@@ -47,6 +47,23 @@ jobs:
       - name: Generate Android project
         run: npx cap add android
 
+      - name: Normalize generated Android manifest
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('android/app/src/main/AndroidManifest.xml')
+          text = path.read_text(encoding='utf-8')
+          permission = '<uses-permission android:name="android.permission.INTERNET" />'
+          text = re.sub(r'\s*<uses-permission android:name="android.permission.INTERNET"\s*/>', '', text)
+          marker = '<application'
+          if marker not in text:
+              raise SystemExit('AndroidManifest.xml has no <application> element')
+          text = text.replace(marker, f'    {permission}\n\n    {marker}', 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
       - name: Stamp Android version
         run: |
           sed -i "s/versionCode 1/versionCode ${GITHUB_RUN_NUMBER}/" android/app/build.gradle
