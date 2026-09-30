@@ -337,6 +337,90 @@ function itemStory(item: CharacterItem) {
   }
 }
 
+function itemIsInventoryLocked(item: CharacterItem) {
+  return item.metadata?.inventory_locked === true
+}
+
+function itemIsRecent(item: CharacterItem) {
+  const acquiredAt = new Date(item.acquired_at).getTime()
+  return Number.isFinite(acquiredAt) && Date.now() - acquiredAt <= 24 * 60 * 60 * 1000
+}
+
+function itemAffixCount(item: CharacterItem) {
+  return itemAffixes(item).length
+}
+
+function itemCanBeDismantled(item: CharacterItem, definition: ItemDefinition) {
+  return ['weapon', 'armor', 'accessory'].includes(definition.category)
+    && definition.rarity !== 'unique'
+    && !definition.slug.startsWith('ancient_')
+    && !definition.religion_origin_slug
+    && !itemIsInventoryLocked(item)
+}
+
+function itemDismantleValue(item: CharacterItem, definition: ItemDefinition) {
+  const base: Record<ItemDefinition['rarity'], number> = {
+    common: 1,
+    uncommon: 2,
+    rare: 4,
+    epic: 7,
+    legendary: 12,
+    unique: 0,
+  }
+  return Math.max(0, (base[definition.rarity] ?? 0) + Math.min(3, itemAffixCount(item)))
+}
+
+function itemCombinedCoreStats(item: CharacterItem, definition: ItemDefinition) {
+  const result: Record<string, number> = { ...(definition.stat_modifiers ?? {}) }
+  for (const source of [affixStatModifiers(item), religionItemStatModifiers(item)]) {
+    for (const [key, value] of Object.entries(source)) {
+      if (typeof value === 'number') result[key] = (result[key] ?? 0) + value
+    }
+  }
+  return result
+}
+
+function itemComparisonSummary(
+  item: CharacterItem,
+  definition: ItemDefinition,
+  equippedItem: CharacterItem | null,
+) {
+  if (!equippedItem || equippedItem.id === item.id) return null
+  const equippedDefinition = normalizeDefinition(equippedItem.item_definitions)
+  if (!equippedDefinition) return null
+
+  const parts: string[] = []
+  const currentStats = itemCombinedCoreStats(item, definition)
+  const equippedStats = itemCombinedCoreStats(equippedItem, equippedDefinition)
+
+  for (const key of ['strength', 'agility', 'vitality', 'intellect', 'luck'] as StatKey[]) {
+    const diff = Number(currentStats[key] ?? 0) - Number(equippedStats[key] ?? 0)
+    if (diff !== 0) parts.push(`${statLabels[key]} ${diff > 0 ? '+' : ''}${diff}`)
+  }
+
+  if (definition.category === 'weapon' && equippedDefinition.category === 'weapon') {
+    const currentBase = Math.round(Number(definition.weapon_base_damage ?? 0) * (1 + item.enhancement_level * 0.03))
+    const equippedBase = Math.round(Number(equippedDefinition.weapon_base_damage ?? 0) * (1 + equippedItem.enhancement_level * 0.03))
+    const diff = currentBase - equippedBase
+    if (diff !== 0) parts.push(`База урона ${diff > 0 ? '+' : ''}${diff}`)
+  }
+
+  const currentRes = combinedResistances(item, definition)
+  const equippedRes = combinedResistances(equippedItem, equippedDefinition)
+  for (const type of Object.keys({ ...currentRes, ...equippedRes }) as DamageType[]) {
+    const diff = Number(currentRes[type] ?? 0) - Number(equippedRes[type] ?? 0)
+    if (diff !== 0) parts.push(`${damageTypeLabels[type]} ${diff > 0 ? '+' : ''}${diff} п.п.`)
+  }
+
+  const affixDiff = itemAffixCount(item) - itemAffixCount(equippedItem)
+  if (affixDiff !== 0) parts.push(`Аффиксы ${affixDiff > 0 ? '+' : ''}${affixDiff}`)
+
+  return {
+    name: equippedItem.custom_name || equippedDefinition.name,
+    parts: parts.slice(0, 7),
+  }
+}
+
 export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) {
   const [tab, setTab] = useState<Tab>(readStoredPlayerTab)
   const [characterTab, setCharacterTab] = useState<CharacterTab>(readStoredCharacterTab)
@@ -594,7 +678,8 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               unique_property_description,
               unique_effect_type,
               unique_effect_value,
-              equipment_set_id
+              equipment_set_id,
+              religion_origin_slug
             )
           `)
           .eq('character_id', character.id)
