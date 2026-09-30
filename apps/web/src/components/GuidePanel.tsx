@@ -129,6 +129,12 @@ type GuideMechanics = {
   physical_critical_multiplier: number
   magic_critical_multiplier: number
   loot_quality_luck_relative_percent_per_point: number
+  lucky_affix_chance_percent_per_luck: number
+  lucky_affix_chance_cap_percent: number
+  ruins_ancient_luck_flat_percent_per_point: number
+  ruins_ancient_luck_cap_percent: number
+  luck_variance_nudge_percent_per_point: number
+  luck_variance_nudge_chunk: number
   affix_slots: Record<string, number>
 }
 
@@ -700,6 +706,21 @@ export function GuidePanel({ onBack }: Props) {
                 <GuideRule title="Удача и качественный лут">
                   Каждая единица УДА даёт <b>+{catalog.mechanics.loot_quality_luck_relative_percent_per_point}% относительного шанса</b>
                   на выпадение экипировки Rare+ в подземельях. Это влияет на оружие, броню и аксессуары, но не на материалы и расходники.
+                </GuideRule>
+                <GuideRule title="Удачная находка">
+                  Для выпавшей экипировки УДА также даёт <b>{catalog.mechanics.lucky_affix_chance_percent_per_luck} п.п. шанса за каждое очко</b>
+                  получить один дополнительный аффикс сверх обычного лимита редкости.
+                  Шанс ограничен <b>{catalog.mechanics.lucky_affix_chance_cap_percent}%</b>; количество вещей за заход от этого не растёт.
+                </GuideRule>
+                <GuideRule title="Удача и разброс урона">
+                  Диапазон остаётся <b>−4…+4</b>, но УДА смещает результат вверх.
+                  Каждые первые {catalog.mechanics.luck_variance_nudge_chunk} очков дают отдельный шанс на улучшение результата;
+                  каждая единица внутри такого блока добавляет <b>{catalog.mechanics.luck_variance_nudge_percent_per_point}%</b>.
+                  Поэтому после 10 УДА эффект больше не перестаёт развиваться.
+                </GuideRule>
+                <GuideRule title="Удача в руинах">
+                  УДА дополнительно повышает шанс древней экипировки на <b>+{catalog.mechanics.ruins_ancient_luck_flat_percent_per_point} п.п.</b>
+                  за очко, максимум на <b>+{catalog.mechanics.ruins_ancient_luck_cap_percent} п.п.</b>.
                 </GuideRule>
                 <GuideRule title="Критический урон">
                   Физический крит: <b>×{catalog.mechanics.physical_critical_multiplier}</b>.
@@ -1304,9 +1325,10 @@ export function GuidePanel({ onBack }: Props) {
                   Расходники и материалы в этот предел не входят. Редкие и боссовые предметы проверяются раньше обычной экипировки.
                 </GuideRule>
                 <GuideRule title="Качество экипировки">
-                  Удача немного повышает шанс получить оружие, броню или аксессуар Rare+.
-                  Бонус относительный: каждая единица УДА добавляет <b>+{catalog.mechanics.loot_quality_luck_relative_percent_per_point}%</b>
-                  к базовому шансу подходящей награды.
+                  Каждая единица УДА добавляет <b>+{catalog.mechanics.loot_quality_luck_relative_percent_per_point}% относительного шанса</b>
+                  к Rare+ экипировке. Кроме того, каждая УДА даёт
+                  <b> {catalog.mechanics.lucky_affix_chance_percent_per_luck} п.п.</b> шанса, что выпавшая экипировка получит
+                  дополнительный аффикс сверх обычного лимита редкости. Это улучшает качество вещи, а не число предметов за заход.
                 </GuideRule>
               </div>
             </>
