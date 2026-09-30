@@ -28,6 +28,7 @@ type ArenaRating = {
   rank_name: string
   placement_remaining: number
   season_reward_gold?: number
+  season_reward_claimed?: boolean
   enabled?: boolean
   next_rank?: {
     slug: string
@@ -141,6 +142,9 @@ function arenaError(raw: string) {
   if (raw.includes('ARENA_COOLDOWN')) return 'Матчмейкинг ещё обновляет прошлый бой. Повтори через пару секунд.'
   if (raw.includes('ARENA_SEASON_INACTIVE')) return 'Сейчас между сезонами. Рейтинговые бои временно закрыты.'
   if (raw.includes('CHARACTER_NOT_FOUND')) return 'Не удалось подтвердить персонажа для арены.'
+  if (raw.includes('ARENA_SEASON_NOT_FINISHED')) return 'Сезон ещё не завершён.'
+  if (raw.includes('ARENA_NOT_CALIBRATED')) return 'Для сезонной награды сначала нужно завершить калибровку.'
+  if (raw.includes('ARENA_SEASON_REWARD_ALREADY_CLAIMED')) return 'Сезонная награда уже получена.'
   return userFacingError(raw)
 }
 
@@ -171,6 +175,7 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
   const [lastMatch, setLastMatch] = useState<ArenaMatchResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [fighting, setFighting] = useState(false)
+  const [claimingReward, setClaimingReward] = useState(false)
   const [message, setMessage] = useState('')
 
   async function loadOverview(silent = false) {
@@ -222,6 +227,34 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
     }
 
     setFighting(false)
+  }
+
+  async function claimSeasonReward() {
+    if (!season || !solo || season.active || solo.matches < 5 || solo.season_reward_claimed || claimingReward) return
+
+    setClaimingReward(true)
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('claim_arena_season_reward', {
+      p_character_id: characterId,
+      p_season_id: season.id,
+      p_mode: 'solo',
+    })
+
+    if (error) {
+      setMessage(arenaError(error.message))
+    } else {
+      const reward = (data as { rank_name?: string, reward_gold?: number } | null) ?? {}
+      setMessage(
+        `Награда сезона получена${reward.rank_name ? ` · ${reward.rank_name}` : ''}: +${reward.reward_gold ?? 0} золота.`,
+      )
+      await Promise.all([
+        loadOverview(true),
+        Promise.resolve(onProgressChanged?.()),
+      ])
+    }
+
+    setClaimingReward(false)
   }
 
   const solo = overview.solo
@@ -310,17 +343,43 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
             <span><b>{solo?.season_reward_gold ?? 0}</b><small>Награда сезона</small></span>
           </div>
 
-          <button
-            className="primary-button arena-search-button"
-            type="button"
-            disabled={fighting || !season?.active}
-            onClick={() => void findSoloMatch()}
-          >
-            {fighting ? 'Идёт автобой…' : solo?.placement_remaining ? 'Найти калибровочный бой' : 'Найти рейтинговый бой'}
-          </button>
-          <small className="arena-search-note">
-            Соперника выбирает система. Результат считается на сервере и сразу меняет MMR обоих персонажей.
-          </small>
+          {season?.active ? (
+            <>
+              <button
+                className="primary-button arena-search-button"
+                type="button"
+                disabled={fighting}
+                onClick={() => void findSoloMatch()}
+              >
+                {fighting ? 'Идёт автобой…' : solo?.placement_remaining ? 'Найти калибровочный бой' : 'Найти рейтинговый бой'}
+              </button>
+              <small className="arena-search-note">
+                Соперника выбирает система. Результат считается на сервере и сразу меняет MMR обоих персонажей.
+              </small>
+            </>
+          ) : solo && solo.matches >= 5 ? (
+            <>
+              <button
+                className="primary-button arena-search-button"
+                type="button"
+                disabled={claimingReward || Boolean(solo.season_reward_claimed)}
+                onClick={() => void claimSeasonReward()}
+              >
+                {solo.season_reward_claimed
+                  ? 'Награда сезона получена'
+                  : claimingReward
+                    ? 'Выдаём награду…'
+                    : `Получить награду сезона · ${solo.season_reward_gold ?? 0} золота`}
+              </button>
+              <small className="arena-search-note">
+                Итоговая награда считается по максимальному solo-рангу, достигнутому за сезон.
+              </small>
+            </>
+          ) : (
+            <small className="arena-search-note">
+              Сезон завершён. Для итоговой награды нужна завершённая калибровка.
+            </small>
+          )}
         </section>
 
         <section className="panel arena-rating-card future">
