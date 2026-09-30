@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION private.arena_effect_severity(p_effects jsonb)
  RETURNS integer
  LANGUAGE sql
  IMMUTABLE
-AS $function$;
+AS $function$
   select coalesce(sum(
     case key
       when 'stun' then 4
@@ -27,7 +27,7 @@ CREATE OR REPLACE FUNCTION private.arena_effect_reduction(p_effects jsonb)
  RETURNS integer
  LANGUAGE sql
  IMMUTABLE
-AS $function$;
+AS $function$
   select least(
     60,
     coalesce(sum(coalesce((value->>'potency')::integer,0))
@@ -40,7 +40,7 @@ CREATE OR REPLACE FUNCTION private.arena_effect_vulnerable(p_effects jsonb)
  RETURNS integer
  LANGUAGE sql
  IMMUTABLE
-AS $function$;
+AS $function$
   select least(
     75,
     coalesce(sum(coalesce((value->>'potency')::integer,0))
@@ -53,7 +53,7 @@ CREATE OR REPLACE FUNCTION private.arena_has_effect(p_effects jsonb, p_effect_ty
  RETURNS boolean
  LANGUAGE sql
  IMMUTABLE
-AS $function$;
+AS $function$
   select coalesce((coalesce(p_effects,'{}'::jsonb)->p_effect_type->>'turns')::integer,0)>0
 $function$;
 
@@ -61,7 +61,7 @@ CREATE OR REPLACE FUNCTION private.arena_apply_effect(p_effects jsonb, p_effect_
  RETURNS jsonb
  LANGUAGE plpgsql
  IMMUTABLE
-AS $function$;
+AS $function$
 declare
   effects jsonb:=coalesce(p_effects,'{}'::jsonb);
   old_turns integer:=coalesce((effects->p_effect_type->>'turns')::integer,0);
@@ -84,7 +84,7 @@ CREATE OR REPLACE FUNCTION private.arena_decay_effects(p_effects jsonb)
  RETURNS jsonb
  LANGUAGE sql
  IMMUTABLE
-AS $function$;
+AS $function$
   select coalesce(
     jsonb_object_agg(
       key,
@@ -103,7 +103,7 @@ CREATE OR REPLACE FUNCTION private.arena_dot_damage(p_effects jsonb, p_target_re
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   e record;
   total integer:=0;
@@ -130,7 +130,7 @@ CREATE OR REPLACE FUNCTION private.arena_estimate_physical_damage(p_actor_id uui
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   family text:=private.character_weapon_family(p_actor_id);
   weapon_type text:=coalesce(p_actor_stats->>'weapon_damage_type','blunt');
@@ -214,7 +214,7 @@ CREATE OR REPLACE FUNCTION private.arena_estimate_magic_damage(p_actor_id uuid, 
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   magic_type text:=coalesce(p_actor_stats->>'magic_damage_type','fire');
   actor_power integer:=greatest(1,coalesce((p_actor_stats->>'magic_power')::integer,1));
@@ -261,7 +261,7 @@ CREATE OR REPLACE FUNCTION private.arena_choose_action_v2(p_actor_id uuid, p_act
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   settings public.character_autobattle_settings;
   hp integer:=greatest(0,coalesce((p_actor_state->>'hp')::integer,0));
@@ -778,7 +778,7 @@ CREATE OR REPLACE FUNCTION private.arena_execute_action_v2(p_actor_id uuid, p_ac
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   actor_state jsonb:=p_actor_state;
   target_state jsonb:=p_target_state;
@@ -1059,7 +1059,7 @@ CREATE OR REPLACE FUNCTION private.arena_simulate_solo(p_challenger_id uuid, p_o
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   a record;
   b record;

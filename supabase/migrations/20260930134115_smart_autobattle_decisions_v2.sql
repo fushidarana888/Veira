@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.autobattle_heal_score(p_character_id uuid, p_
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   s public.spell_definitions;
   heal_value integer:=0;
@@ -52,7 +52,7 @@ CREATE OR REPLACE FUNCTION private.autobattle_damage_spell_score(p_encounter_id 
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   e public.combat_encounters;
   s public.spell_definitions;
@@ -227,7 +227,7 @@ CREATE OR REPLACE FUNCTION private.run_combat_autobattle_internal(p_encounter_id
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   caller uuid:=auth.uid();
   encounter public.combat_encounters;

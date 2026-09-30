@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.arena_choose_action_v2(p_actor_id uuid, p_act
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   settings public.character_autobattle_settings;
   hp integer:=greatest(0,coalesce((p_actor_state->>'hp')::integer,0));
@@ -538,7 +538,7 @@ CREATE OR REPLACE FUNCTION private.arena_execute_action_v2(p_actor_id uuid, p_ac
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   actor_state jsonb:=p_actor_state;
   target_state jsonb:=p_target_state;
@@ -822,7 +822,7 @@ CREATE OR REPLACE FUNCTION private.run_combat_autobattle_internal(p_encounter_id
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   caller uuid:=auth.uid();
   encounter public.combat_encounters;

@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.arena_choose_action_v2(p_actor_id uuid, p_act
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$;
+AS $function$
 declare
   settings public.character_autobattle_settings;
   hp integer:=greatest(0,coalesce((p_actor_state->>'hp')::integer,0));
