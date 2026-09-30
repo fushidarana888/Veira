@@ -83,6 +83,7 @@ type ArenaLogEntry = {
   actor_name: string
   action: string
   label: string
+  plan?: string
   damage: number
   healing: number
   actor_hp: number
@@ -453,6 +454,7 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
                       {entry.damage > 0 ? `${entry.damage} урона` : entry.healing > 0 ? `+${entry.healing} ОЗ` : 'подготовка'}
                       {' · '}ОЗ {entry.actor_hp} · ОМ {entry.actor_mana}
                     </small>
+                    {entry.plan && <small className="arena-plan-note">План AI · {entry.plan}</small>}
                   </div>
                 </article>
               ))}
