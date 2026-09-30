@@ -216,6 +216,7 @@ export type ItemDefinition = {
   unique_effect_type: 'lifesteal' | 'mana_on_hit' | 'damage_vs_wounded' | 'guard_boost' | 'taunt' | null
   unique_effect_value: number
   equipment_set_id: string | null
+  religion_origin_slug: string | null
 }
 
 export type EquipmentSetPieceState = {
@@ -831,6 +832,7 @@ export type DungeonLootDrop = {
   rarity: ItemRarity
   quantity: number
   combat_encounter_id: string | null
+  lucky_find: boolean
   created_at: string
 }
 
