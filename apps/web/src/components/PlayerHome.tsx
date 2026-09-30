@@ -128,6 +128,7 @@ const equipmentExchangeValues: Record<ItemDefinition['rarity'], number> = {
 }
 
 function itemExchangeValue(definition: ItemDefinition) {
+  if (definition.slug === 'ancient_relic_fragment_beta' || definition.slug.endsWith('_damaged')) return 0
   if (definition.category === 'material') {
     if (definition.rarity === 'unique') return 0
     return materialExchangeValues[definition.rarity]
@@ -302,6 +303,23 @@ function combinedResistances(item: CharacterItem, definition: ItemDefinition) {
   }
 
   return result
+}
+
+function ancientRestorationInfo(definition: ItemDefinition) {
+  const effects = Array.isArray(definition.effects) ? definition.effects : []
+  const restoration = effects.find((effect) =>
+    Boolean(effect)
+    && typeof effect === 'object'
+    && !Array.isArray(effect)
+    && (effect as Record<string, unknown>).type === 'ancient_restoration'
+  ) as Record<string, unknown> | undefined
+
+  if (!restoration) return null
+
+  return {
+    targetSlug: typeof restoration.target_slug === 'string' ? restoration.target_slug : '',
+    fragmentCost: Math.max(1, Number(restoration.fragment_cost ?? 1)),
+  }
 }
 
 function itemStory(item: CharacterItem) {
@@ -973,6 +991,50 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     setInventoryBusy(false)
   }
 
+  async function restoreAncientItem(item: CharacterItem) {
+    const definition = normalizeDefinition(item.item_definitions)
+    const restoration = definition ? ancientRestorationInfo(definition) : null
+    if (!definition || !restoration) return
+
+    if (equippedItemIds.has(item.id)) {
+      setInventoryMessage('Сначала сними повреждённый древний предмет.')
+      return
+    }
+
+    if (!window.confirm(
+      `Восстановить «${definition.name}» за ${restoration.fragmentCost} Осколка древней реликвии?`,
+    )) return
+
+    setInventoryBusy(true)
+    setInventoryMessage('')
+
+    const { data, error } = await supabase.rpc('restore_ancient_item', {
+      p_character_item_id: item.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('NOT_ENOUGH_RELIC_FRAGMENTS')) {
+        setInventoryMessage(`Не хватает Осколков древней реликвии. Нужно: ${restoration.fragmentCost}.`)
+      } else if (raw.includes('ITEM_IS_EQUIPPED')) {
+        setInventoryMessage('Сначала сними повреждённый древний предмет.')
+      } else if (raw.includes('COMBAT_ACTIVE')) {
+        setInventoryMessage('Нельзя восстанавливать древнюю экипировку во время боя.')
+      } else {
+        setInventoryMessage(userFacingError(raw))
+      }
+      setInventoryBusy(false)
+      return
+    }
+
+    const result = data as { restored_name?: string; fragment_cost?: number } | null
+    await loadInventory()
+    setInventoryMessage(
+      `Восстановлено: ${result?.restored_name ?? 'древний предмет'} · потрачено ${result?.fragment_cost ?? restoration.fragmentCost} осколка.`,
+    )
+    setInventoryBusy(false)
+  }
+
   async function learnSpellFromScroll(item: CharacterItem) {
     const definition = normalizeDefinition(item.item_definitions)
     if (!definition || definition.scroll_mode !== 'learn') return
@@ -1620,6 +1682,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               onUseResource={useResourceItem}
               onExchangeItem={exchangeItem}
               onLearnScroll={learnSpellFromScroll}
+              onRestoreAncient={restoreAncientItem}
               onHistory={openItemHistory}
             />
           )}
@@ -2025,6 +2088,7 @@ function InventoryPanel({
   onUseResource,
   onExchangeItem,
   onLearnScroll,
+  onRestoreAncient,
   onHistory,
 }: {
   items: CharacterItem[]
@@ -2036,6 +2100,7 @@ function InventoryPanel({
   onUseResource: (item: CharacterItem, fillToMax?: boolean) => Promise<void>
   onExchangeItem: (item: CharacterItem, quantity: number) => Promise<void>
   onLearnScroll: (item: CharacterItem) => Promise<void>
+  onRestoreAncient: (item: CharacterItem) => Promise<void>
   onHistory: (item: CharacterItem) => Promise<void>
 }) {
   const [filter, setFilter] = useState<InventoryFilter>('all')
@@ -2204,6 +2269,7 @@ function InventoryPanel({
             const damageBonuses = Object.entries(definition.damage_bonuses ?? {})
               .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
             const story = itemStory(item)
+            const restoration = ancientRestorationInfo(definition)
 
             return (
               <article
@@ -2328,6 +2394,16 @@ function InventoryPanel({
                   </div>
                 )}
 
+                {restoration && (
+                  <div className="unique-property">
+                    <strong>Можно восстановить</strong>
+                    <span>
+                      Требуется {restoration.fragmentCost} Осколка древней реликвии.
+                      После восстановления предмет получает полные характеристики и древнее свойство.
+                    </span>
+                  </div>
+                )}
+
                 {story && (
                   <div className="item-story-card">
                     <span className="eyebrow">СЛЕД ПРОШЛОГО</span>
@@ -2364,7 +2440,23 @@ function InventoryPanel({
                       >
                         История
                       </button>
-                      {!equipped && ['weapon', 'armor', 'accessory'].includes(definition.category) && (
+                      {restoration && (
+                        <button
+                          className="primary-button"
+                          type="button"
+                          disabled={busy || equipped}
+                          title={equipped ? 'Сначала сними предмет' : undefined}
+                          onClick={() => void onRestoreAncient(item)}
+                        >
+                          {equipped
+                            ? 'Сначала сними'
+                            : `Восстановить · ${restoration.fragmentCost} оск.`}
+                        </button>
+                      )}
+                      {!equipped
+                        && ['weapon', 'armor', 'accessory'].includes(definition.category)
+                        && itemExchangeValue(definition) > 0
+                        && (
                         <button
                           className="ghost-button"
                           type="button"
@@ -2389,7 +2481,11 @@ function InventoryPanel({
                       Боевой свиток · используется во время боя
                     </span>
                   ) : definition.category === 'material' ? (
-                    definition.rarity === 'unique' ? (
+                    definition.slug === 'ancient_relic_fragment_beta' ? (
+                      <span className="muted item-state">
+                        Ресурс восстановления древней экипировки · обмен недоступен
+                      </span>
+                    ) : definition.rarity === 'unique' ? (
                       <span className="muted item-state">Уникальный ресурс · обмен недоступен</span>
                     ) : definition.slug === 'tempering_mark_iii' ? (
                       <span className="muted item-state">Особый ресурс · обмен недоступен</span>
