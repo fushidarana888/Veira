@@ -1435,7 +1435,13 @@ export function AdventuresPanel({
               </div>
               <div className="dungeon-loot-grid">
                 {lootDrops.map((drop) => (
-                  <div className={'dungeon-loot-item rarity-' + drop.rarity} key={drop.drop_id}>
+                  <div
+                    className={
+                      'dungeon-loot-item rarity-' + drop.rarity
+                      + (drop.lucky_find ? ' lucky-find' : '')
+                    }
+                    key={drop.drop_id}
+                  >
                     <div>
                       <strong>{drop.item_name}</strong>
                       <span>
@@ -1445,6 +1451,9 @@ export function AdventuresPanel({
                             ? 'хранитель'
                             : 'враг'}
                       </span>
+                      {drop.lucky_find && (
+                        <em className="lucky-find-badge">🍀 Удачная находка · дополнительный аффикс</em>
+                      )}
                     </div>
                     <b>×{drop.quantity}</b>
                   </div>
@@ -2523,7 +2532,13 @@ export function AdventuresPanel({
               </div>
               <div className="dungeon-loot-grid">
                 {lootDrops.map((drop) => (
-                  <div className={'dungeon-loot-item rarity-' + drop.rarity} key={drop.drop_id}>
+                  <div
+                    className={
+                      'dungeon-loot-item rarity-' + drop.rarity
+                      + (drop.lucky_find ? ' lucky-find' : '')
+                    }
+                    key={drop.drop_id}
+                  >
                     <div>
                       <strong>{drop.item_name}</strong>
                       <span>
@@ -2533,6 +2548,9 @@ export function AdventuresPanel({
                             ? 'хранитель'
                             : 'враг'}
                       </span>
+                      {drop.lucky_find && (
+                        <em className="lucky-find-badge">🍀 Удачная находка · дополнительный аффикс</em>
+                      )}
                     </div>
                     <b>×{drop.quantity}</b>
                   </div>
