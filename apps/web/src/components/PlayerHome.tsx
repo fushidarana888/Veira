@@ -2417,10 +2417,14 @@ function InventoryPanel({
                     <>
                       <span className={'item-state ' + (lockedByLevel ? 'level-warning' : 'muted')}>
                         {equipped
-                          ? 'Надето · сними для обмена'
+                          ? 'Надето · сними для действий с предметом'
                           : lockedByLevel
                             ? `Нужен ${definition.required_level} ур. · сейчас ${characterLevel}`
-                            : `Можно надеть · обмен ${itemExchangeValue(definition)} золота`}
+                            : restoration
+                              ? `Можно надеть · восстановление за ${restoration.fragmentCost} оск.`
+                              : itemExchangeValue(definition) > 0
+                                ? `Можно надеть · обмен ${itemExchangeValue(definition)} золота`
+                                : 'Можно надеть · обмен недоступен'}
                       </span>
                       <button
                         className={equipped || lockedByLevel ? 'ghost-button' : 'primary-button'}
