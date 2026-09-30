@@ -100,7 +100,7 @@ type HuntingState = {
 }
 
 type HuntResult = {
-  result: 'resource' | 'nothing' | 'monster'
+  result: 'resource' | 'nothing' | 'tracks' | 'monster'
   pressure: number
   monster_chance: number
   region_key: string
@@ -110,6 +110,7 @@ type HuntResult = {
   enemy_name?: string
   run_id?: string
   encounter_id?: string
+  experience?: number
 }
 
 type WorldAnomaly = {
@@ -552,6 +553,9 @@ export function WorldMap({
       (entry) => entry.status === 'completed' && entry.action_type === 'explore_ruins',
     )?.id ?? null,
   )
+  const expeditionRewardNotifiedRef = useRef<string | null>(
+    cachedMap?.results[0]?.id ?? null,
+  )
 
   async function loadMapData(silent = false) {
     if (!silent) {
@@ -913,6 +917,16 @@ export function WorldMap({
     void Promise.resolve(onInventoryChanged?.())
   }, [recentSiteResult?.id, recentSiteResult?.action_type, onProgressChanged, onInventoryChanged])
 
+  useEffect(() => {
+    if (!latestResult || latestResult.id === expeditionRewardNotifiedRef.current) return
+
+    expeditionRewardNotifiedRef.current = latestResult.id
+    if (latestResult.source === 'random_event' || latestResult.source === 'gm_event') {
+      void Promise.resolve(onProgressChanged?.())
+      void Promise.resolve(onInventoryChanged?.())
+    }
+  }, [latestResult?.id, latestResult?.source, onProgressChanged, onInventoryChanged])
+
   const selectedSector = selectedSectorId
     ? sectorById.get(selectedSectorId) ?? null
     : null
@@ -1126,9 +1140,18 @@ export function WorldMap({
       return
     }
 
+    if (result.result === 'tracks') {
+      await Promise.resolve(onProgressChanged?.())
+      setMessage(
+        `Добыча ушла, но охота не была пустой: следы дали +${result.experience ?? 0} опыта. Давление региона: ${result.pressure}/6; шанс сильного монстра продолжает расти.`,
+      )
+      endAction()
+      return
+    }
+
     if (result.result === 'nothing') {
       setMessage(
-        `Добыча ушла. Ничего не получено. Давление региона: ${result.pressure}/6; шанс сильного монстра на следующей охоте продолжает расти.`,
+        `Старый исход охоты без добычи. Новые охоты вместо этого дают опыт за выслеживание. Давление региона: ${result.pressure}/6.`,
       )
       endAction()
       return
