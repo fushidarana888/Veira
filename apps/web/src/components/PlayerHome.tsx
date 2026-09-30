@@ -2270,6 +2270,7 @@ function InventoryPanel({
               .filter((entry): entry is [DamageType, number] => typeof entry[1] === 'number' && entry[1] > 0)
             const story = itemStory(item)
             const restoration = ancientRestorationInfo(definition)
+            const luckyAffixUpgrade = item.metadata?.lucky_affix_upgrade === true
 
             return (
               <article
@@ -2384,6 +2385,15 @@ function InventoryPanel({
                         {affixEffectText(affix) ? ' · ' + affixEffectText(affix) : ''}
                       </span>
                     ))}
+                  </div>
+                )}
+
+                {luckyAffixUpgrade && (
+                  <div className="unique-property">
+                    <strong>Удачная находка</strong>
+                    <span>
+                      Удача дала этому предмету дополнительный аффикс сверх обычного лимита его редкости.
+                    </span>
                   </div>
                 )}
 
