@@ -252,6 +252,7 @@ const ruinsResultLabels: Record<string, string> = {
   lost_knowledge: 'знание',
   relic_fragment: 'реликвия',
   sealed_reliquary: 'реликварий',
+  ancient_equipment: 'древняя экипировка',
 }
 
 function ruinsBaseRewardRange(danger: number | null) {
