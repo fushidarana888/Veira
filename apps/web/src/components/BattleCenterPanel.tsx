@@ -7,6 +7,7 @@ const AdventuresPanel = lazy(() => import('./AdventuresPanel').then((module) => 
 const PartyPanel = lazy(() => import('./PartyPanel').then((module) => ({ default: module.PartyPanel })))
 const PartyDungeonPanel = lazy(() => import('./PartyDungeonPanel').then((module) => ({ default: module.PartyDungeonPanel })))
 const DuelPanel = lazy(() => import('./DuelPanel').then((module) => ({ default: module.DuelPanel })))
+const ArenaPanel = lazy(() => import('./ArenaPanel').then((module) => ({ default: module.ArenaPanel })))
 
 type Props = {
   characterId: string
@@ -15,7 +16,7 @@ type Props = {
 }
 
 type BattleKind = 'solo' | 'party' | 'pvp'
-type BattleTab = 'current' | 'group' | 'history' | 'duels'
+type BattleTab = 'current' | 'group' | 'history' | 'arena' | 'duels'
 
 type BattleOverview = {
   active_kind: BattleKind | null
@@ -304,7 +305,7 @@ export function BattleCenterPanel({
           <span className="eyebrow">БОЕВОЙ ЦЕНТР</span>
           <h2>Бои</h2>
           <p className="muted">
-            Текущая битва, группа, кооперативные походы, история прохождений и дуэли теперь собраны в одном месте.
+            Текущая битва, группа, история, рейтинговая автоарена и свободные дуэли собраны в одном месте.
           </p>
         </div>
         <div className={'battle-live-indicator ' + (overview.active_kind ? 'active' : showingFinishedResult ? 'result' : '')}>
@@ -331,6 +332,9 @@ export function BattleCenterPanel({
         <button className={tab === 'history' ? 'active' : ''} type="button" role="tab" aria-selected={tab === 'history'} onClick={() => setTab('history')}>
           История
           {overview.history_count > 0 && <b>{overview.history_count}</b>}
+        </button>
+        <button className={tab === 'arena' ? 'active' : ''} type="button" role="tab" aria-selected={tab === 'arena'} onClick={() => setTab('arena')}>
+          Арена
         </button>
         <button className={tab === 'duels' ? 'active' : ''} type="button" role="tab" aria-selected={tab === 'duels'} onClick={() => setTab('duels')}>
           Дуэли
@@ -592,6 +596,12 @@ export function BattleCenterPanel({
             )}
           </article>
         </div>
+      )}
+
+      {tab === 'arena' && (
+        <Suspense fallback={<LoadingBattle />}>
+          <ArenaPanel characterId={characterId} onProgressChanged={onProgressChanged} />
+        </Suspense>
       )}
 
       {tab === 'duels' && (
