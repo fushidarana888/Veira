@@ -526,7 +526,7 @@ export function BattleCenterPanel({
 
                     {selected.reward?.tracked === false ? (
                       <p className="battle-old-snapshot">
-                        Для этого старого группового боя точная сумма золота и опыта ещё не сохранялась.
+                        Награда для этого боя не сохранена.
                       </p>
                     ) : (
                       <>
