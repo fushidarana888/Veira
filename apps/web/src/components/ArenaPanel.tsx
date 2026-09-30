@@ -26,6 +26,8 @@ type ArenaRating = {
   draws: number
   rank_slug: string
   rank_name: string
+  ladder_position?: number | null
+  max_matchmaking_spread?: number
   placement_remaining: number
   season_reward_gold?: number
   season_reward_claimed?: boolean
@@ -66,6 +68,7 @@ type ArenaLeaderboardEntry = {
   wins: number
   rank_slug: string
   rank_name: string
+  ladder_position?: number | null
 }
 
 type ArenaOverview = {
@@ -108,6 +111,7 @@ type ArenaMatchResult = {
   rank_before: string
   rank_after: string
   rank_name: string
+  ladder_position?: number | null
   rank_reward_gold: number
   rounds: number
   challenger_final_hp: number
@@ -139,7 +143,9 @@ const historyLabels: Record<ArenaHistoryEntry['result'], string> = {
 }
 
 function arenaError(raw: string) {
-  if (raw.includes('NO_ARENA_OPPONENT')) return 'Сейчас не нашлось доступного соперника. Попробуй немного позже.'
+  if (raw.includes('NO_ARENA_OPPONENT') || raw.includes('ARENA_OPPONENT_OUT_OF_RANGE')) {
+    return 'Сейчас нет доступного соперника в пределах ±500 MMR. Попробуй немного позже.'
+  }
   if (raw.includes('ARENA_COOLDOWN')) return 'Матчмейкинг ещё обновляет прошлый бой. Повтори через пару секунд.'
   if (raw.includes('ARENA_SEASON_INACTIVE')) return 'Сейчас между сезонами. Рейтинговые бои временно закрыты.'
   if (raw.includes('CHARACTER_NOT_FOUND')) return 'Не удалось подтвердить персонажа для арены.'
@@ -334,8 +340,13 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
                 <span style={{ width: `${nextRankProgress ?? 0}%` }} />
               </div>
             </div>
+          ) : solo?.rank_slug === 'titan' ? (
+            <p className="arena-max-rank">
+              Ладдер Титанов · {solo.ladder_position ? `#${solo.ladder_position}` : 'позиция обновляется'}.
+              {' '}После 5000 MMR верхнего лимита нет.
+            </p>
           ) : (
-            <p className="arena-max-rank">Высший ранг сезона достигнут.</p>
+            <p className="arena-max-rank">Следующая ступень рейтинга пока не задана.</p>
           )}
 
           <div className="arena-record">
@@ -355,7 +366,8 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
                 {fighting ? 'Идёт автобой…' : solo?.placement_remaining ? 'Найти калибровочный бой' : 'Найти рейтинговый бой'}
               </button>
               <small className="arena-search-note">
-                Соперника выбирает система. Результат считается на сервере и сразу меняет MMR обоих персонажей.
+                Соперника выбирает система в пределах ±{solo?.max_matchmaking_spread ?? 500} MMR.
+                Результат считается на сервере и сразу меняет MMR обоих персонажей.
               </small>
             </>
           ) : solo && solo.matches >= 5 ? (
@@ -478,7 +490,7 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
           <div className="arena-leaderboard-list">
             {overview.leaderboard.map((entry, index) => (
               <div className={'arena-leaderboard-row ' + (entry.character_id === characterId ? 'self' : '')} key={entry.character_id}>
-                <b>{index + 1}</b>
+                <b>{entry.ladder_position ?? index + 1}</b>
                 <div>
                   <strong>{entry.name}</strong>
                   <small>{entry.level} ур. · {entry.rank_name}</small>
@@ -526,7 +538,9 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
             <article className={'arena-rank-row rank-' + rank.slug} key={rank.slug}>
               <div>
                 <strong>{rank.name}</strong>
-                <span>от {rank.min_mmr} MMR</span>
+                <span>
+                  от {rank.min_mmr} MMR{rank.slug === 'titan' ? ' · дальше без лимита' : ''}
+                </span>
               </div>
               <div>
                 <span>Достижение <b>+{rank.milestone_gold}</b></span>
