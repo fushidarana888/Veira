@@ -2555,6 +2555,17 @@ function InventoryPanel({
             const story = itemStory(item)
             const restoration = ancientRestorationInfo(definition)
             const luckyAffixUpgrade = item.metadata?.lucky_affix_upgrade === true
+            const inventoryLocked = itemIsInventoryLocked(item)
+            const equippedPeer = definition.equip_group && !equipped
+              ? items.find((candidate) => {
+                if (!equippedItemIds.has(candidate.id) || candidate.id === item.id) return false
+                const candidateDefinition = normalizeDefinition(candidate.item_definitions)
+                return candidateDefinition?.equip_group === definition.equip_group
+              }) ?? null
+              : null
+            const comparison = itemComparisonSummary(item, definition, equippedPeer)
+            const dismantleValue = itemDismantleValue(item, definition)
+            const dismantlable = itemCanBeDismantled(item, definition) && !equipped
 
             return (
               <article
@@ -2562,6 +2573,8 @@ function InventoryPanel({
                   'item-card rarity-' + definition.rarity
                   + (lockedByLevel ? ' level-locked' : '')
                   + (equipped ? ' is-equipped' : '')
+                  + (inventoryLocked ? ' is-inventory-locked' : '')
+                  + (itemIsRecent(item) ? ' is-new-item' : '')
                 }
                 key={item.id}
               >
@@ -2577,7 +2590,11 @@ function InventoryPanel({
                       {item.awakening_level > 0 ? ` · ◆${['0','I','II','III','IV','V'][item.awakening_level] ?? item.awakening_level}` : ''}
                     </h3>
                   </div>
-                  {item.quantity > 1 && <span className="quantity">×{item.quantity}</span>}
+                  <div className="item-card-badges">
+                    {itemIsRecent(item) && <span className="item-mini-badge">NEW</span>}
+                    {inventoryLocked && <span className="item-mini-badge locked">◆</span>}
+                    {item.quantity > 1 && <span className="quantity">×{item.quantity}</span>}
+                  </div>
                 </div>
 
                 <p>{definition.description}</p>
@@ -2672,9 +2689,16 @@ function InventoryPanel({
                   </div>
                 )}
 
+                {comparison && comparison.parts.length > 0 && (
+                  <div className="item-comparison">
+                    <strong>Сравнение с «{comparison.name}»</strong>
+                    <span>{comparison.parts.join(' · ')}</span>
+                  </div>
+                )}
+
                 {luckyAffixUpgrade && (
-                  <div className="unique-property">
-                    <strong>Удачная находка</strong>
+                  <div className="unique-property lucky-find-property">
+                    <strong>🍀 Удачная находка</strong>
                     <span>
                       Удача дала этому предмету дополнительный аффикс сверх обычного лимита его редкости.
                     </span>
@@ -2731,6 +2755,14 @@ function InventoryPanel({
                         {equipped ? 'Надето' : lockedByLevel ? `Нужен ${definition.required_level} ур.` : 'Экипировать'}
                       </button>
                       <button
+                        className={inventoryLocked ? 'primary-button item-lock-button' : 'ghost-button item-lock-button'}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void onToggleLock(item, !inventoryLocked)}
+                      >
+                        {inventoryLocked ? '◆ Защищено' : '◇ Защитить'}
+                      </button>
+                      <button
                         className="ghost-button item-history-button"
                         type="button"
                         disabled={busy}
@@ -2751,7 +2783,18 @@ function InventoryPanel({
                             : `Восстановить · ${restoration.fragmentCost} оск.`}
                         </button>
                       )}
+                      {dismantlable && dismantleValue > 0 && (
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void onDismantleItem(item)}
+                        >
+                          Разобрать · {dismantleValue} лом
+                        </button>
+                      )}
                       {!equipped
+                        && !inventoryLocked
                         && ['weapon', 'armor', 'accessory'].includes(definition.category)
                         && itemExchangeValue(definition) > 0
                         && (
