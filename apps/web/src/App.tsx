@@ -273,6 +273,7 @@ export function App() {
         profile={state.profile}
         character={state.character}
         userEmail={state.user.email ?? ''}
+        accountCreatedAt={state.user.created_at}
         onSignOut={signOut}
       />
     </Suspense>
