@@ -2264,7 +2264,9 @@ function LazyPanelFallback({ title }: { title: string }) {
 }
 
 type InventoryFilter = 'all' | 'weapon' | 'armor' | 'accessory' | 'consumable' | 'material' | 'other'
-type InventorySort = 'rarity' | 'level' | 'name'
+type InventorySpecialFilter = 'all' | 'new' | 'locked'
+type InventoryRarityFilter = 'all' | ItemDefinition['rarity']
+type InventorySort = 'rarity' | 'level' | 'name' | 'affixes' | 'newest'
 
 const inventoryRarityRank: Record<ItemDefinition['rarity'], number> = {
   common: 0,
@@ -2284,6 +2286,10 @@ function InventoryPanel({
   onEquip,
   onUseResource,
   onExchangeItem,
+  onToggleLock,
+  onDismantleItem,
+  onBulkDismantle,
+  onBulkExchange,
   onLearnScroll,
   onRestoreAncient,
   onHistory,
@@ -2296,11 +2302,17 @@ function InventoryPanel({
   onEquip: (item: CharacterItem) => Promise<void>
   onUseResource: (item: CharacterItem, fillToMax?: boolean) => Promise<void>
   onExchangeItem: (item: CharacterItem, quantity: number) => Promise<void>
+  onToggleLock: (item: CharacterItem, locked: boolean) => Promise<void>
+  onDismantleItem: (item: CharacterItem) => Promise<void>
+  onBulkDismantle: (itemIds: string[]) => Promise<void>
+  onBulkExchange: (itemIds: string[]) => Promise<void>
   onLearnScroll: (item: CharacterItem) => Promise<void>
   onRestoreAncient: (item: CharacterItem) => Promise<void>
   onHistory: (item: CharacterItem) => Promise<void>
 }) {
   const [filter, setFilter] = useState<InventoryFilter>('all')
+  const [specialFilter, setSpecialFilter] = useState<InventorySpecialFilter>('all')
+  const [rarityFilter, setRarityFilter] = useState<InventoryRarityFilter>('all')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<InventorySort>('rarity')
 
@@ -2343,6 +2355,9 @@ function InventoryPanel({
             : definition.category === filter)
 
         if (!categoryMatches) return false
+        if (specialFilter === 'new' && !itemIsRecent(item)) return false
+        if (specialFilter === 'locked' && !itemIsInventoryLocked(item)) return false
+        if (rarityFilter !== 'all' && definition.rarity !== rarityFilter) return false
         if (!normalizedQuery) return true
 
         return [
@@ -2372,12 +2387,32 @@ function InventoryPanel({
             || inventoryRarityRank[rightDefinition.rarity] - inventoryRarityRank[leftDefinition.rarity]
         }
 
+        if (sort === 'affixes') {
+          return itemAffixCount(right) - itemAffixCount(left)
+            || inventoryRarityRank[rightDefinition.rarity] - inventoryRarityRank[leftDefinition.rarity]
+        }
+
+        if (sort === 'newest') {
+          return new Date(right.acquired_at).getTime() - new Date(left.acquired_at).getTime()
+        }
+
         return inventoryRarityRank[rightDefinition.rarity] - inventoryRarityRank[leftDefinition.rarity]
           || rightDefinition.required_level - leftDefinition.required_level
           || (left.custom_name || leftDefinition.name)
             .localeCompare(right.custom_name || rightDefinition.name, 'ru-RU')
       })
-  }, [filter, items, query, sort])
+  }, [filter, items, query, rarityFilter, sort, specialFilter])
+
+  const bulkEligibleItems = useMemo(() => visibleItems.filter((item) => {
+    const definition = normalizeDefinition(item.item_definitions)
+    if (!definition) return false
+    return ['weapon', 'armor', 'accessory'].includes(definition.category)
+      && !equippedItemIds.has(item.id)
+      && !itemIsInventoryLocked(item)
+      && definition.rarity !== 'unique'
+      && !definition.slug.startsWith('ancient_')
+      && !definition.religion_origin_slug
+  }), [equippedItemIds, visibleItems])
 
   const filters: Array<[InventoryFilter, string]> = [
     ['all', 'Все'],
