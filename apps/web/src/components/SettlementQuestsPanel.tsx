@@ -315,7 +315,7 @@ export function SettlementQuestsPanel({
       {quests.length === 0 ? (
         <div className="quest-empty">
           <strong>Сейчас поручений нет.</strong>
-          <span>Загляни позже — ГМ может добавить новые задачи для этого поселения.</span>
+          <span>Новые поручения появятся позже.</span>
         </div>
       ) : (
         <>
