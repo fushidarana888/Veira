@@ -13598,6 +13598,7 @@ html.native-app .bottom-nav {
 .arena-combat-log article > span, .arena-combat-log small { color: #7f8994; font-size: 8px; }
 .arena-combat-log article > div { display: grid; gap: 2px; }
 .arena-combat-log strong { color: #ccd2d8; font-size: 10px; }
+.arena-plan-note { color: #b7a27f !important; }
 
 .arena-leaderboard, .arena-history { min-width: 0; }
 .arena-leaderboard-list, .arena-history-list { display: grid; gap: 7px; margin-top: 13px; }
