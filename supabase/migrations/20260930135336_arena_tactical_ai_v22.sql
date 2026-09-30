@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.arena_estimate_physical_damage(p_actor_id uui
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   family text:=private.character_weapon_family(p_actor_id);
   weapon_type text:=coalesce(p_actor_stats->>'weapon_damage_type','blunt');
@@ -84,14 +84,14 @@ begin
   -- and rolled only once when the arena action is executed.
   return greatest(1,raw);
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.arena_estimate_magic_damage(p_actor_id uuid, p_actor_stats jsonb, p_actor_state jsonb, p_target_stats jsonb, p_target_state jsonb)
  RETURNS integer
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   magic_type text:=coalesce(p_actor_stats->>'magic_damage_type','fire');
   actor_power integer:=greatest(1,coalesce((p_actor_stats->>'magic_power')::integer,1));
@@ -131,14 +131,14 @@ begin
 
   return greatest(1,raw);
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.arena_choose_action_v2(p_actor_id uuid, p_actor_stats jsonb, p_actor_state jsonb, p_target_id uuid, p_target_stats jsonb, p_target_state jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   settings public.character_autobattle_settings;
   hp integer:=greatest(0,coalesce((p_actor_state->>'hp')::integer,0));
@@ -648,14 +648,14 @@ begin
     'distance',chosen_distance,'full_draw_release',false
   );
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.arena_execute_action_v2(p_actor_id uuid, p_actor_stats jsonb, p_actor_state jsonb, p_target_id uuid, p_target_stats jsonb, p_target_state jsonb, p_action jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   actor_state jsonb:=p_actor_state;
   target_state jsonb:=p_target_state;
@@ -929,14 +929,14 @@ begin
     'critical',critical,'extra_hits',extra_hits,'status_applied',status_applied
   );
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.arena_simulate_solo(p_challenger_id uuid, p_opponent_id uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   a record;
   b record;
@@ -1172,7 +1172,7 @@ begin
     'log',log_data
   );
 end;
-$function$
+$function$;
 
 revoke all on function private.arena_estimate_physical_damage(uuid,jsonb,jsonb,jsonb,jsonb,boolean) from public, anon, authenticated;
 revoke all on function private.arena_estimate_magic_damage(uuid,jsonb,jsonb,jsonb,jsonb) from public, anon, authenticated;

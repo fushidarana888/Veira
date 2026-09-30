@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.autobattle_heal_score(p_character_id uuid, p_
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   s public.spell_definitions;
   heal_value integer:=0;
@@ -45,14 +45,14 @@ begin
 
   return effective_heal::numeric/cost*100.0 + effective_heal*0.15;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.autobattle_damage_spell_score(p_encounter_id uuid, p_spell_id uuid, p_priority integer DEFAULT 100)
  RETURNS integer
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   e public.combat_encounters;
   s public.spell_definitions;
@@ -220,14 +220,14 @@ begin
     round((direct_damage+status_utility)*priority_mult-mana_penalty)::integer
   );
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.run_combat_autobattle_internal(p_encounter_id uuid, p_max_actions integer DEFAULT 80)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   caller uuid:=auth.uid();
   encounter public.combat_encounters;
@@ -972,7 +972,7 @@ begin
     'actions',actions,'encounter_id',encounter.id
   );
 end;
-$function$
+$function$;
 
 revoke all on function private.autobattle_heal_score(uuid,uuid,integer,integer,integer)
   from public, anon, authenticated;

@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.arena_choose_action_v2(p_actor_id uuid, p_act
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   settings public.character_autobattle_settings;
   hp integer:=greatest(0,coalesce((p_actor_state->>'hp')::integer,0));
@@ -531,14 +531,14 @@ begin
     'distance',chosen_distance,'full_draw_release',false
   );
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.arena_execute_action_v2(p_actor_id uuid, p_actor_stats jsonb, p_actor_state jsonb, p_target_id uuid, p_target_stats jsonb, p_target_state jsonb, p_action jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   actor_state jsonb:=p_actor_state;
   target_state jsonb:=p_target_state;
@@ -815,14 +815,14 @@ begin
     'critical',critical,'extra_hits',extra_hits,'status_applied',status_applied
   );
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.run_combat_autobattle_internal(p_encounter_id uuid, p_max_actions integer DEFAULT 80)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   caller uuid:=auth.uid();
   encounter public.combat_encounters;
@@ -1562,7 +1562,7 @@ begin
     'actions',actions,'encounter_id',encounter.id
   );
 end;
-$function$
+$function$;
 
 revoke all on function private.arena_choose_action_v2(uuid,jsonb,jsonb,uuid,jsonb,jsonb)
   from public, anon, authenticated;

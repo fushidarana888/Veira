@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.arena_estimate_immediate_threat(p_actor_id uu
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   settings public.character_autobattle_settings;
   family text:=private.character_weapon_family(p_actor_id);
@@ -104,14 +104,14 @@ begin
 
   return greatest(1,best);
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.arena_choose_action_v2(p_actor_id uuid, p_actor_stats jsonb, p_actor_state jsonb, p_target_id uuid, p_target_stats jsonb, p_target_state jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
+AS $function$;
 declare
   settings public.character_autobattle_settings;
   hp integer:=greatest(0,coalesce((p_actor_state->>'hp')::integer,0));
@@ -633,7 +633,7 @@ begin
     'distance',chosen_distance,'full_draw_release',false
   );
 end;
-$function$
+$function$;
 
 revoke all on function private.arena_estimate_immediate_threat(uuid,jsonb,jsonb,jsonb,jsonb)
   from public, anon, authenticated;
