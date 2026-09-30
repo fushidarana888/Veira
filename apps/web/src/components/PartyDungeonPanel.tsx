@@ -175,6 +175,7 @@ type PartyLoot = {
   item_name: string
   rarity: string
   quantity: number
+  lucky_find: boolean
   created_at: string
 }
 
@@ -1136,8 +1137,19 @@ export function PartyDungeonPanel({
             </div>
             <div className="party-personal-loot-grid">
               {state.loot.map((drop) => (
-                <div className={'party-loot-item rarity-' + drop.rarity} key={drop.id}>
-                  <strong>{drop.item_name}</strong>
+                <div
+                  className={
+                    'party-loot-item rarity-' + drop.rarity
+                    + (drop.lucky_find ? ' lucky-find' : '')
+                  }
+                  key={drop.id}
+                >
+                  <div>
+                    <strong>{drop.item_name}</strong>
+                    {drop.lucky_find && (
+                      <em className="lucky-find-badge">🍀 Удачная находка · дополнительный аффикс</em>
+                    )}
+                  </div>
                   <b>×{drop.quantity}</b>
                 </div>
               ))}
@@ -2111,7 +2123,13 @@ export function PartyDungeonPanel({
               </div>
               <div className="party-personal-loot-grid">
                 {state.loot.map((drop) => (
-                  <div className={'party-loot-item rarity-' + drop.rarity} key={drop.id}>
+                  <div
+                    className={
+                      'party-loot-item rarity-' + drop.rarity
+                      + (drop.lucky_find ? ' lucky-find' : '')
+                    }
+                    key={drop.id}
+                  >
                     <div>
                       <strong>{drop.item_name}</strong>
                       <span>
@@ -2121,6 +2139,9 @@ export function PartyDungeonPanel({
                             ? 'хранитель'
                             : 'враг'}
                       </span>
+                      {drop.lucky_find && (
+                        <em className="lucky-find-badge">🍀 Удачная находка · дополнительный аффикс</em>
+                      )}
                     </div>
                     <b>×{drop.quantity}</b>
                   </div>
