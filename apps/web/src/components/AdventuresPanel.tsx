@@ -207,8 +207,13 @@ export function AdventuresPanel({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [dungeonEventPending, setDungeonEventPending] = useState(false)
+  const [worldPulseRefreshSignal, setWorldPulseRefreshSignal] = useState(0)
 
   const { beginAction, endAction } = useActionGate(setBusy, false, setMessage)
+
+  function refreshWorldPulse() {
+    setWorldPulseRefreshSignal((current) => current + 1)
+  }
 
   async function loadPreparedSpells() {
     const spellResult = await supabase.rpc('get_character_spells', {
@@ -545,6 +550,7 @@ export function AdventuresPanel({
     }
 
     if (next.status !== 'active') {
+      refreshWorldPulse()
       void loadAdventures(true)
       void loadCombatToolkit()
     }
@@ -628,6 +634,8 @@ export function AdventuresPanel({
       } else if (raw.includes('ROOM_COMBAT_ALREADY_EXISTS')) {
         setMessage('Этот зал уже был разыгран.')
       } else if (raw.includes('DUNGEON_EVENT_PENDING')) {
+        refreshWorldPulse()
+        await loadAdventures(true)
         setMessage('Между залами произошло событие. Решение находится прямо здесь, в текущем прохождении.')
       } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
         setMessage('У персонажа нет здоровья для начала боя.')
@@ -1063,6 +1071,7 @@ export function AdventuresPanel({
       Promise.resolve(onInventoryChanged?.()),
     ])
     await loadAdventures(true)
+    refreshWorldPulse()
     setMessage(autobattleMessage(result, false))
     endAction()
   }
@@ -1087,6 +1096,7 @@ export function AdventuresPanel({
       Promise.resolve(onInventoryChanged?.()),
     ])
     await loadAdventures(true)
+    refreshWorldPulse()
     setMessage(autobattleMessage(result, true))
     endAction()
   }
@@ -1117,6 +1127,7 @@ export function AdventuresPanel({
       Promise.resolve(onInventoryChanged?.()),
     ])
     await loadAdventures(true)
+    refreshWorldPulse()
     setMessage(
       result.status === 'victory'
         ? 'Veira завершила бой в твоём стиле.'
@@ -1149,6 +1160,7 @@ export function AdventuresPanel({
       Promise.resolve(onInventoryChanged?.()),
     ])
     await loadAdventures(true)
+    refreshWorldPulse()
     setMessage(
       result.status === 'completed'
         ? 'Veira полностью зачистила подземелье, повторяя твой стиль.'
@@ -1843,6 +1855,7 @@ export function AdventuresPanel({
               compact
               embedded
               dungeonEventMode="interactive"
+              refreshSignal={worldPulseRefreshSignal}
               onPendingEventChange={setDungeonEventPending}
               onProgressChanged={onProgressChanged}
               onInventoryChanged={onInventoryChanged}
@@ -2537,6 +2550,7 @@ export function AdventuresPanel({
           <WorldPulsePanel
             characterId={characterId}
             dungeonEventMode="summary"
+            refreshSignal={worldPulseRefreshSignal}
             onProgressChanged={onProgressChanged}
             onInventoryChanged={onInventoryChanged}
             onAdventureChanged={() => loadAdventures(true)}
