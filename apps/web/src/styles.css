@@ -12701,6 +12701,113 @@ select {
   }
 }
 
+.inventory-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  border: 1px solid rgba(112, 127, 146, .24);
+  border-radius: 12px;
+  background: rgba(24, 30, 38, .56);
+}
+
+.inventory-bulk-actions > span {
+  flex: 1 1 240px;
+  color: #aab3bf;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.inventory-bulk-actions button {
+  flex: 0 1 auto;
+}
+
+.item-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.item-mini-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 3px 6px;
+  border: 1px solid rgba(113, 156, 112, .32);
+  border-radius: 999px;
+  background: rgba(62, 104, 61, .13);
+  color: #9ac497;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.item-mini-badge.locked {
+  border-color: rgba(190, 156, 95, .34);
+  background: rgba(124, 92, 42, .14);
+  color: #d5b36f;
+}
+
+.item-card.is-inventory-locked {
+  border-color: rgba(190, 156, 95, .42);
+}
+
+.item-card.is-new-item:not(.is-inventory-locked) {
+  box-shadow: inset 0 0 0 1px rgba(105, 158, 105, .08);
+}
+
+.item-comparison {
+  display: grid;
+  gap: 5px;
+  padding: 10px 11px;
+  margin-top: 9px;
+  border: 1px solid rgba(90, 125, 159, .25);
+  border-radius: 11px;
+  background: rgba(39, 62, 83, .12);
+}
+
+.item-comparison strong {
+  color: #a9bed2;
+  font-size: 10px;
+  letter-spacing: .03em;
+}
+
+.item-comparison span {
+  color: #bac4cf;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.lucky-find-property,
+.dungeon-loot-item.lucky-find,
+.party-loot-item.lucky-find {
+  border-color: rgba(105, 157, 94, .42);
+  background:
+    radial-gradient(circle at 92% 12%, rgba(92, 153, 82, .12), transparent 45%),
+    rgba(36, 66, 34, .10);
+}
+
+.lucky-find-badge {
+  display: block;
+  margin-top: 4px;
+  color: #9fc899;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+@media (max-width: 620px) {
+  .inventory-bulk-actions > span,
+  .inventory-bulk-actions button {
+    flex: 1 1 100%;
+  }
+}
+
 
 /* Modern event boss party battle */
 .event-boss-battle-panel {
