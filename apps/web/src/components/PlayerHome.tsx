@@ -1790,7 +1790,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
                   </div>
 
                   <p className="muted level-up-copy">
-                    За каждый новый уровень персонаж получает 2 очка. Здесь уже нет стартового лимита 8 — развивай нужные характеристики дальше.
+                    За каждый новый уровень персонаж получает 2 очка характеристик.
                   </p>
 
                   {progressMessage && <p className="form-message" aria-live="polite">{progressMessage}</p>}
@@ -2044,9 +2044,7 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               <div>
                 <span className="eyebrow">ANDROID</span>
                 <h2>Veira для Android</h2>
-                <p className="muted">
-                  Нативная тестовая сборка. При сообщении о баге можно приложить номер сборки — так проще понять, какая версия установлена.
-                </p>
+                <p className="muted">Версия установленного приложения.</p>
               </div>
               <div className="native-build-meta">
                 <span>Сборка <strong>{appBuildNumber || 'локальная'}</strong></span>
