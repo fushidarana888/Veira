@@ -1076,6 +1076,114 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
     setInventoryBusy(false)
   }
 
+  async function setInventoryItemLocked(item: CharacterItem, locked: boolean) {
+    setInventoryBusy(true)
+    setInventoryMessage('')
+
+    const { error } = await supabase.rpc('set_inventory_item_locked', {
+      p_character_item_id: item.id,
+      p_locked: locked,
+    })
+
+    if (error) {
+      setInventoryMessage(userFacingError(error.message))
+      setInventoryBusy(false)
+      return
+    }
+
+    await loadInventory()
+    setInventoryMessage(locked ? 'Предмет защищён от обмена и разбора.' : 'Защита предмета снята.')
+    setInventoryBusy(false)
+  }
+
+  async function dismantleItem(item: CharacterItem) {
+    const definition = normalizeDefinition(item.item_definitions)
+    if (!definition) return
+    const scrap = itemDismantleValue(item, definition)
+    if (scrap <= 0) return
+
+    if (!window.confirm(
+      `Разобрать «${item.custom_name || definition.name}»? Вещь исчезнет, ты получишь примерно ${scrap} ед. кузнечного лома.`,
+    )) return
+
+    setInventoryBusy(true)
+    setInventoryMessage('')
+
+    const { data, error } = await supabase.rpc('dismantle_inventory_item', {
+      p_character_item_id: item.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      if (raw.includes('ITEM_LOCKED')) setInventoryMessage('Сначала сними защиту с предмета.')
+      else if (raw.includes('ITEM_IS_EQUIPPED')) setInventoryMessage('Сначала сними вещь с персонажа.')
+      else if (raw.includes('PROTECTED_ITEM')) setInventoryMessage('Этот особый предмет нельзя разбирать.')
+      else if (raw.includes('COMBAT_ACTIVE')) setInventoryMessage('Во время боя разбирать предметы нельзя.')
+      else setInventoryMessage(userFacingError(raw))
+      setInventoryBusy(false)
+      return
+    }
+
+    const result = data as { scrap_received?: number } | null
+    await loadInventory()
+    setInventoryMessage(`Предмет разобран · получено ${result?.scrap_received ?? scrap} ед. кузнечного лома.`)
+    setInventoryBusy(false)
+  }
+
+  async function bulkDismantleItems(itemIds: string[]) {
+    if (itemIds.length === 0) return
+    if (!window.confirm(
+      `Разобрать все подходящие предметы в текущем фильтре: ${itemIds.length} шт.? Защищённые, надетые и особые вещи будут пропущены.`,
+    )) return
+
+    setInventoryBusy(true)
+    setInventoryMessage('')
+    const { data, error } = await supabase.rpc('bulk_dismantle_inventory_items', {
+      p_character_item_ids: itemIds,
+    })
+
+    if (error) {
+      setInventoryMessage(userFacingError(error.message))
+      setInventoryBusy(false)
+      return
+    }
+
+    const result = data as { items_dismantled?: number; scrap_received?: number; skipped?: number } | null
+    await loadInventory()
+    setInventoryMessage(
+      `Массовый разбор: ${result?.items_dismantled ?? 0} шт. · лом +${result?.scrap_received ?? 0}`
+      + (result?.skipped ? ` · пропущено ${result.skipped}` : ''),
+    )
+    setInventoryBusy(false)
+  }
+
+  async function bulkExchangeItems(itemIds: string[]) {
+    if (itemIds.length === 0) return
+    if (!window.confirm(
+      `Обменять все подходящие предметы в текущем фильтре: ${itemIds.length} шт.? Защищённые, надетые, уникальные и особые вещи будут пропущены.`,
+    )) return
+
+    setInventoryBusy(true)
+    setInventoryMessage('')
+    const { data, error } = await supabase.rpc('bulk_exchange_inventory_items', {
+      p_character_item_ids: itemIds,
+    })
+
+    if (error) {
+      setInventoryMessage(userFacingError(error.message))
+      setInventoryBusy(false)
+      return
+    }
+
+    const result = data as { items_exchanged?: number; gold_received?: number; skipped?: number } | null
+    await Promise.all([loadInventory(), loadProgress()])
+    setInventoryMessage(
+      `Массовый обмен: ${result?.items_exchanged ?? 0} шт. · золото +${result?.gold_received ?? 0}`
+      + (result?.skipped ? ` · пропущено ${result.skipped}` : ''),
+    )
+    setInventoryBusy(false)
+  }
+
   async function restoreAncientItem(item: CharacterItem) {
     const definition = normalizeDefinition(item.item_definitions)
     const restoration = definition ? ancientRestorationInfo(definition) : null
@@ -1766,6 +1874,10 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
               onEquip={equipItem}
               onUseResource={useResourceItem}
               onExchangeItem={exchangeItem}
+              onToggleLock={setInventoryItemLocked}
+              onDismantleItem={dismantleItem}
+              onBulkDismantle={bulkDismantleItems}
+              onBulkExchange={bulkExchangeItems}
               onLearnScroll={learnSpellFromScroll}
               onRestoreAncient={restoreAncientItem}
               onHistory={openItemHistory}
