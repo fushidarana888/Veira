@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { userFacingError } from '../lib/userError'
 import { useActionGate } from '../lib/actionGate'
@@ -125,6 +125,7 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
   onAdventureChanged?: () => Promise<unknown> | void
   onPendingEventChange?: (pending: boolean) => void
+  refreshSignal?: number
   compact?: boolean
   embedded?: boolean
   dungeonEventMode?: 'interactive' | 'summary'
@@ -170,6 +171,7 @@ export function WorldPulsePanel({
   onInventoryChanged,
   onAdventureChanged,
   onPendingEventChange,
+  refreshSignal,
   compact = false,
   embedded = false,
   dungeonEventMode = 'interactive',
@@ -179,6 +181,7 @@ export function WorldPulsePanel({
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [expandedDiscoveries, setExpandedDiscoveries] = useState(false)
+  const lastRefreshSignalRef = useRef(refreshSignal)
   const { beginAction, endAction } = useActionGate(setBusy, null, setMessage)
 
   async function loadPulse(silent = false) {
@@ -204,8 +207,15 @@ export function WorldPulsePanel({
     setPulse(null)
     setLoading(true)
     setMessage('')
+    lastRefreshSignalRef.current = refreshSignal
     void loadPulse()
   }, [characterId])
+
+  useEffect(() => {
+    if (refreshSignal == null || lastRefreshSignalRef.current === refreshSignal) return
+    lastRefreshSignalRef.current = refreshSignal
+    void loadPulse(true)
+  }, [refreshSignal])
 
   useEffect(() => {
     onPendingEventChange?.(Boolean(pulse?.active_dungeon?.pending_event))
