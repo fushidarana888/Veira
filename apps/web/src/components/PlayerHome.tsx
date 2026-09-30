@@ -2452,10 +2452,62 @@ function InventoryPanel({
           <select value={sort} onChange={(event) => setSort(event.target.value as InventorySort)}>
             <option value="rarity">Сначала редкие</option>
             <option value="level">По уровню</option>
+            <option value="affixes">Больше аффиксов</option>
+            <option value="newest">Сначала новые</option>
             <option value="name">По названию</option>
           </select>
         </label>
+        <label className="inventory-sort">
+          <span>Редкость</span>
+          <select
+            value={rarityFilter}
+            onChange={(event) => setRarityFilter(event.target.value as InventoryRarityFilter)}
+          >
+            <option value="all">Любая</option>
+            <option value="common">Обычные</option>
+            <option value="uncommon">Необычные</option>
+            <option value="rare">Редкие</option>
+            <option value="epic">Эпические</option>
+            <option value="legendary">Легендарные</option>
+            <option value="unique">Уникальные</option>
+          </select>
+        </label>
+        <label className="inventory-sort">
+          <span>Показывать</span>
+          <select
+            value={specialFilter}
+            onChange={(event) => setSpecialFilter(event.target.value as InventorySpecialFilter)}
+          >
+            <option value="all">Все</option>
+            <option value="new">Новые за 24 часа</option>
+            <option value="locked">Защищённые</option>
+          </select>
+        </label>
       </div>
+
+      {bulkEligibleItems.length > 0 && (
+        <div className="inventory-bulk-actions">
+          <span>
+            В текущем фильтре можно обработать <b>{bulkEligibleItems.length}</b> ненадетых вещей.
+          </span>
+          <button
+            className="ghost-button"
+            type="button"
+            disabled={busy}
+            onClick={() => void onBulkDismantle(bulkEligibleItems.map((item) => item.id))}
+          >
+            Разобрать видимое
+          </button>
+          <button
+            className="ghost-button"
+            type="button"
+            disabled={busy}
+            onClick={() => void onBulkExchange(bulkEligibleItems.map((item) => item.id))}
+          >
+            Обменять видимое
+          </button>
+        </div>
+      )}
 
       <div className="inventory-filter-tabs" role="tablist" aria-label="Фильтр инвентаря">
         {filters.map(([key, label]) => (
