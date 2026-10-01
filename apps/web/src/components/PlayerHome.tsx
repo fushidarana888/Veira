@@ -12,7 +12,8 @@ const GuidePanel = lazy(() => import('./GuidePanel').then((module) => ({ default
 const CommunitiesPanel = lazy(() => import('./CommunitiesPanel').then((module) => ({ default: module.CommunitiesPanel })))
 const MagicPanel = lazy(() => import('./MagicPanel').then((module) => ({ default: module.MagicPanel })))
 const ReligionPanel = lazy(() => import('./ReligionPanel').then((module) => ({ default: module.ReligionPanel })))
-const NewcomerPanel = lazy(() => import('./NewcomerPanel').then((module) => ({ default: module.NewcomerPanel })))
+const NewcomerHandbook = lazy(() => import('./NewcomerHandbook').then((module) => ({ default: module.NewcomerHandbook })))
+const NewcomerJourney = lazy(() => import('./NewcomerJourney').then((module) => ({ default: module.NewcomerJourney })))
 const WorldMap = lazy(() => import('./WorldMap').then((module) => ({ default: module.WorldMap })))
 import type {
   Character,
@@ -47,6 +48,7 @@ const characterTabs: CharacterTab[] = ['overview', 'religion', 'inventory', 'equ
 const isNativeApp = Capacitor.isNativePlatform()
 const appBuildNumber = import.meta.env.VITE_BUILD_NUMBER || ''
 const appBuildSha = import.meta.env.VITE_BUILD_SHA || ''
+const NEWCOMER_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 
 function readStoredPlayerTab(): Tab {
   try {
@@ -1579,17 +1581,30 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
         </div>
       </header>
 
+      {Date.now() - new Date(accountCreatedAt).getTime() < NEWCOMER_WINDOW_MS && (
+        <Suspense fallback={null}>
+          <NewcomerHandbook
+            compact
+            daysRemaining={Math.max(
+              1,
+              Math.ceil((NEWCOMER_WINDOW_MS - (Date.now() - new Date(accountCreatedAt).getTime())) / (24 * 60 * 60 * 1000)),
+            )}
+            onOpenGuide={() => {
+              setTab('more')
+              setMoreView('guide')
+            }}
+          />
+        </Suspense>
+      )}
+
       <Suspense fallback={null}>
-        <NewcomerPanel
+        <NewcomerJourney
           characterId={character.id}
-          accountCreatedAt={accountCreatedAt}
-          onOpenGuide={() => {
-            setTab('more')
-            setMoreView('guide')
-          }}
-          onProgressChanged={async () => {
+          onChanged={async () => {
             await Promise.all([loadProgress(), refreshInventoryState()])
           }}
+          onOpenAdventures={() => setTab('adventures')}
+          onOpenWorld={() => setTab('world')}
         />
       </Suspense>
 
