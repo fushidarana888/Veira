@@ -207,8 +207,8 @@ const statLabels: Record<StatKey, string> = {
 }
 
 const statUpgradeHints: Partial<Record<StatKey, string>> = {
-  intellect: '+3 маг. мощи · +1 маг. броня · +7 макс. маны',
-  vitality: '+10 макс. ОЗ · +2 физ. брони · +1 маг. брони',
+  intellect: '+3 маг. мощи · +1 маг. броня · +4,9 макс. маны',
+  vitality: '+7 макс. ОЗ · +2 физ. брони · +1 маг. брони',
 }
 
 function raceTraitNumber(traits: RaceTrait[] | undefined, type: string) {
