@@ -14433,3 +14433,143 @@ html.native-app .bottom-nav {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Battle turn-by-turn history */
+.battle-history-turns {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #303842;
+  border-radius: 13px;
+  background: #0f1419;
+  padding: 11px;
+}
+
+.battle-history-turns > .muted {
+  margin: 0;
+}
+
+.battle-turn-log {
+  display: grid;
+  gap: 7px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.battle-turn-log.compact {
+  max-height: 360px;
+}
+
+.battle-turn-row {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #2d3540;
+  border-radius: 10px;
+  background: #0d1217;
+  padding: 9px 10px;
+}
+
+.battle-turn-row.dealt-damage {
+  border-color: rgba(163, 101, 84, .42);
+}
+
+.battle-turn-head,
+.battle-turn-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.battle-turn-head {
+  justify-content: space-between;
+}
+
+.battle-turn-head span {
+  color: #77828d;
+  font-size: 8px;
+}
+
+.battle-turn-head strong {
+  color: #dce1e5;
+  font-size: 9px;
+}
+
+.battle-turn-route b {
+  color: #bfc7ce;
+  font-size: 9px;
+}
+
+.battle-turn-route > span {
+  color: #68737e;
+  font-size: 9px;
+}
+
+.battle-turn-damage,
+.battle-turn-healing {
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.battle-turn-damage {
+  background: rgba(155, 78, 67, .14);
+  color: #d3988d;
+}
+
+.battle-turn-healing {
+  background: rgba(78, 127, 92, .14);
+  color: #9fbea8;
+}
+
+.battle-turn-row p {
+  margin: 0;
+  color: #87929d;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.duel-history-entry {
+  display: grid;
+  border-bottom: 1px solid #29313a;
+}
+
+.duel-history-entry:last-child {
+  border-bottom: 0;
+}
+
+.duel-history-entry .duel-history-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.duel-history-result {
+  justify-items: end;
+}
+
+.duel-history-result small {
+  color: #6f7984;
+  font-size: 7px;
+}
+
+.duel-history-turns {
+  padding: 0 0 10px;
+}
+
+@media (max-width: 720px) {
+  .battle-turn-log,
+  .battle-turn-log.compact {
+    max-height: none;
+  }
+
+  .duel-history-result {
+    justify-items: start;
+  }
+}

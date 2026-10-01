@@ -2,6 +2,7 @@ import { userFacingError } from '../lib/userError'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
+import { BattleTurnLog, type BattleTurnLogEntry } from './BattleTurnLog'
 
 const AdventuresPanel = lazy(() => import('./AdventuresPanel').then((module) => ({ default: module.AdventuresPanel })))
 const PartyPanel = lazy(() => import('./PartyPanel').then((module) => ({ default: module.PartyPanel })))
@@ -123,6 +124,7 @@ type BattleDetail = {
   reward?: BattleReward
   consumables?: BattleConsumableUsage[]
   consumables_complete?: boolean
+  turns?: BattleTurnLogEntry[]
 }
 
 const emptyOverview: BattleOverview = {
@@ -241,7 +243,7 @@ export function BattleCenterPanel({
     setDetailLoading(true)
     setSelected(null)
 
-    const [detailResult, economyResult] = await Promise.all([
+    const [detailResult, economyResult, turnsResult] = await Promise.all([
       supabase.rpc('get_battle_history_detail', {
         p_character_id: characterId,
         p_kind: entry.kind,
@@ -252,16 +254,24 @@ export function BattleCenterPanel({
         p_kind: entry.kind,
         p_battle_id: entry.battle_id,
       }),
+      supabase.rpc('get_battle_turn_log', {
+        p_character_id: characterId,
+        p_kind: entry.kind,
+        p_battle_id: entry.battle_id,
+      }),
     ])
 
     if (detailResult.error) {
       setMessage(userFacingError(detailResult.error.message))
     } else if (economyResult.error) {
       setMessage(userFacingError(economyResult.error.message))
+    } else if (turnsResult.error) {
+      setMessage(userFacingError(turnsResult.error.message))
     } else {
       const detail = (detailResult.data as BattleDetail | null) ?? null
       const economy = (economyResult.data as BattleEconomyDetail | null) ?? null
-      setSelected(detail && economy ? { ...detail, ...economy } : detail)
+      const turns = (turnsResult.data as BattleTurnLogEntry[] | null) ?? []
+      setSelected(detail ? { ...detail, ...(economy ?? {}), turns } : null)
     }
     setDetailLoading(false)
   }
@@ -447,7 +457,7 @@ export function BattleCenterPanel({
               <>
                 <span className="eyebrow">ПОДРОБНОСТИ</span>
                 <h3>Выбери бой слева</h3>
-                <p className="muted">Здесь будут участники, урон, итоговое ОЗ и экипировка на момент начала боя.</p>
+                <p className="muted">Здесь будут участники, урон, каждый ход, итоговое ОЗ и экипировка на момент начала боя.</p>
               </>
             ) : (
               <>
@@ -519,6 +529,17 @@ export function BattleCenterPanel({
                     Общий урон эффектов группы без однозначного автора: <b>{selected.unattributed_effect_damage}</b>
                   </p>
                 )}
+
+                <div className="battle-history-turns">
+                  <div className="battle-economy-heading">
+                    <span>ХОД ЗА ХОДОМ</span>
+                    <strong>Боевой журнал</strong>
+                  </div>
+                  <p className="muted">
+                    Кто действовал, по кому пришёлся ход и сколько урона или лечения прошло.
+                  </p>
+                  <BattleTurnLog turns={selected.turns ?? []} />
+                </div>
 
                 <div className="battle-history-economy">
                   <div className="battle-economy-card">

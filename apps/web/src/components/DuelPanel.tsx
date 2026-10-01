@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
+import { BattleTurnLog, type BattleTurnLogEntry } from './BattleTurnLog'
 import type { BowDistance, BowProfile, CharacterSpell, CombatStatusEffectType } from '../types'
 
 function isBowProfile(profile: BowProfile | null | undefined): profile is BowProfile & { weapon_family: 'short_bow' | 'long_bow' } {
@@ -177,6 +178,9 @@ export function DuelPanel({ characterId }: Props) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
+  const [historySelectedId, setHistorySelectedId] = useState<string | null>(null)
+  const [historyTurns, setHistoryTurns] = useState<BattleTurnLogEntry[]>([])
+  const [historyTurnsLoading, setHistoryTurnsLoading] = useState(false)
 
   const { beginAction, endAction } = useActionGate(setBusy, '', setMessage)
 
@@ -292,6 +296,33 @@ export function DuelPanel({ characterId }: Props) {
   const opponentStatuses = opponent
     ? details?.statuses.filter((status) => status.target_character_id === opponent.character_id) ?? []
     : []
+
+  async function openHistoryDuel(duel: DuelSummary) {
+    if (historySelectedId === duel.id) {
+      setHistorySelectedId(null)
+      setHistoryTurns([])
+      return
+    }
+
+    setHistorySelectedId(duel.id)
+    setHistoryTurns([])
+    setHistoryTurnsLoading(true)
+
+    const { data, error } = await supabase.rpc('get_battle_turn_log', {
+      p_character_id: characterId,
+      p_kind: 'pvp',
+      p_battle_id: duel.id,
+    })
+
+    if (error) {
+      setMessage(duelError(error.message))
+      setHistorySelectedId(null)
+    } else {
+      setHistoryTurns((data as BattleTurnLogEntry[] | null) ?? [])
+    }
+
+    setHistoryTurnsLoading(false)
+  }
 
   async function challenge(player: DuelPlayer) {
     if (!beginAction('challenge-' + player.character_id)) return
@@ -748,20 +779,41 @@ export function DuelPanel({ characterId }: Props) {
                 ? duel.opponent_name
                 : duel.challenger_name
               const label = duelResultLabel(duel, characterId)
+              const expanded = historySelectedId === duel.id
 
               return (
-                <div className="duel-history-row" key={duel.id}>
-                  <div>
-                    <strong>{opponentName}</strong>
-                    <span>{new Date(duel.created_at).toLocaleString('ru-RU')}</span>
-                  </div>
-                  <b className={
-                    label === 'Победа' ? 'win'
-                      : label === 'Поражение' ? 'loss'
-                        : ''
-                  }>
-                    {label}
-                  </b>
+                <div className={'duel-history-entry' + (expanded ? ' expanded' : '')} key={duel.id}>
+                  <button
+                    className="duel-history-row"
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => void openHistoryDuel(duel)}
+                  >
+                    <div>
+                      <strong>{opponentName}</strong>
+                      <span>{new Date(duel.created_at).toLocaleString('ru-RU')}</span>
+                    </div>
+                    <div className="duel-history-result">
+                      <b className={
+                        label === 'Победа' ? 'win'
+                          : label === 'Поражение' ? 'loss'
+                            : ''
+                      }>
+                        {label}
+                      </b>
+                      <small>{expanded ? 'Скрыть ходы' : 'Показать ходы'}</small>
+                    </div>
+                  </button>
+
+                  {expanded && (
+                    <div className="duel-history-turns">
+                      {historyTurnsLoading ? (
+                        <p className="muted">Загружаем ходы дуэли…</p>
+                      ) : (
+                        <BattleTurnLog turns={historyTurns} compact />
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
