@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
   BlacksmithAffix,
+  BlacksmithAffixItem,
   BlacksmithDuplicate,
   BlacksmithWeapon,
   ItemRarity,
@@ -56,6 +57,12 @@ const statLabels: Record<string, string> = {
   luck: 'УД',
 }
 
+const affixCategoryLabels: Record<BlacksmithAffixItem['category'], string> = {
+  weapon: 'Оружие',
+  armor: 'Броня',
+  accessory: 'Аксессуар',
+}
+
 const effectLabels: Record<string, string> = {
   lifesteal: 'Вампиризм',
   mana_on_hit: 'Мана за удар',
@@ -80,8 +87,9 @@ function blacksmithError(raw: string) {
   if (raw.includes('AFFIX_REROLL_LOCKED')) return 'Перековка аффиксов открывается у кузнеца поселения 3 уровня.'
   if (raw.includes('AWAKENING_SERVICE_LOCKED')) return 'Пробуждение открывается у кузнеца поселения 3 уровня.'
   if (raw.includes('AFFIX_SLOTS_FULL')) return 'Все слоты аффиксов уже заняты.'
-  if (raw.includes('ITEM_HAS_NO_AFFIX_SLOTS')) return 'У этого оружия нет слотов под аффиксы.'
-  if (raw.includes('NO_ELIGIBLE_AFFIX')) return 'Для этого оружия сейчас нет подходящего аффикса.'
+  if (raw.includes('ITEM_HAS_NO_AFFIX_SLOTS')) return 'У этого предмета нет слотов под аффиксы.'
+  if (raw.includes('NO_ELIGIBLE_AFFIX')) return 'Для этого предмета сейчас нет подходящего аффикса.'
+  if (raw.includes('ITEM_IS_NOT_EQUIPMENT')) return 'Этот предмет нельзя перековывать.'
   if (raw.includes('NO_ALTERNATIVE_AFFIX')) return 'Не найден другой подходящий аффикс для перековки.'
   if (raw.includes('SOURCE_ITEM_EQUIPPED')) return 'Нельзя поглотить экипированную копию оружия.'
   if (raw.includes('ITEMS_NOT_IDENTICAL')) return 'Для пробуждения нужна точно такая же модель оружия.'
@@ -133,6 +141,7 @@ export function BlacksmithPanel({
   onInventoryChanged,
 }: Props) {
   const [weapons, setWeapons] = useState<BlacksmithWeapon[]>([])
+  const [affixItems, setAffixItems] = useState<BlacksmithAffixItem[]>([])
   const [tab, setTab] = useState<ForgeTab>('enhance')
   const [loading, setLoading] = useState(true)
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -143,8 +152,12 @@ export function BlacksmithPanel({
   async function loadWeapons(silent = false) {
     if (!silent) setLoading(true)
 
-    const [weaponResult, markResult] = await Promise.all([
+    const [weaponResult, affixResult, markResult] = await Promise.all([
       supabase.rpc('get_settlement_blacksmith_v2', {
+        p_character_id: characterId,
+        p_sector_id: sectorId,
+      }),
+      supabase.rpc('get_settlement_blacksmith_affixes', {
         p_character_id: characterId,
         p_sector_id: sectorId,
       }),
@@ -153,14 +166,16 @@ export function BlacksmithPanel({
       }),
     ])
 
-    if (weaponResult.error) {
-      setMessage(blacksmithError(weaponResult.error.message))
+    if (weaponResult.error || affixResult.error) {
+      setMessage(blacksmithError((weaponResult.error ?? affixResult.error)?.message ?? 'Не удалось загрузить кузницу.'))
       setWeapons([])
+      setAffixItems([])
       if (!silent) setLoading(false)
       return
     }
 
     setWeapons((weaponResult.data as BlacksmithWeapon[] | null) ?? [])
+    setAffixItems((affixResult.data as BlacksmithAffixItem[] | null) ?? [])
     if (!markResult.error) {
       setTemperingMarks(Number(markResult.data ?? 0))
     }
@@ -176,10 +191,10 @@ export function BlacksmithPanel({
 
   const rules = useMemo(() => ({
     maxEnhancement: weapons[0]?.max_enhancement ?? 0,
-    affixApply: weapons[0]?.affix_apply_unlocked ?? settlementLevel >= 2,
-    affixReroll: weapons[0]?.affix_reroll_unlocked ?? settlementLevel >= 3,
+    affixApply: affixItems[0]?.affix_apply_unlocked ?? weapons[0]?.affix_apply_unlocked ?? settlementLevel >= 2,
+    affixReroll: affixItems[0]?.affix_reroll_unlocked ?? weapons[0]?.affix_reroll_unlocked ?? settlementLevel >= 3,
     awakening: weapons[0]?.awakening_unlocked ?? settlementLevel >= 3,
-  }), [weapons, settlementLevel])
+  }), [weapons, affixItems, settlementLevel])
 
   async function refreshAfterMutation(copy: string) {
     await Promise.all([
@@ -249,15 +264,15 @@ export function BlacksmithPanel({
     )
   }
 
-  async function applyAffix(weapon: BlacksmithWeapon) {
-    const key = `affix:${weapon.character_item_id}`
+  async function applyAffix(item: BlacksmithAffixItem) {
+    const key = `affix:${item.character_item_id}`
     setBusyKey(key)
     setMessage('')
 
-    const { data, error } = await supabase.rpc('apply_weapon_affix_at_blacksmith', {
+    const { data, error } = await supabase.rpc('apply_equipment_affix_at_blacksmith', {
       p_character_id: characterId,
       p_sector_id: sectorId,
-      p_character_item_id: weapon.character_item_id,
+      p_character_item_id: item.character_item_id,
     })
 
     if (error) {
@@ -270,27 +285,27 @@ export function BlacksmithPanel({
     const affix = row?.added_affix as BlacksmithAffix | undefined
     await refreshAfterMutation(
       affix
-        ? `На «${weapon.custom_name || weapon.item_name}» наложен аффикс «${affix.name}».`
+        ? `На «${item.custom_name || item.item_name}» наложен аффикс «${affix.name}».`
         : 'Аффикс наложен.',
     )
   }
 
-  async function rerollAffix(weapon: BlacksmithWeapon, affix: BlacksmithAffix, slotIndex: number) {
-    const quote = weapon.reroll_costs.find((entry) => Number(entry.slot) === slotIndex + 1)
+  async function rerollAffix(item: BlacksmithAffixItem, affix: BlacksmithAffix, slotIndex: number) {
+    const quote = item.reroll_costs.find((entry) => Number(entry.slot) === slotIndex + 1)
     const cost = Number(quote?.cost ?? 0)
 
     if (!window.confirm(
       `Перековать аффикс «${affix.name}» за ${cost.toLocaleString('ru-RU')} золота? Остальные аффиксы сохранятся.`,
     )) return
 
-    const key = `reroll:${weapon.character_item_id}:${affix.id}`
+    const key = `reroll:${item.character_item_id}:${affix.id}`
     setBusyKey(key)
     setMessage('')
 
-    const { data, error } = await supabase.rpc('reroll_weapon_affix_at_blacksmith', {
+    const { data, error } = await supabase.rpc('reroll_equipment_affix_at_blacksmith', {
       p_character_id: characterId,
       p_sector_id: sectorId,
-      p_character_item_id: weapon.character_item_id,
+      p_character_item_id: item.character_item_id,
       p_affix_id: affix.id,
     })
 
@@ -399,8 +414,8 @@ export function BlacksmithPanel({
           <span className="eyebrow">КУЗНЕЦ</span>
           <h4>{settlementName}</h4>
           <p>
-            Заточка повышает базовый урон, пробуждение использует одинаковые копии оружия,
-            а аффиксы позволяют собирать собственный билд.
+            Заточка и пробуждение работают с оружием, а аффиксы можно накладывать
+            и перековывать на оружии, броне и аксессуарах.
           </p>
         </div>
         <span className="badge">поселение ур. {settlementLevel}</span>
@@ -427,8 +442,10 @@ export function BlacksmithPanel({
 
       {message && <p className="form-message" aria-live="polite">{message}</p>}
 
-      {weapons.length === 0 ? (
-        <div className="blacksmith-empty">В инвентаре нет оружия для работы кузнеца.</div>
+      {tab !== 'affixes' && weapons.length === 0 ? (
+        <div className="blacksmith-empty">В инвентаре нет оружия для этой услуги кузнеца.</div>
+      ) : tab === 'affixes' && affixItems.length === 0 ? (
+        <div className="blacksmith-empty">В инвентаре нет экипировки для работы с аффиксами.</div>
       ) : tab === 'enhance' ? (
         <>
           <div className="settlement-shop-rule">
@@ -615,7 +632,7 @@ export function BlacksmithPanel({
       ) : (
         <>
           <div className="settlement-shop-rule">
-            <strong>Слоты аффиксов зависят только от редкости.</strong>
+            <strong>Аффиксы работают на оружии, броне и аксессуарах.</strong>
             <span>Common 0 · Uncommon 1 · Rare 2 · Epic 3 · Unique 4 · Legendary 5. Перековка меняет один выбранный аффикс и сохраняет остальные.</span>
           </div>
 
@@ -625,33 +642,34 @@ export function BlacksmithPanel({
             </div>
           ) : (
             <div className="blacksmith-grid">
-              {weapons.map((weapon) => {
-                const busy = busyKey?.includes(weapon.character_item_id) ?? false
+              {affixItems.map((item) => {
+                const busy = busyKey?.includes(item.character_item_id) ?? false
                 return (
-                  <article className={'blacksmith-card blacksmith-affix-card rarity-' + weapon.rarity} key={weapon.character_item_id}>
+                  <article className={'blacksmith-card blacksmith-affix-card rarity-' + item.rarity} key={item.character_item_id}>
                     <div className="blacksmith-title-row">
                       <div>
                         <div className="blacksmith-tags">
-                          <span className="rarity-label">{rarityLabels[weapon.rarity]}</span>
-                          {weapon.is_equipped && <span className="blacksmith-equipped">Экипировано</span>}
+                          <span className="rarity-label">{rarityLabels[item.rarity]}</span>
+                          <span className="badge">{affixCategoryLabels[item.category]}</span>
+                          {item.is_equipped && <span className="blacksmith-equipped">Экипировано</span>}
                         </div>
-                        <h5>{weapon.custom_name || weapon.item_name}</h5>
+                        <h5>{item.custom_name || item.item_name}</h5>
                       </div>
-                      <span className="blacksmith-level">{weapon.affix_count}/{weapon.affix_slots}</span>
+                      <span className="blacksmith-level">{item.affix_count}/{item.affix_slots}</span>
                     </div>
 
-                    <div className="blacksmith-slot-row" aria-label={`Аффиксы ${weapon.affix_count} из ${weapon.affix_slots}`}>
-                      {weapon.affix_slots === 0
+                    <div className="blacksmith-slot-row" aria-label={`Аффиксы ${item.affix_count} из ${item.affix_slots}`}>
+                      {item.affix_slots === 0
                         ? <span className="no-slots">Нет слотов</span>
-                        : Array.from({ length: weapon.affix_slots }, (_, index) => (
-                          <span className={index < weapon.affix_count ? 'filled' : ''} key={index}>◆</span>
+                        : Array.from({ length: item.affix_slots }, (_, index) => (
+                          <span className={index < item.affix_count ? 'filled' : ''} key={index}>◆</span>
                         ))}
                     </div>
 
-                    {weapon.affixes.length > 0 && (
+                    {item.affixes.length > 0 && (
                       <div className="blacksmith-affix-list">
-                        {weapon.affixes.map((affix, index) => {
-                          const rerollQuote = weapon.reroll_costs.find((entry) => Number(entry.slot) === index + 1)
+                        {item.affixes.map((affix, index) => {
+                          const rerollQuote = item.reroll_costs.find((entry) => Number(entry.slot) === index + 1)
                           return (
                             <div className="blacksmith-affix-row" key={affix.id}>
                               <div>
@@ -663,7 +681,7 @@ export function BlacksmithPanel({
                                   className="ghost-button"
                                   type="button"
                                   disabled={busyKey !== null}
-                                  onClick={() => void rerollAffix(weapon, affix, index)}
+                                  onClick={() => void rerollAffix(item, affix, index)}
                                 >
                                   Перековать · {Number(rerollQuote?.cost ?? 0).toLocaleString('ru-RU')}
                                 </button>
@@ -674,31 +692,31 @@ export function BlacksmithPanel({
                       </div>
                     )}
 
-                    {weapon.affix_slots === 0 ? (
-                      <div className="blacksmith-locked">Обычное оружие не имеет слотов аффиксов.</div>
-                    ) : weapon.affix_count < weapon.affix_slots ? (
+                    {item.affix_slots === 0 ? (
+                      <div className="blacksmith-locked">Обычная экипировка не имеет слотов аффиксов.</div>
+                    ) : item.affix_count < item.affix_slots ? (
                       <button
                         className="primary-button"
                         type="button"
-                        disabled={busyKey !== null || !weapon.can_add_affix || !weapon.can_afford_affix}
-                        onClick={() => void applyAffix(weapon)}
+                        disabled={busyKey !== null || !item.can_add_affix || !item.can_afford_affix}
+                        onClick={() => void applyAffix(item)}
                       >
                         {busy
                           ? 'Накладываем…'
-                          : !weapon.can_afford_affix
-                            ? `Нужно ${Number(weapon.next_affix_cost ?? 0).toLocaleString('ru-RU')} золота`
-                            : `Наложить аффикс · ${Number(weapon.next_affix_cost ?? 0).toLocaleString('ru-RU')}`}
+                          : !item.can_afford_affix
+                            ? `Нужно ${Number(item.next_affix_cost ?? 0).toLocaleString('ru-RU')} золота`
+                            : `Наложить аффикс · ${Number(item.next_affix_cost ?? 0).toLocaleString('ru-RU')}`}
                       </button>
                     ) : (
                       <div className="blacksmith-maxed">
-                        Все {weapon.affix_slots} слота заполнены.
+                        Все {item.affix_slots} слота заполнены.
                         {!rules.affixReroll && ' Перековка откроется у кузнеца 3 уровня.'}
                       </div>
                     )}
 
-                    {weapon.affix_reroll_count > 0 && (
+                    {item.affix_reroll_count > 0 && (
                       <small className="blacksmith-reroll-note">
-                        Перековок этого предмета: {weapon.affix_reroll_count}. Повторные перековки постепенно дорожают.
+                        Перековок этого предмета: {item.affix_reroll_count}. Повторные перековки постепенно дорожают.
                       </small>
                     )}
                   </article>
@@ -706,6 +724,7 @@ export function BlacksmithPanel({
               })}
             </div>
           )}
+        </>
         </>
       )}
     </section>
