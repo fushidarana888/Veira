@@ -338,10 +338,10 @@ export function CampPanel({
     )
   }
 
-  async function refuel() {
+  async function repair() {
     await run(
-      () => supabase.rpc('refuel_character_camp', { p_character_id: characterId }),
-      'Запасы пополнены: срок лагеря продлён.',
+      () => supabase.rpc('repair_character_camp', { p_character_id: characterId }),
+      'Лагерь отремонтирован. Следующий ремонт понадобится через 7 дней.',
       true,
     )
   }
@@ -530,7 +530,7 @@ export function CampPanel({
         <span className="eyebrow">ПОЛЕВАЯ БАЗА</span>
         <h4>Разбить лагерь</h4>
         <p className="muted">
-          Лагерь ставится бесплатно на 5 дней. Сам по себе он не даёт боевых бонусов: возможности появляются через постройки и действия.
+          Лагерь ставится бесплатно и может стоять сколько угодно. Раз в 7 дней его нужно чинить лагерными ресурсами, иначе база будет разобрана автоматически. Сам по себе лагерь не даёт боевых бонусов: возможности появляются через постройки и действия.
         </p>
         {message && <p className="form-message">{message}</p>}
         <button
@@ -566,6 +566,13 @@ export function CampPanel({
     : false
   const moduleCount = state?.modules.length ?? 0
   const resources = state?.resources ?? { field_timber: 0, field_fiber: 0, smithing_scrap: 0 }
+  const repairCost = camp.camp_level <= 1
+    ? { timber: 3, fiber: 2 }
+    : camp.camp_level === 2
+      ? { timber: 5, fiber: 3 }
+      : { timber: 7, fiber: 5 }
+  const repairDueMs = new Date(camp.expires_at).getTime()
+  const repairUrgent = repairDueMs - tick <= 24 * 60 * 60 * 1000
 
   return (
     <div className="camp-system-card">
@@ -574,7 +581,7 @@ export function CampPanel({
           <span className="eyebrow">{isOwner ? 'ТВОЯ ПОЛЕВАЯ БАЗА' : 'ЧУЖОЙ ЛАГЕРЬ'}</span>
           <h4>{camp.owner_name} · уровень {camp.camp_level}</h4>
           <p className="muted">
-            Сектор #{camp.sector_id} · до {timeLabel(camp.expires_at)} · построек {moduleCount}/{camp.module_slots}
+            Сектор #{camp.sector_id} · следующий ремонт до {timeLabel(camp.expires_at)} · построек {moduleCount}/{camp.module_slots}
           </p>
         </div>
         <span className="badge">{accessLabels[camp.access_mode]}</span>
@@ -588,6 +595,24 @@ export function CampPanel({
             <span>Полевой лес <b>{resources.field_timber}</b></span>
             <span>Волокно <b>{resources.field_fiber}</b></span>
             <span>Кузнечный лом <b>{resources.smithing_scrap}</b></span>
+          </div>
+
+          <div className={'camp-maintenance-card ' + (repairUrgent ? 'urgent' : '')}>
+            <div>
+              <span className="eyebrow">ОБСЛУЖИВАНИЕ ЛАГЕРЯ</span>
+              <strong>{repairUrgent ? 'Нужен ремонт' : 'Лагерь в порядке'}</strong>
+              <small>
+                Следующий ремонт до {timeLabel(camp.expires_at)} · стоимость: {repairCost.timber} полевого леса + {repairCost.fiber} прочного волокна.
+              </small>
+            </div>
+            <button
+              className={repairUrgent ? 'primary-button' : 'ghost-button'}
+              type="button"
+              disabled={busy || resources.field_timber < repairCost.timber || resources.field_fiber < repairCost.fiber}
+              onClick={() => void repair()}
+            >
+              Вложить ресурсы в ремонт · +7 дней
+            </button>
           </div>
 
           <div className="camp-owner-actions">
@@ -604,15 +629,12 @@ export function CampPanel({
                 Улучшить до ур. {camp.camp_level + 1}
               </button>
             )}
-            <button className="ghost-button" type="button" disabled={busy} onClick={() => void refuel()}>
-              Продлить +48 ч
-            </button>
             <button className="danger-button" type="button" disabled={busy} onClick={() => void dismantle()}>
               Свернуть
             </button>
           </div>
           <small className="muted">
-            Улучшение 2: 6 леса + 4 волокна · улучшение 3: 10 леса + 6 волокон + 2 лома · продление: 2 леса + 1 волокно.
+            Улучшение 2: 6 леса + 4 волокна · улучшение 3: 10 леса + 6 волокон + 2 лома. Ремонт не накапливает недели вперёд: после каждого ремонта новый срок считается на 7 дней от текущего момента.
           </small>
         </>
       )}

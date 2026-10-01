@@ -217,7 +217,7 @@ export function ActivityJournalPanel({ characterId, onProgressChanged }: Props) 
               <p className="muted">
                 Сектор #{journal.camp.sector_id} · построек {journal.camp.module_count}/{journal.camp.module_slots}
                 {' '}· склад {journal.camp.storage_used}/{journal.camp.storage_capacity}
-                {' '}· до {formatTime(journal.camp.expires_at)}.
+                {' '}· ремонт до {formatTime(journal.camp.expires_at)}.
               </p>
               <button className="ghost-button" type="button" disabled={busy} onClick={() => void removeCamp()}>
                 {busy ? 'Сворачиваем…' : 'Свернуть лагерь'}
@@ -226,7 +226,7 @@ export function ActivityJournalPanel({ characterId, onProgressChanged }: Props) 
           ) : (
             <>
               <h3>Лагерь не установлен</h3>
-              <p className="muted">Выбери открытый дикий сектор на карте и разбей полевую базу. Возможности лагеря открываются постройками, а не покупкой пассивного бафа.</p>
+              <p className="muted">Выбери открытый дикий сектор на карте и разбей полевую базу. Лагерь может стоять сколько угодно, но раз в 7 дней требует ремонта ресурсами.</p>
             </>
           )}
         </article>
@@ -267,7 +267,12 @@ export function ActivityJournalPanel({ characterId, onProgressChanged }: Props) 
               <div className="activity-entry-info">
                 <span><small>Награда / смысл</small><b>{entry.reward_hint}</b></span>
                 <span><small>Что делать</small><b>{entry.action_hint}</b></span>
-                {endsAt && <span><small>Срок / возвращение</small><b>{endsAt}</b></span>}
+                {endsAt && (
+                  <span>
+                    <small>{entry.kind === 'camp' ? 'Ремонт до' : 'Срок / возвращение'}</small>
+                    <b>{endsAt}</b>
+                  </span>
+                )}
               </div>
             </article>
           )

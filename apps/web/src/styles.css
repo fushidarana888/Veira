@@ -14364,3 +14364,36 @@ html.native-app .bottom-nav {
 .hunting-last-result small {
   color: var(--muted);
 }
+
+
+.camp-maintenance-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(143, 170, 120, .28);
+  border-radius: 11px;
+  background: rgba(70, 90, 55, .12);
+}
+
+.camp-maintenance-card > div {
+  display: grid;
+  gap: 4px;
+}
+
+.camp-maintenance-card small {
+  color: var(--muted);
+}
+
+.camp-maintenance-card.urgent {
+  border-color: rgba(195, 132, 87, .42);
+  background: rgba(111, 64, 38, .16);
+}
+
+@media (max-width: 760px) {
+  .camp-maintenance-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

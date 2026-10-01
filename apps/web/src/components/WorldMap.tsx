@@ -1853,7 +1853,12 @@ export function WorldMap({
                     {marker.kind === 'treasure' && marker.total_stages && (
                       <small>Этап {marker.stage ?? 1}/{marker.total_stages} · риск {marker.risk_level ?? 0}/3</small>
                     )}
-                    {marker.ends_at && <small>Действует до {new Date(marker.ends_at).toLocaleString('ru-RU')}</small>}
+                    {marker.ends_at && (
+                      <small>
+                        {marker.kind === 'camp' ? 'Ремонт до ' : 'Действует до '}
+                        {new Date(marker.ends_at).toLocaleString('ru-RU')}
+                      </small>
+                    )}
                   </div>
                 ))}
               </div>
