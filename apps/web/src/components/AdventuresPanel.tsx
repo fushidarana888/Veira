@@ -556,13 +556,13 @@ export function AdventuresPanel({
     }
   }
 
-  async function startDungeon(site: CharacterAdventureSite) {
+  async function startDungeonBySector(sectorId: number) {
     if (!beginAction(true)) return
     setMessage('')
 
     const { data: runData, error } = await supabase.rpc('start_dungeon_run', {
       p_character_id: characterId,
-      p_sector_id: site.sector_id,
+      p_sector_id: sectorId,
     })
 
     if (error) {
@@ -613,8 +613,15 @@ export function AdventuresPanel({
       return
     }
 
+    await loadAdventures(true)
+    await Promise.resolve(onProgressChanged?.())
+    setMessage('Новое прохождение начато.')
     endAction()
     onOpenBattles?.()
+  }
+
+  async function startDungeon(site: CharacterAdventureSite) {
+    await startDungeonBySector(site.sector_id)
   }
 
   async function startCombat(runId: string) {
@@ -2501,6 +2508,31 @@ export function AdventuresPanel({
           <p className="combat-result-sticky-note">
             Этот результат останется в «Бои → Сейчас», пока ты не выйдешь из раздела.
           </p>
+
+          {latestCombat.status === 'victory'
+            && latestCombatSite?.content_type === 'dungeon'
+            && !latestCombatSite.is_event_boss
+            && latestCombatSite.run_status === 'completed' && (
+              <div className="combat-result-repeat">
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void startDungeonBySector(latestCombatSite.sector_id)}
+                >
+                  Пройти этот данж ещё раз
+                </button>
+                <span>
+                  Новое прохождение начнётся сразу здесь, без возврата на карту.
+                  {latestCombatSite.run_reward_attempt_number !== null
+                    ? ` Следующая попытка: ${latestCombatSite.run_reward_attempt_number + 1}.`
+                    : ''}
+                  {(latestCombatSite.run_reward_attempt_number ?? 0) >= 25
+                    ? ' Лимит наград текущего 18-часового цикла уже исчерпан.'
+                    : ''}
+                </span>
+              </div>
+            )}
 
           {turns.length > 0 && (
             <div className="combat-log combat-result-log">
