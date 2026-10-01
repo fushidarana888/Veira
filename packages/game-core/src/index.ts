@@ -60,7 +60,7 @@ export function baseHpMax(level: number, vitality: number): number {
 export function baseManaMax(level: number, intellect: number): number {
   const safeLevel = Math.max(1, Math.floor(level))
   const safeIntellect = Math.max(0, Math.floor(intellect))
-  return Math.max(20, Math.round(30 + safeIntellect * 4.9 + (safeLevel - 1) * 4))
+  return Math.max(20, Math.round(30 + safeIntellect * 4.9 + (safeLevel - 1) * 2))
 }
 
 export function calculateDerivedCombatStats(
