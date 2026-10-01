@@ -12151,6 +12151,19 @@ textarea {
   line-height: 1.4;
 }
 
+.character-trophy-bonus {
+  width: fit-content;
+  margin-top: 2px;
+  border: 1px solid rgba(116, 164, 104, .30);
+  border-radius: 999px;
+  background: rgba(75, 124, 67, .12);
+  padding: 4px 7px;
+  color: #a9d3a1;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
 .character-trophy-item b {
   position: absolute;
   top: 10px;
