@@ -174,8 +174,11 @@ export function BlacksmithPanel({
       return
     }
 
-    setWeapons((weaponResult.data as BlacksmithWeapon[] | null) ?? [])
-    setAffixItems((affixResult.data as BlacksmithAffixItem[] | null) ?? [])
+    const nextWeapons = (weaponResult.data as BlacksmithWeapon[] | null) ?? []
+    const nextAffixItems = (affixResult.data as BlacksmithAffixItem[] | null) ?? []
+
+    setWeapons([...nextWeapons].sort((left, right) => Number(right.is_equipped) - Number(left.is_equipped)))
+    setAffixItems([...nextAffixItems].sort((left, right) => Number(right.is_equipped) - Number(left.is_equipped)))
     if (!markResult.error) {
       setTemperingMarks(Number(markResult.data ?? 0))
     }
