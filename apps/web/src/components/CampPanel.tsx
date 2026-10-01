@@ -299,7 +299,11 @@ export function CampPanel({
     [inventoryCandidates],
   )
 
-  async function run(action: () => Promise<{ error: { message: string } | null }>, success: string, inventoryChanged = false) {
+  async function run(
+    action: () => PromiseLike<{ error: { message: string } | null }>,
+    success: string,
+    inventoryChanged = false,
+  ) {
     if (busy) return
     setBusy(true)
     setMessage('')
