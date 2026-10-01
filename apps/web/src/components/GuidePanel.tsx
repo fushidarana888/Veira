@@ -215,7 +215,7 @@ const sections: Array<{ id: GuideSection; label: string; description: string }> 
   { id: 'newcomer', label: 'Новичку', description: 'Что делать, характеристики, урон и билды' },
   { id: 'races', label: 'Расы', description: 'Все игровые расы и их особенности' },
   { id: 'religions', label: 'Религии', description: 'Вера, уровни, клятвы и источники' },
-  { id: 'mechanics', label: 'Основы', description: 'Характеристики, урон и крит' },
+  { id: 'mechanics', label: 'Основы', description: 'Характеристики, ресурсы, защита, ходы и крит' },
   { id: 'weapons', label: 'Оружие', description: 'Семейства и весь каталог' },
   { id: 'armor', label: 'Броня', description: 'Броня, защиты и свойства' },
   { id: 'accessories', label: 'Аксессуары', description: 'Талисманы и дополнительные эффекты' },
