@@ -442,6 +442,7 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
     name: string
     description: string
     quantity: number
+    bonus_text: string
   }>>([])
   const [inventoryHydrated, setInventoryHydrated] = useState(false)
   const [inventoryBusy, setInventoryBusy] = useState(false)
@@ -540,6 +541,7 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
       name: string
       description: string
       quantity: number
+      bonus_text: string
     }> | null) ?? []
 
     setTrophies(next)
@@ -1725,7 +1727,7 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
                     <div>
                       <span className="eyebrow">ТРОФЕИ</span>
                       <h2>Витрина охотника</h2>
-                      <p className="muted">Редкие хранители оставляют вещи, которые остаются частью истории персонажа.</p>
+                      <p className="muted">Каждый уникальный трофей хранителя даёт небольшой постоянный боевой бонус. Копии одного трофея не усиливают эффект повторно.</p>
                     </div>
                     <span className="badge">{trophies.reduce((sum, trophy) => sum + trophy.quantity, 0)}</span>
                   </div>
@@ -1734,6 +1736,9 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
                       <div className="character-trophy-item" key={trophy.slug}>
                         <strong>{trophy.name}</strong>
                         <small>{trophy.description}</small>
+                        {trophy.bonus_text && (
+                          <span className="character-trophy-bonus">{trophy.bonus_text}</span>
+                        )}
                         {trophy.quantity > 1 && <b>×{trophy.quantity}</b>}
                       </div>
                     ))}
