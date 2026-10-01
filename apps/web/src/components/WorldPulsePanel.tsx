@@ -47,6 +47,13 @@ type TreasureHunt = {
   ready: boolean
 }
 
+type TreasureExpedition = {
+  id: string
+  treasure_hunt_id: string | null
+  status: string
+  ends_at: string
+}
+
 type MerchantOffer = {
   item_definition_id: string
   slug: string
@@ -177,6 +184,7 @@ export function WorldPulsePanel({
   dungeonEventMode = 'interactive',
 }: Props) {
   const [pulse, setPulse] = useState<WorldPulse | null>(null)
+  const [treasureExpeditions, setTreasureExpeditions] = useState<Record<string, TreasureExpedition>>({})
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
@@ -187,17 +195,45 @@ export function WorldPulsePanel({
   async function loadPulse(silent = false) {
     if (!silent) setLoading(true)
 
-    const { data, error } = await supabase.rpc('get_world_pulse', {
+    const refreshResult = await supabase.rpc('refresh_treasure_hunt_expeditions', {
       p_character_id: characterId,
     })
 
-    if (error) {
-      if (!silent) setMessage(userFacingError(error.message, 'Не удалось обновить события мира.'))
+    const [pulseResult, expeditionResult] = await Promise.all([
+      supabase.rpc('get_world_pulse', {
+        p_character_id: characterId,
+      }),
+      supabase
+        .from('sector_expeditions')
+        .select('id, treasure_hunt_id, status, ends_at')
+        .eq('character_id', characterId)
+        .eq('status', 'active')
+        .not('treasure_hunt_id', 'is', null),
+    ])
+
+    if (pulseResult.error) {
+      if (!silent) setMessage(userFacingError(pulseResult.error.message, 'Не удалось обновить события мира.'))
       setLoading(false)
       return null
     }
 
-    const next = (data as WorldPulse | null) ?? null
+    const nextExpeditions: Record<string, TreasureExpedition> = {}
+    if (!expeditionResult.error) {
+      for (const expedition of (expeditionResult.data as TreasureExpedition[] | null) ?? []) {
+        if (expedition.treasure_hunt_id) {
+          nextExpeditions[expedition.treasure_hunt_id] = expedition
+        }
+      }
+    }
+
+    if (!silent && refreshResult.error) {
+      setMessage(userFacingError(refreshResult.error.message, 'Не удалось обновить поход к тайнику.'))
+    } else if (!silent && expeditionResult.error) {
+      setMessage(userFacingError(expeditionResult.error.message, 'Не удалось проверить поход к тайнику.'))
+    }
+
+    const next = (pulseResult.data as WorldPulse | null) ?? null
+    setTreasureExpeditions(nextExpeditions)
     setPulse(next)
     setLoading(false)
     return next
@@ -205,6 +241,7 @@ export function WorldPulsePanel({
 
   useEffect(() => {
     setPulse(null)
+    setTreasureExpeditions({})
     setLoading(true)
     setMessage('')
     lastRefreshSignalRef.current = refreshSignal
@@ -286,6 +323,52 @@ export function WorldPulsePanel({
     endAction()
   }
 
+  async function startTreasureExpedition(hunt: TreasureHunt) {
+    if (hunt.ready || treasureExpeditions[hunt.id] || !beginAction('hunt-start:' + hunt.id)) return
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('start_treasure_hunt_expedition', {
+      p_hunt_id: hunt.id,
+    })
+
+    if (error) {
+      const raw = error.message
+      setMessage(
+        raw.includes('TREASURE_HUNT_ALREADY_VISITED')
+          ? 'Поход уже завершён. Обнови события мира и забери тайник.'
+          : raw.includes('EXPEDITION_ALREADY_ACTIVE') || raw.includes('SITE_ACTION_ALREADY_ACTIVE')
+            ? 'Сначала заверши текущее исследование.'
+            : raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')
+              ? 'Сначала заверши текущее подземелье.'
+              : raw.includes('COMBAT_ALREADY_ACTIVE')
+                ? 'Сначала заверши текущий бой.'
+                : raw.includes('PARTY_DUNGEON_ACTIVE')
+                  ? 'Сначала заверши текущий групповой поход.'
+                  : userFacingError(raw, 'Не удалось отправиться к тайнику.'),
+      )
+      endAction()
+      return
+    }
+
+    const expedition = data as { ends_at?: string } | null
+    const returnAt = expedition?.ends_at
+      ? new Date(expedition.ends_at).toLocaleString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null
+
+    setMessage(
+      returnAt
+        ? `Поход к тайнику начат. Возвращение: ${returnAt}.`
+        : 'Поход к тайнику начат.',
+    )
+    await refreshAfterAction()
+    endAction()
+  }
+
   async function claimTreasure(hunt: TreasureHunt) {
     if (!hunt.ready || !beginAction('hunt:' + hunt.id)) return
     setMessage('')
@@ -298,7 +381,7 @@ export function WorldPulsePanel({
       const raw = error.message
       setMessage(
         raw.includes('TREASURE_SECTOR_NOT_VISITED_AFTER_MAP')
-          ? 'После активации карты нужно заново завершить экспедицию в отмеченный сектор.'
+          ? 'Сначала заверши отдельный поход к тайнику по активной карте.'
           : userFacingError(raw, 'Тайник пока не удалось забрать.'),
       )
       endAction()
@@ -497,25 +580,47 @@ export function WorldPulsePanel({
 
           {pulse.treasure_hunts.length > 0 ? (
             <div className="treasure-hunt-list">
-              {pulse.treasure_hunts.map((hunt) => (
-                <div className="treasure-hunt-card" key={hunt.id}>
-                  <span>{hunt.reward_tier >= 2 ? 'Золотая карта' : 'Старая карта'}</span>
-                  <strong>{hunt.target_name}</strong>
-                  <small>сектор #{hunt.target_sector_id} · после активации карты нужно завершить здесь новую экспедицию</small>
-                  <button
-                    className={hunt.ready ? 'primary-button' : 'ghost-button'}
-                    type="button"
-                    disabled={Boolean(busy) || !hunt.ready}
-                    onClick={() => void claimTreasure(hunt)}
-                  >
-                    {busy === 'hunt:' + hunt.id
-                      ? 'Открываем…'
-                      : hunt.ready
-                        ? 'Забрать тайник'
-                        : 'Сначала доберись до сектора'}
-                  </button>
-                </div>
-              ))}
+              {pulse.treasure_hunts.map((hunt) => {
+                const expedition = treasureExpeditions[hunt.id] ?? null
+                const returnAt = expedition
+                  ? new Date(expedition.ends_at).toLocaleString('ru-RU', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : null
+
+                return (
+                  <div className="treasure-hunt-card" key={hunt.id}>
+                    <span>{hunt.reward_tier >= 2 ? 'Золотая карта' : 'Старая карта'}</span>
+                    <strong>{hunt.target_name}</strong>
+                    <small>
+                      {hunt.ready
+                        ? `сектор #${hunt.target_sector_id} · экспедиция вернулась, тайник можно открыть`
+                        : expedition
+                          ? `сектор #${hunt.target_sector_id} · поход идёт · возвращение ${returnAt}`
+                          : `сектор #${hunt.target_sector_id} · знакомая местность, нужен отдельный поход по карте`}
+                    </small>
+                    <button
+                      className={hunt.ready || !expedition ? 'primary-button' : 'ghost-button'}
+                      type="button"
+                      disabled={Boolean(busy) || Boolean(expedition)}
+                      onClick={() => void (hunt.ready ? claimTreasure(hunt) : startTreasureExpedition(hunt))}
+                    >
+                      {busy === 'hunt:' + hunt.id
+                        ? 'Открываем…'
+                        : busy === 'hunt-start:' + hunt.id
+                          ? 'Отправляем…'
+                          : hunt.ready
+                            ? 'Забрать тайник'
+                            : expedition
+                              ? 'Экспедиция в пути'
+                              : 'Отправиться к тайнику'}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           ) : pulse.maps.length > 0 ? (
             <div className="treasure-map-list">
