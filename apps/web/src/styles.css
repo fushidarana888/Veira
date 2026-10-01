@@ -14129,3 +14129,33 @@ html.native-app .bottom-nav {
     grid-template-columns: 1fr;
   }
 }
+
+
+.death-spirit-result-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid rgba(185, 130, 211, .34);
+  border-radius: 13px;
+  background: rgba(53, 35, 67, .38);
+}
+
+.death-spirit-result-alert > div {
+  display: grid;
+  gap: 5px;
+}
+
+.death-spirit-result-alert p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .death-spirit-result-alert {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

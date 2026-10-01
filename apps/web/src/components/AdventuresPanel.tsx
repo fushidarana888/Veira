@@ -35,8 +35,19 @@ type Props = {
   characterId: string
   mode?: 'adventures' | 'battles'
   onOpenBattles?: () => void
+  onOpenWorld?: () => void
   onProgressChanged?: () => Promise<unknown> | void
   onInventoryChanged?: () => Promise<unknown> | void
+}
+
+type DeathSpiritJournalEntry = {
+  id: string
+  kind: 'death_spirit'
+  title: string
+  objective: string
+  sector_id: number | null
+  ends_at: string | null
+  action_hint: string
 }
 
 type AdventureTab = 'journal' | 'locations' | 'world' | 'bosses'
@@ -182,6 +193,7 @@ export function AdventuresPanel({
   characterId,
   mode = 'adventures',
   onOpenBattles,
+  onOpenWorld,
   onProgressChanged,
   onInventoryChanged,
 }: Props) {
@@ -209,6 +221,7 @@ export function AdventuresPanel({
   const [message, setMessage] = useState('')
   const [dungeonEventPending, setDungeonEventPending] = useState(false)
   const [worldPulseRefreshSignal, setWorldPulseRefreshSignal] = useState(0)
+  const [ownDeathSpirit, setOwnDeathSpirit] = useState<DeathSpiritJournalEntry | null>(null)
 
   const { beginAction, endAction } = useActionGate(setBusy, false, setMessage)
 
@@ -315,7 +328,7 @@ export function AdventuresPanel({
   async function loadAdventures(silent = false) {
     if (!silent) setLoading(true)
 
-    const [siteResult, encounterResult] = await Promise.all([
+    const [siteResult, encounterResult, journalResult] = await Promise.all([
       supabase.rpc('get_character_adventures_v4', {
         p_character_id: characterId,
       }),
@@ -325,9 +338,12 @@ export function AdventuresPanel({
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(6),
+      supabase.rpc('get_character_activity_journal', {
+        p_character_id: characterId,
+      }),
     ])
 
-    const error = siteResult.error ?? encounterResult.error
+    const error = siteResult.error ?? encounterResult.error ?? journalResult.error
     if (error) {
       if (!silent) setMessage(userFacingError(error.message))
       if (!silent) setLoading(false)
@@ -336,8 +352,11 @@ export function AdventuresPanel({
 
     const nextSites = (siteResult.data as CharacterAdventureSite[] | null) ?? []
     const nextEncounters = (encounterResult.data as CombatEncounter[] | null) ?? []
+    const journalEntries = ((journalResult.data as { entries?: Array<Record<string, unknown>> } | null)?.entries ?? [])
+    const spiritEntry = journalEntries.find((entry) => entry.kind === 'death_spirit') ?? null
     setSites(nextSites)
     setEncounters(nextEncounters)
+    setOwnDeathSpirit(spiritEntry as DeathSpiritJournalEntry | null)
 
     const latestEncounter = nextEncounters[0] ?? null
     const activeRunId =
@@ -2512,6 +2531,35 @@ export function AdventuresPanel({
           <p className="combat-result-sticky-note">
             Этот результат останется в «Бои → Сейчас», пока ты не выйдешь из раздела.
           </p>
+
+          {latestCombat.status === 'defeat' && ownDeathSpirit && (
+            <div className="death-spirit-result-alert">
+              <div>
+                <span className="eyebrow">ПОСЛЕ СМЕРТИ ОСТАЛСЯ ДУХ</span>
+                <strong>Сектор #{ownDeathSpirit.sector_id ?? '—'} · удерживает: {ownDeathSpirit.objective}</strong>
+                <p>
+                  Верни потерянную вещь до
+                  {' '}
+                  <b>
+                    {ownDeathSpirit.ends_at
+                      ? new Date(ownDeathSpirit.ends_at).toLocaleString('ru-RU', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : 'исчезновения духа'}
+                  </b>.
+                  {' '}Твой дух сражается с 60% силы исходного персонажа.
+                </p>
+              </div>
+              {onOpenWorld && (
+                <button className="primary-button" type="button" onClick={onOpenWorld}>
+                  Показать на карте
+                </button>
+              )}
+            </div>
+          )}
 
           {latestCombat.status === 'victory'
             && latestCombatSite?.content_type === 'dungeon'

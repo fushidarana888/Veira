@@ -11,6 +11,7 @@ const ArenaPanel = lazy(() => import('./ArenaPanel').then((module) => ({ default
 
 type Props = {
   characterId: string
+  onOpenWorld?: () => void
   onProgressChanged?: () => Promise<unknown> | void
   onInventoryChanged?: () => Promise<unknown> | void
 }
@@ -181,6 +182,7 @@ function LoadingBattle() {
 
 export function BattleCenterPanel({
   characterId,
+  onOpenWorld,
   onProgressChanged,
   onInventoryChanged,
 }: Props) {
@@ -361,6 +363,7 @@ export function BattleCenterPanel({
                 <AdventuresPanel
                   characterId={characterId}
                   mode="battles"
+                  onOpenWorld={onOpenWorld}
                   onProgressChanged={onProgressChanged}
                   onInventoryChanged={onInventoryChanged}
                 />

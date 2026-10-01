@@ -1972,6 +1972,7 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
         <Suspense fallback={<LazyPanelFallback title="Загружаем бои…" />}>
           <BattleCenterPanel
             characterId={character.id}
+            onOpenWorld={() => setTab('world')}
             onProgressChanged={loadProgress}
             onInventoryChanged={refreshInventoryState}
           />
