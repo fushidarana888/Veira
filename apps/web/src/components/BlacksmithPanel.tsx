@@ -211,33 +211,72 @@ export function BlacksmithPanel({
     setBusyKey(key)
     setMessage('')
 
+    let resolvedTargetLevel = targetLevel
     let quotedCost = Number(weapon.next_cost ?? 0)
 
     if (targetLevel > weapon.enhancement_level + 1) {
-      const quote = await supabase.rpc('quote_weapon_enhancement_at_blacksmith', {
-        p_character_id: characterId,
-        p_sector_id: sectorId,
-        p_character_item_id: weapon.character_item_id,
-        p_target_level: targetLevel,
-      })
+      async function quoteTo(level: number) {
+        const quote = await supabase.rpc('quote_weapon_enhancement_at_blacksmith', {
+          p_character_id: characterId,
+          p_sector_id: sectorId,
+          p_character_item_id: weapon.character_item_id,
+          p_target_level: level,
+        })
 
-      if (quote.error) {
-        setMessage(blacksmithError(quote.error.message))
+        if (quote.error) throw quote.error
+
+        const row = Array.isArray(quote.data) ? quote.data[0] : null
+        return {
+          canAfford: Boolean(row?.can_afford),
+          totalCost: Number(row?.total_cost ?? 0),
+        }
+      }
+
+      try {
+        const fullQuote = await quoteTo(targetLevel)
+
+        if (fullQuote.canAfford) {
+          quotedCost = fullQuote.totalCost
+        } else {
+          let low = weapon.enhancement_level + 1
+          let high = targetLevel - 1
+          let bestLevel = weapon.enhancement_level
+          let bestCost = 0
+
+          while (low <= high) {
+            const middle = Math.floor((low + high) / 2)
+            const quote = await quoteTo(middle)
+
+            if (quote.canAfford) {
+              bestLevel = middle
+              bestCost = quote.totalCost
+              low = middle + 1
+            } else {
+              high = middle - 1
+            }
+          }
+
+          if (bestLevel <= weapon.enhancement_level) {
+            setMessage(`Не хватает золота даже на заточку до +${weapon.enhancement_level + 1}.`)
+            setBusyKey(null)
+            return
+          }
+
+          resolvedTargetLevel = bestLevel
+          quotedCost = bestCost
+        }
+      } catch (error) {
+        setMessage(blacksmithError(error instanceof Error ? error.message : String(error)))
         setBusyKey(null)
         return
       }
 
-      const row = Array.isArray(quote.data) ? quote.data[0] : null
-      quotedCost = Number(row?.total_cost ?? 0)
-
-      if (!row?.can_afford) {
-        setMessage(`Для заточки до +${targetLevel} нужно ${quotedCost.toLocaleString('ru-RU')} золота.`)
-        setBusyKey(null)
-        return
-      }
+      const partialNote = resolvedTargetLevel < targetLevel
+        ? `\n\nНа +${targetLevel} золота не хватает, поэтому оружие будет заточено до максимального доступного +${resolvedTargetLevel}.`
+        : ''
 
       if (!window.confirm(
-        `Заточить «${weapon.custom_name || weapon.item_name}» с +${weapon.enhancement_level} до +${targetLevel} за ${quotedCost.toLocaleString('ru-RU')} золота?`,
+        `Заточить «${weapon.custom_name || weapon.item_name}» с +${weapon.enhancement_level} до +${resolvedTargetLevel} за ${quotedCost.toLocaleString('ru-RU')} золота?${partialNote}`,
       )) {
         setBusyKey(null)
         return
@@ -248,7 +287,7 @@ export function BlacksmithPanel({
       p_character_id: characterId,
       p_sector_id: sectorId,
       p_character_item_id: weapon.character_item_id,
-      p_target_level: targetLevel,
+      p_target_level: resolvedTargetLevel,
     })
 
     if (error) {
@@ -259,8 +298,9 @@ export function BlacksmithPanel({
 
     const result = Array.isArray(data) ? data[0] : null
     const spent = Number(result?.gold_spent ?? quotedCost)
+    const newLevel = Number(result?.new_enhancement_level ?? resolvedTargetLevel)
     await refreshAfterMutation(
-      `${weapon.custom_name || weapon.item_name} заточен до +${targetLevel}. Потрачено ${spent.toLocaleString('ru-RU')} золота.`,
+      `${weapon.custom_name || weapon.item_name} заточен до +${newLevel}. Потрачено ${spent.toLocaleString('ru-RU')} золота.`,
     )
   }
 
@@ -525,6 +565,7 @@ export function BlacksmithPanel({
                           className="ghost-button"
                           type="button"
                           disabled={busyKey !== null}
+                          title="Заточить до максимального уровня, на который хватает золота"
                           onClick={() => void enhanceTo(weapon, townMax)}
                         >
                           До +{townMax}
