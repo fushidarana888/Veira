@@ -1,0 +1,6 @@
+-- This migration version existed briefly in production while the newcomer flow
+-- was being consolidated. Its experimental objects were removed by
+-- 20261001044449_merge_duplicate_newcomer_journey.
+--
+-- The canonical first-hour implementation lives in:
+-- 20260930213004_newcomer_first_hour_journey.sql
