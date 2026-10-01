@@ -33,15 +33,15 @@ type CampState = {
     bonus_percent: number
     expires_at: string
   }
+  preparation_used_today: boolean
   scout_reports: Array<{
     id: string
     sector_id: number
-    terrain_type: string
-    content_hint: string
     danger_level: number
+    has_point_of_interest: boolean
     expires_at: string
   }>
-  scout_targets: Array<{ sector_id: number }>
+  scout_targets: Array<{ sector_id: number; grid_col: number; grid_row: number }>
   storage: Array<{
     id: string
     item_definition_id: string
@@ -130,7 +130,7 @@ type Props = {
 const moduleInfo: Record<CampModuleType, { name: string; description: string; cost: string }> = {
   scout_post: {
     name: 'Разведывательный пост',
-    description: '20 минут на разведку соседнего закрытого сектора без его полного открытия.',
+    description: 'Открывает 2-часовой предпросмотр любого сектора, который уже доступен для обычного исследования: опасность и наличие точки интереса без открытия клетки.',
     cost: '4 леса · 2 волокна',
   },
   hunting_table: {
@@ -140,7 +140,7 @@ const moduleInfo: Record<CampModuleType, { name: string; description: string; co
   },
   training_yard: {
     name: 'Тренировочная площадка',
-    description: 'Выбери полевую подготовку на 45 минут: физический урон, магический урон или защита.',
+    description: 'Раз в день выбери одну подготовку на 1 час: физический урон, магический урон или защита.',
     cost: '5 леса · 2 кузнечного лома',
   },
   trading_post: {
@@ -200,6 +200,8 @@ function campError(raw: string) {
     ['REQUESTED_ITEM_NOT_AVAILABLE', 'У тебя нет подходящего предмета для этого обмена.'],
     ['TRADE_OFFER_NOT_OPEN', 'Предложение уже закрыто или истекло.'],
     ['CAMP_EVENT_ALREADY_RESOLVED', 'Сегодня ты уже разобрался с лагерным событием.'],
+    ['PREPARATION_ALREADY_USED_TODAY', 'Сегодня тренировочная площадка уже использована. Следующую подготовку можно выбрать завтра.'],
+    ['SCOUT_TARGET_NOT_EXPLORABLE', 'Этот сектор сейчас нельзя исследовать, поэтому предпросмотр для него недоступен.'],
   ]
   return pairs.find(([key]) => raw.includes(key))?.[1] ?? userFacingError(raw)
 }
@@ -229,6 +231,7 @@ export function CampPanel({
   const [offerQty, setOfferQty] = useState(1)
   const [requestDefinitionId, setRequestDefinitionId] = useState('')
   const [requestQty, setRequestQty] = useState(1)
+  const [scoutTargetId, setScoutTargetId] = useState('')
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -263,7 +266,14 @@ export function CampPanel({
       return
     }
 
-    setState((stateResult.data as CampState | null) ?? null)
+    const nextState = (stateResult.data as CampState | null) ?? null
+    setState(nextState)
+    setScoutTargetId((current) => {
+      if (current && nextState?.scout_targets.some((target) => String(target.sector_id) === current)) {
+        return current
+      }
+      return nextState?.scout_targets[0] ? String(nextState.scout_targets[0].sector_id) : ''
+    })
     setInventory((itemsResult.data as InventoryItem[] | null) ?? [])
     setEquippedIds(new Set(((equipmentResult.data as Array<{ character_item_id: string }> | null) ?? []).map((x) => x.character_item_id)))
     setDefinitions((definitionsResult.data as ItemDefinition[] | null) ?? [])
@@ -377,7 +387,7 @@ export function CampPanel({
         p_action_type: actionType,
         p_target_sector_id: target ?? null,
       }),
-      actionType === 'rest' ? 'Отдых начался · 30 минут.' : 'Разведчики вышли из лагеря · 20 минут.',
+      actionType === 'rest' ? 'Отдых начался · 2 часа.' : 'Предпросмотр сектора начался · 2 часа.',
     )
   }
 
@@ -401,7 +411,7 @@ export function CampPanel({
         p_camp_owner_character_id: state?.camp?.owner_character_id ?? ownerId,
         p_preparation_type: type,
       }),
-      `${labels[type]} активна на 45 минут.`,
+      `${labels[type]} активна на 1 час. Следующую лагерную подготовку можно будет выбрать завтра.`,
     )
   }
 
@@ -643,7 +653,7 @@ export function CampPanel({
         <span className="eyebrow">КОСТЁР И ОТДЫХ</span>
         {state?.active_action ? (
           <div className="camp-action-active">
-            <strong>{state.active_action.action_type === 'rest' ? 'Отдых' : 'Разведка'}</strong>
+            <strong>{state.active_action.action_type === 'rest' ? 'Отдых' : 'Предпросмотр сектора'}</strong>
             <span>до {timeLabel(state.active_action.ends_at)}</span>
             <button className="primary-button" type="button" disabled={busy || !activeActionReady} onClick={() => void finishAction()}>
               {activeActionReady ? 'Забрать результат' : 'Ещё не готово'}
@@ -651,7 +661,7 @@ export function CampPanel({
           </div>
         ) : (
           <button className="ghost-button" type="button" disabled={busy || blocked} title={blockingReason} onClick={() => void startAction('rest')}>
-            Отдохнуть · 30 минут · полное ОЗ и мана
+            Отдохнуть · 2 часа · полное ОЗ и мана
           </button>
         )}
       </div>
@@ -688,24 +698,45 @@ export function CampPanel({
 
       {moduleTypes.has('scout_post') && (
         <div className="camp-section">
-          <span className="eyebrow">РАЗВЕДКА</span>
-          <p className="muted">Разведка не открывает сектор, а заранее сообщает местность, опасность и заметные признаки.</p>
+          <span className="eyebrow">ПРЕДПРОСМОТР СЕКТОРА</span>
+          <p className="muted">
+            За 2 часа можно проверить любой ещё не открытый сектор, который уже доступен для обычного исследования.
+            Клетка не открывается: отчёт показывает только опасность и наличие точки интереса.
+          </p>
           {!state?.active_action && (
-            <div className="camp-inline-actions">
-              {state?.scout_targets.slice(0, 8).map((target) => (
-                <button className="ghost-button" type="button" disabled={busy || blocked} key={target.sector_id} onClick={() => void startAction('scout', target.sector_id)}>
-                  Разведать #{target.sector_id}
+            state?.scout_targets.length ? (
+              <div className="camp-scout-picker">
+                <label>
+                  <span>Доступный сектор</span>
+                  <select value={scoutTargetId} onChange={(event) => setScoutTargetId(event.target.value)}>
+                    {state.scout_targets.map((target) => (
+                      <option value={target.sector_id} key={target.sector_id}>
+                        Сектор #{target.sector_id} · {target.grid_col}:{target.grid_row}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  disabled={busy || blocked || !scoutTargetId}
+                  onClick={() => void startAction('scout', Number(scoutTargetId))}
+                >
+                  Предпросмотреть · 2 часа
                 </button>
-              ))}
-              {state?.scout_targets.length === 0 && <small>Соседних неизвестных секторов нет.</small>}
-            </div>
+              </div>
+            ) : (
+              <small>Сейчас нет закрытых секторов, доступных для обычного исследования.</small>
+            )
           )}
           {(state?.scout_reports.length ?? 0) > 0 && (
             <div className="camp-report-list">
               {state!.scout_reports.slice(0, 5).map((report) => (
                 <div key={report.id}>
                   <strong>Сектор #{report.sector_id}</strong>
-                  <span>{report.terrain_type} · опасность {report.danger_level}/10 · {report.content_hint}</span>
+                  <span>
+                    Опасность {report.danger_level}/10 · точка интереса: {report.has_point_of_interest ? 'есть' : 'не обнаружена'}
+                  </span>
                 </div>
               ))}
             </div>
@@ -729,16 +760,20 @@ export function CampPanel({
 
       {moduleTypes.has('training_yard') && (
         <div className="camp-section">
-          <span className="eyebrow">ТРЕНИРОВОЧНАЯ ПЛОЩАДКА</span>
-          {state?.preparation && (
+          <span className="eyebrow">ТРЕНИРОВОЧНАЯ ПЛОЩАДКА · 1 РАЗ В ДЕНЬ</span>
+          {state?.preparation ? (
             <p className="muted">
               Активно: {state.preparation.preparation_type} +{state.preparation.bonus_percent}% · до {timeLabel(state.preparation.expires_at)}
             </p>
+          ) : state?.preparation_used_today ? (
+            <p className="muted">Сегодня подготовка уже использована. Новый бафф можно выбрать завтра.</p>
+          ) : (
+            <p className="muted">Выбери один бафф. Он действует 1 час, после чего площадка остаётся недоступной до следующего дня.</p>
           )}
           <div className="camp-inline-actions">
-            <button className="ghost-button" type="button" disabled={busy || blocked} onClick={() => void prepare('physical')}>+6% физ. урона</button>
-            <button className="ghost-button" type="button" disabled={busy || blocked} onClick={() => void prepare('magic')}>+6% маг. урона</button>
-            <button className="ghost-button" type="button" disabled={busy || blocked} onClick={() => void prepare('fortify')}>+6% физ. защиты</button>
+            <button className="ghost-button" type="button" disabled={busy || blocked || state?.preparation_used_today} onClick={() => void prepare('physical')}>+6% физ. урона · 1 ч</button>
+            <button className="ghost-button" type="button" disabled={busy || blocked || state?.preparation_used_today} onClick={() => void prepare('magic')}>+6% маг. урона · 1 ч</button>
+            <button className="ghost-button" type="button" disabled={busy || blocked || state?.preparation_used_today} onClick={() => void prepare('fortify')}>+6% физ. защиты · 1 ч</button>
           </div>
         </div>
       )}

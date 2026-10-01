@@ -14397,3 +14397,39 @@ html.native-app .bottom-nav {
     flex-direction: column;
   }
 }
+
+
+.camp-scout-picker,
+.inventory-subfilter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.camp-scout-picker label,
+.inventory-subfilter-row label {
+  display: grid;
+  gap: 5px;
+  min-width: min(100%, 260px);
+}
+
+.camp-scout-picker select,
+.inventory-subfilter-row select {
+  min-height: 38px;
+}
+
+.inventory-subfilter-row {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+}
+
+@media (max-width: 760px) {
+  .camp-scout-picker {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

@@ -2297,6 +2297,8 @@ type InventoryFilter = 'all' | 'weapon' | 'armor' | 'accessory' | 'consumable' |
 type InventorySpecialFilter = 'all' | 'new' | 'locked'
 type InventoryRarityFilter = 'all' | ItemDefinition['rarity']
 type InventorySort = 'rarity' | 'level' | 'name' | 'affixes' | 'newest'
+type ArmorSlotFilter = 'all' | 'head' | 'chest' | 'hands' | 'legs' | 'feet' | 'offhand'
+type WeaponFamilyFilter = 'all' | NonNullable<ItemDefinition['weapon_family']>
 
 const inventoryRarityRank: Record<ItemDefinition['rarity'], number> = {
   common: 0,
@@ -2305,6 +2307,15 @@ const inventoryRarityRank: Record<ItemDefinition['rarity'], number> = {
   epic: 3,
   legendary: 4,
   unique: 5,
+}
+
+const armorSlotFilterLabels: Record<Exclude<ArmorSlotFilter, 'all'>, string> = {
+  head: 'Шлемы / голова',
+  chest: 'Нагрудники',
+  hands: 'Перчатки / руки',
+  legs: 'Поножи / ноги',
+  feet: 'Сапоги',
+  offhand: 'Щиты / вторая рука',
 }
 
 function InventoryPanel({
@@ -2343,6 +2354,8 @@ function InventoryPanel({
   const [filter, setFilter] = useState<InventoryFilter>('all')
   const [specialFilter, setSpecialFilter] = useState<InventorySpecialFilter>('all')
   const [rarityFilter, setRarityFilter] = useState<InventoryRarityFilter>('all')
+  const [armorSlotFilter, setArmorSlotFilter] = useState<ArmorSlotFilter>('all')
+  const [weaponFamilyFilter, setWeaponFamilyFilter] = useState<WeaponFamilyFilter>('all')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<InventorySort>('rarity')
 
@@ -2385,6 +2398,8 @@ function InventoryPanel({
             : definition.category === filter)
 
         if (!categoryMatches) return false
+        if (filter === 'armor' && armorSlotFilter !== 'all' && definition.equip_group !== armorSlotFilter) return false
+        if (filter === 'weapon' && weaponFamilyFilter !== 'all' && definition.weapon_family !== weaponFamilyFilter) return false
         if (specialFilter === 'new' && !itemIsRecent(item)) return false
         if (specialFilter === 'locked' && !itemIsInventoryLocked(item)) return false
         if (rarityFilter !== 'all' && definition.rarity !== rarityFilter) return false
@@ -2431,7 +2446,7 @@ function InventoryPanel({
           || (left.custom_name || leftDefinition.name)
             .localeCompare(right.custom_name || rightDefinition.name, 'ru-RU')
       })
-  }, [filter, items, query, rarityFilter, sort, specialFilter])
+  }, [armorSlotFilter, filter, items, query, rarityFilter, sort, specialFilter, weaponFamilyFilter])
 
   const bulkEligibleItems = useMemo(() => visibleItems.filter((item) => {
     const definition = normalizeDefinition(item.item_definitions)
@@ -2453,6 +2468,18 @@ function InventoryPanel({
     ['material', 'Ресурсы'],
     ['other', 'Прочее'],
   ]
+
+  const availableArmorSlots = (Object.keys(armorSlotFilterLabels) as Array<Exclude<ArmorSlotFilter, 'all'>>)
+    .filter((slot) => items.some((item) => {
+      const definition = normalizeDefinition(item.item_definitions)
+      return definition?.category === 'armor' && definition.equip_group === slot
+    }))
+
+  const availableWeaponFamilies = (Object.keys(weaponFamilyLabels) as Array<NonNullable<ItemDefinition['weapon_family']>>)
+    .filter((family) => items.some((item) => {
+      const definition = normalizeDefinition(item.item_definitions)
+      return definition?.category === 'weapon' && definition.weapon_family === family
+    }))
 
   return (
     <section className="panel">
@@ -2547,13 +2574,51 @@ function InventoryPanel({
             role="tab"
             aria-selected={filter === key}
             key={key}
-            onClick={() => setFilter(key)}
+            onClick={() => {
+              setFilter(key)
+              if (key !== 'armor') setArmorSlotFilter('all')
+              if (key !== 'weapon') setWeaponFamilyFilter('all')
+            }}
           >
             <span>{label}</span>
             <b>{categoryCounts[key]}</b>
           </button>
         ))}
       </div>
+
+      {filter === 'armor' && (
+        <div className="inventory-subfilter-row">
+          <label>
+            <span>Тип брони</span>
+            <select
+              value={armorSlotFilter}
+              onChange={(event) => setArmorSlotFilter(event.target.value as ArmorSlotFilter)}
+            >
+              <option value="all">Вся броня</option>
+              {availableArmorSlots.map((slot) => (
+                <option value={slot} key={slot}>{armorSlotFilterLabels[slot]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {filter === 'weapon' && (
+        <div className="inventory-subfilter-row">
+          <label>
+            <span>Семейство оружия</span>
+            <select
+              value={weaponFamilyFilter}
+              onChange={(event) => setWeaponFamilyFilter(event.target.value as WeaponFamilyFilter)}
+            >
+              <option value="all">Все семейства</option>
+              {availableWeaponFamilies.map((family) => (
+                <option value={family} key={family}>{weaponFamilyLabels[family]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <p className="muted">Инвентарь пуст.</p>
