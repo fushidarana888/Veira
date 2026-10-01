@@ -593,6 +593,29 @@ export type BlacksmithRerollCost = {
   cost: number
 }
 
+export type BlacksmithAffixItem = {
+  settlement_name: string
+  settlement_level: number
+  affix_apply_unlocked: boolean
+  affix_reroll_unlocked: boolean
+  character_item_id: string
+  item_definition_id: string
+  item_name: string
+  custom_name: string | null
+  category: 'weapon' | 'armor' | 'accessory'
+  equip_group: ItemEquipGroup
+  rarity: ItemRarity
+  is_equipped: boolean
+  affix_slots: number
+  affix_count: number
+  affixes: BlacksmithAffix[]
+  next_affix_cost: number | null
+  can_add_affix: boolean
+  can_afford_affix: boolean
+  affix_reroll_count: number
+  reroll_costs: BlacksmithRerollCost[]
+}
+
 export type BlacksmithWeapon = {
   settlement_name: string
   settlement_level: number
