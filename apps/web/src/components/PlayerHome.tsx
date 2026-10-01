@@ -12,6 +12,7 @@ const GuidePanel = lazy(() => import('./GuidePanel').then((module) => ({ default
 const CommunitiesPanel = lazy(() => import('./CommunitiesPanel').then((module) => ({ default: module.CommunitiesPanel })))
 const MagicPanel = lazy(() => import('./MagicPanel').then((module) => ({ default: module.MagicPanel })))
 const ReligionPanel = lazy(() => import('./ReligionPanel').then((module) => ({ default: module.ReligionPanel })))
+const NewcomerPanel = lazy(() => import('./NewcomerPanel').then((module) => ({ default: module.NewcomerPanel })))
 const WorldMap = lazy(() => import('./WorldMap').then((module) => ({ default: module.WorldMap })))
 import type {
   Character,
@@ -31,6 +32,7 @@ type Props = {
   profile: Profile
   character: Character
   userEmail: string
+  accountCreatedAt: string
   onSignOut: () => Promise<void> | void
 }
 
@@ -421,7 +423,7 @@ function itemComparisonSummary(
   }
 }
 
-export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) {
+export function PlayerHome({ profile, character, userEmail, accountCreatedAt, onSignOut }: Props) {
   const [tab, setTab] = useState<Tab>(readStoredPlayerTab)
   const [characterTab, setCharacterTab] = useState<CharacterTab>(readStoredCharacterTab)
   const [moreView, setMoreView] = useState<MoreView>('menu')
@@ -1576,6 +1578,20 @@ export function PlayerHome({ profile, character, userEmail, onSignOut }: Props) 
           </button>
         </div>
       </header>
+
+      <Suspense fallback={null}>
+        <NewcomerPanel
+          characterId={character.id}
+          accountCreatedAt={accountCreatedAt}
+          onOpenGuide={() => {
+            setTab('more')
+            setMoreView('guide')
+          }}
+          onProgressChanged={async () => {
+            await Promise.all([loadProgress(), refreshInventoryState()])
+          }}
+        />
+      </Suspense>
 
       {tab === 'character' && (
         <>
