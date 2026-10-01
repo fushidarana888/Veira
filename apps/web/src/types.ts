@@ -604,6 +604,7 @@ export type BlacksmithAffixItem = {
   custom_name: string | null
   category: 'weapon' | 'armor' | 'accessory'
   equip_group: ItemEquipGroup
+  weapon_family: WeaponFamily | null
   rarity: ItemRarity
   is_equipped: boolean
   affix_slots: number
