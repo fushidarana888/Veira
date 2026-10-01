@@ -1288,7 +1288,7 @@ export function WorldMap({
       setMessage(
         `Охота завершена: ${result.item_name ?? 'ресурс'} ×${result.quantity ?? 1}`
         + (result.hunting_table_bonus ? ' · охотничий стол дал +1 добычу' : '')
-        + '.',
+        + '. Добыча добавлена в «Инвентарь → Ресурсы».',
       )
       endAction()
       return
@@ -2042,6 +2042,28 @@ export function WorldMap({
                     <div className="hunting-danger-note">
                       <strong>Охота заблокирована</strong>
                       <span>Этот сектор сейчас захвачен. Сначала освободи его через событие выше.</span>
+                    </div>
+                  )}
+
+                  {huntingState?.last_result && !activeHunt && (
+                    <div className="hunting-last-result">
+                      <span className="eyebrow">ПОСЛЕДНЯЯ ОХОТА</span>
+                      <strong>
+                        {huntingState.last_result.result === 'resource'
+                          ? `${huntingState.last_result.item_name ?? 'Ресурс'} ×${huntingState.last_result.quantity ?? 1}`
+                          : huntingState.last_result.result === 'monster'
+                            ? `Встречен сильный противник: ${huntingState.last_result.enemy_name ?? 'неизвестный зверь'}`
+                            : huntingState.last_result.result === 'tracks'
+                              ? 'Добыча ушла, остались только следы'
+                              : huntingState.last_result.result}
+                      </strong>
+                      <small>
+                        {huntingState.last_result.result === 'resource'
+                          ? 'Предмет уже лежит в «Инвентарь → Ресурсы».'
+                          : huntingState.last_result.resolved_at
+                            ? `Завершено ${new Date(huntingState.last_result.resolved_at).toLocaleString('ru-RU')}`
+                            : ''}
+                      </small>
                     </div>
                   )}
 

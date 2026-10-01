@@ -14350,3 +14350,17 @@ html.native-app .bottom-nav {
     grid-template-columns: 1fr;
   }
 }
+
+
+.hunting-last-result {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(133, 161, 111, .28);
+  border-radius: 11px;
+  background: rgba(62, 83, 49, .14);
+}
+
+.hunting-last-result small {
+  color: var(--muted);
+}
