@@ -45,6 +45,12 @@ type TreasureHunt = {
   status: string
   created_at: string
   ready: boolean
+  hunt_kind: 'cache' | 'lost_trail' | 'guarded_vault' | 'cursed_route'
+  hunt_name: string
+  stage: number
+  total_stages: number
+  risk_level: number
+  clue_text: string
 }
 
 type TreasureExpedition = {
@@ -200,7 +206,7 @@ export function WorldPulsePanel({
     })
 
     const [pulseResult, expeditionResult] = await Promise.all([
-      supabase.rpc('get_world_pulse', {
+      supabase.rpc('get_world_pulse_v2', {
         p_character_id: characterId,
       }),
       supabase
@@ -315,9 +321,15 @@ export function WorldPulsePanel({
       return
     }
 
-    const result = data as { target_name?: string } | null
+    const result = data as {
+      target_name?: string
+      hunt_name?: string
+      total_stages?: number
+    } | null
     setMessage(result?.target_name
-      ? `Карта расшифрована. Тайник отмечен в районе «${result.target_name}».`
+      ? `${result.hunt_name ?? 'Карта расшифрована'}: первая отметка — «${result.target_name}»`
+        + ((result.total_stages ?? 1) > 1 ? ` · этапов: ${result.total_stages}` : '')
+        + '.'
       : 'Карта расшифрована. Новая цель появилась в журнале.')
     await refreshAfterAction(true)
     endAction()
@@ -392,11 +404,15 @@ export function WorldPulsePanel({
       gold?: number
       experience?: number
       bonus_item?: string | null
+      material_item?: string | null
+      material_quantity?: number
       target_name?: string
+      hunt_name?: string
     } | null
 
     setMessage(
-      `Тайник найден: +${result?.gold ?? 0} золота, +${result?.experience ?? 0} опыта`
+      `${result?.hunt_name ?? 'Тайник'} завершён: +${result?.gold ?? 0} золота, +${result?.experience ?? 0} опыта`
+      + (result?.material_item ? ` · ${result.material_item} ×${result.material_quantity ?? 1}` : '')
       + (result?.bonus_item ? ` · редкая находка: ${result.bonus_item}` : '')
       + '.',
     )
@@ -592,15 +608,22 @@ export function WorldPulsePanel({
                   : null
 
                 return (
-                  <div className="treasure-hunt-card" key={hunt.id}>
-                    <span>{hunt.reward_tier >= 2 ? 'Золотая карта' : 'Старая карта'}</span>
+                  <div className={'treasure-hunt-card treasure-risk-' + hunt.risk_level} key={hunt.id}>
+                    <span>
+                      {hunt.hunt_name || (hunt.reward_tier >= 2 ? 'Золотая карта' : 'Старая карта')}
+                      {' · этап '}{hunt.stage}/{hunt.total_stages}
+                      {hunt.risk_level > 0 ? ` · риск ${hunt.risk_level}/3` : ''}
+                    </span>
                     <strong>{hunt.target_name}</strong>
+                    <p className="muted treasure-clue">{hunt.clue_text}</p>
                     <small>
                       {hunt.ready
-                        ? `сектор #${hunt.target_sector_id} · экспедиция вернулась, тайник можно открыть`
+                        ? `сектор #${hunt.target_sector_id} · последний поход завершён, награду можно забрать`
                         : expedition
                           ? `сектор #${hunt.target_sector_id} · поход идёт · возвращение ${returnAt}`
-                          : `сектор #${hunt.target_sector_id} · знакомая местность, нужен отдельный поход по карте`}
+                          : hunt.total_stages > 1
+                            ? `сектор #${hunt.target_sector_id} · продолжи маршрут по новой отметке`
+                            : `сектор #${hunt.target_sector_id} · знакомая местность, нужен отдельный поход по карте`}
                     </small>
                     <button
                       className={hunt.ready || !expedition ? 'primary-button' : 'ghost-button'}
@@ -616,7 +639,11 @@ export function WorldPulsePanel({
                             ? 'Забрать тайник'
                             : expedition
                               ? 'Экспедиция в пути'
-                              : 'Отправиться к тайнику'}
+                              : hunt.stage > 1
+                                ? 'Продолжить маршрут'
+                                : hunt.total_stages > 1
+                                  ? 'Начать маршрут'
+                                  : 'Отправиться к тайнику'}
                     </button>
                   </div>
                 )

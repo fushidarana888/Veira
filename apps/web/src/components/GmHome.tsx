@@ -51,6 +51,8 @@ export function GmHome({ profile, onSignOut }: Props) {
   const [mapPreviewVersion, setMapPreviewVersion] = useState(() => Date.now())
   const [hiddenFavor, setHiddenFavor] = useState<HiddenFavorInfo | null>(null)
   const [hiddenFavorInput, setHiddenFavorInput] = useState(0)
+  const [runtimeState, setRuntimeState] = useState<Record<string, unknown> | null>(null)
+  const [runtimeLoading, setRuntimeLoading] = useState(false)
 
   async function loadData() {
     setLoading(true)
@@ -136,6 +138,7 @@ export function GmHome({ profile, onSignOut }: Props) {
   }, [])
 
   useEffect(() => {
+    setRuntimeState(null)
     if (!selectedId) {
       setHiddenFavor(null)
       setHiddenFavorInput(0)
@@ -167,6 +170,26 @@ export function GmHome({ profile, onSignOut }: Props) {
   const selectedProgress = selectedCharacter
     ? normalizeProgress(selectedCharacter.character_progress)
     : null
+
+  async function loadRuntimeState() {
+    if (!selectedCharacter || runtimeLoading) return
+
+    setRuntimeLoading(true)
+    setNotice('')
+
+    const { data, error } = await supabase.rpc('gm_get_character_runtime_state', {
+      p_character_id: selectedCharacter.id,
+    })
+
+    if (error) {
+      setNotice(error.message)
+      setRuntimeLoading(false)
+      return
+    }
+
+    setRuntimeState((data as Record<string, unknown> | null) ?? null)
+    setRuntimeLoading(false)
+  }
 
   async function mutateProgress(patch: Partial<CharacterProgress>, successMessage: string) {
     if (!selectedCharacter) return
@@ -540,6 +563,32 @@ export function GmHome({ profile, onSignOut }: Props) {
                       Выдать
                     </button>
                   </div>
+                </article>
+
+                <article className="panel gm-runtime-panel">
+                  <div className="section-heading">
+                    <div>
+                      <span className="eyebrow">ДИАГНОСТИКА</span>
+                      <h2>Состояние персонажа</h2>
+                      <p className="muted">
+                        Показывает активный бой, экспедицию, исследование, данж, групповой поход, блокировку действий и текущие цели.
+                      </p>
+                    </div>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      disabled={runtimeLoading}
+                      onClick={() => void loadRuntimeState()}
+                    >
+                      {runtimeLoading ? 'Проверяем…' : runtimeState ? 'Обновить' : 'Проверить'}
+                    </button>
+                  </div>
+
+                  {runtimeState ? (
+                    <pre className="gm-runtime-json">{JSON.stringify(runtimeState, null, 2)}</pre>
+                  ) : (
+                    <p className="muted">Запрос выполняется только по кнопке, чтобы не нагружать панель ГМ.</p>
+                  )}
                 </article>
 
                 <article className="panel danger-panel">

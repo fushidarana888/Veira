@@ -126,6 +126,26 @@ type WorldAnomaly = {
   ends_at: string
 }
 
+type WorldMarker = {
+  id: string
+  kind: 'treasure' | 'camp' | 'merchant' | 'quest'
+  sector_id: number
+  title: string
+  detail: string
+  stage?: number
+  total_stages?: number
+  risk_level?: number
+  ends_at?: string
+}
+
+type ActivityBlocker = {
+  kind: string
+  title: string
+  detail: string
+  sector_id: number | null
+  ends_at: string | null
+}
+
 type SectorIncursion = {
   event_id: string
   name: string
@@ -187,6 +207,8 @@ type WorldMapCacheEntry = {
   huntingState: HuntingState | null
   incursions: SectorIncursion[]
   anomalies: WorldAnomaly[]
+  worldMarkers: WorldMarker[]
+  activityBlocker: ActivityBlocker | null
   explorationSpeed: ExplorationSpeedState
 }
 
@@ -369,6 +391,7 @@ const MapSectorButton = memo(function MapSectorButton({
   strongEnemyCount,
   incursionCount,
   anomalyCount,
+  worldMarkers,
   onSelect,
 }: {
   sector: CharacterMapSector
@@ -380,6 +403,7 @@ const MapSectorButton = memo(function MapSectorButton({
   strongEnemyCount: number
   incursionCount: number
   anomalyCount: number
+  worldMarkers: WorldMarker[]
   onSelect: (sectorId: number) => void
 }) {
   const contentType =
@@ -402,6 +426,7 @@ const MapSectorButton = memo(function MapSectorButton({
     strongEnemyCount > 0 ? 'has-strong-enemy' : '',
     incursionCount > 0 ? 'has-sector-incursion' : '',
     anomalyCount > 0 ? 'has-world-anomaly' : '',
+    worldMarkers.length > 0 ? 'has-world-marker' : '',
   ].filter(Boolean).join(' ')
 
   return (
@@ -463,6 +488,26 @@ const MapSectorButton = memo(function MapSectorButton({
           ☠
         </span>
       )}
+      {showGameplayOverlay && worldMarkers.length > 0 && (() => {
+        const primary = worldMarkers[0]
+        const symbol = primary.kind === 'treasure'
+          ? '×'
+          : primary.kind === 'camp'
+            ? '⌂'
+            : primary.kind === 'merchant'
+              ? '¤'
+              : '?'
+        const label = worldMarkers.map((entry) => entry.title).join(' · ')
+        return (
+          <span
+            className={'sector-world-marker-mark marker-' + primary.kind}
+            title={label}
+            aria-label={label}
+          >
+            {symbol}{worldMarkers.length > 1 ? worldMarkers.length : ''}
+          </span>
+        )
+      })()}
       {showGameplayOverlay && contentType && (
         <span
           className="sector-content-mark"
@@ -528,6 +573,8 @@ export function WorldMap({
   const [huntingState, setHuntingState] = useState<HuntingState | null>(() => cachedMap?.huntingState ?? null)
   const [incursions, setIncursions] = useState<SectorIncursion[]>(() => cachedMap?.incursions ?? [])
   const [anomalies, setAnomalies] = useState<WorldAnomaly[]>(() => cachedMap?.anomalies ?? [])
+  const [worldMarkers, setWorldMarkers] = useState<WorldMarker[]>(() => cachedMap?.worldMarkers ?? [])
+  const [activityBlocker, setActivityBlocker] = useState<ActivityBlocker | null>(() => cachedMap?.activityBlocker ?? null)
   const [explorationSpeed, setExplorationSpeed] = useState<ExplorationSpeedState>(
     () => cachedMap?.explorationSpeed ?? {
       speed_percent: 0,
@@ -578,6 +625,8 @@ export function WorldMap({
       huntingStateResult,
       incursionResult,
       anomalyResult,
+      worldMarkerResult,
+      activityJournalResult,
     ] = await Promise.all([
       supabase.rpc('get_character_map_state', {
         p_character_id: characterId,
@@ -634,6 +683,12 @@ export function WorldMap({
       supabase.rpc('get_visible_world_anomalies', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_character_world_markers', {
+        p_character_id: characterId,
+      }),
+      supabase.rpc('get_character_activity_journal', {
+        p_character_id: characterId,
+      }),
     ])
 
     const error =
@@ -649,7 +704,9 @@ export function WorldMap({
       strongEnemyResult.error ??
       huntingStateResult.error ??
       incursionResult.error ??
-      anomalyResult.error
+      anomalyResult.error ??
+      worldMarkerResult.error ??
+      activityJournalResult.error
 
     if (error) {
       if (!silent) setMessage(userFacingError(error.message, 'Не удалось обновить карту.'))
@@ -670,6 +727,8 @@ export function WorldMap({
       huntingState: ((huntingStateResult.data as HuntingState[] | null) ?? [])[0] ?? null,
       incursions: (incursionResult.data as SectorIncursion[] | null) ?? [],
       anomalies: (anomalyResult.data as WorldAnomaly[] | null) ?? [],
+      worldMarkers: (worldMarkerResult.data as WorldMarker[] | null) ?? [],
+      activityBlocker: ((activityJournalResult.data as { blocker?: ActivityBlocker | null } | null)?.blocker ?? null),
       explorationSpeed: ((explorationSpeedResult.data as ExplorationSpeedState[] | null) ?? [])[0] ?? {
         speed_percent: 0,
         religion_percent: 0,
@@ -693,6 +752,8 @@ export function WorldMap({
     setHuntingState(nextCache.huntingState)
     setIncursions(nextCache.incursions)
     setAnomalies(nextCache.anomalies)
+    setWorldMarkers(nextCache.worldMarkers)
+    setActivityBlocker(nextCache.activityBlocker)
     setExplorationSpeed(nextCache.explorationSpeed)
     if (!silent) setLoading(false)
   }
@@ -800,6 +861,18 @@ export function WorldMap({
     return grouped
   }, [anomalies])
 
+  const worldMarkersBySector = useMemo(() => {
+    const grouped = new Map<number, WorldMarker[]>()
+    for (const marker of worldMarkers) {
+      const entries = grouped.get(marker.sector_id) ?? []
+      entries.push(marker)
+      grouped.set(marker.sector_id, entries)
+    }
+    return grouped
+  }, [worldMarkers])
+
+  const activeCampMarker = worldMarkers.find((entry) => entry.kind === 'camp') ?? null
+
   const discoveredCount = useMemo(
     () => sectors.filter((sector) => sector.is_discovered).length,
     [sectors],
@@ -904,7 +977,16 @@ export function WorldMap({
     [siteProgress],
   )
 
-  const anyBlockingActivity = Boolean(openExpedition || activeSiteAction || activeDungeonRun)
+  const anyBlockingActivity = Boolean(activityBlocker || openExpedition || activeSiteAction || activeDungeonRun)
+  const blockingReason = activityBlocker
+    ? activityBlocker.title + ': ' + activityBlocker.detail
+    : activeDungeonRun
+      ? 'Сначала заверши текущее подземелье.'
+      : activeSiteAction
+        ? 'Сначала заверши текущее исследование найденного места.'
+        : openExpedition
+          ? 'Сначала заверши текущую экспедицию.'
+          : ''
 
   useEffect(() => {
     if (
@@ -945,6 +1027,9 @@ export function WorldMap({
     : []
   const selectedAnomalies = selectedSector
     ? anomaliesBySector.get(selectedSector.id) ?? []
+    : []
+  const selectedWorldMarkers = selectedSector
+    ? worldMarkersBySector.get(selectedSector.id) ?? []
     : []
 
   const selectSector = useCallback((sectorId: number) => {
@@ -1095,6 +1180,61 @@ export function WorldMap({
     if (actionType === 'explore_ruins') {
       setMessage('Исследование руин начато. По завершении будут выданы золото, опыт и случайная находка.')
     }
+    endAction()
+  }
+
+  async function placeCamp(specialization: 'scout' | 'hunter' | 'war' | 'trader') {
+    if (!selectedSector?.is_discovered || selectedSector.content_type !== 'wilderness' || selectedSector.terrain_type === 'sea') return
+
+    if (!beginAction(true)) return
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('place_character_camp', {
+      p_character_id: characterId,
+      p_sector_id: selectedSector.id,
+      p_specialization: specialization,
+    })
+
+    if (error) {
+      const raw = error.message
+      setMessage(
+        raw.includes('NOT_ENOUGH_GOLD')
+          ? 'Не хватает золота: новый лагерь стоит 80, перенос или смена активного — 120.'
+          : raw.includes('EXPEDITION_ALREADY_ACTIVE') || raw.includes('SITE_ACTION_ALREADY_ACTIVE')
+            ? 'Сначала заверши текущее исследование или экспедицию.'
+            : raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')
+              ? 'Сначала заверши текущее подземелье.'
+              : raw.includes('COMBAT_ALREADY_ACTIVE')
+                ? 'Сначала заверши текущий бой.'
+                : raw.includes('PARTY_DUNGEON_ACTIVE')
+                  ? 'Сначала заверши текущий групповой поход.'
+                  : userFacingError(raw, 'Не удалось поставить лагерь.'),
+      )
+      endAction()
+      return
+    }
+
+    const result = data as { price?: number; expires_at?: string } | null
+    const expiresAt = result?.expires_at
+      ? new Date(result.expires_at).toLocaleString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null
+
+    setMessage(
+      'Лагерь установлен'
+      + (result?.price ? ` за ${result.price} золота` : '')
+      + (expiresAt ? ` · действует до ${expiresAt}` : '')
+      + '.',
+    )
+
+    await Promise.all([
+      loadMapData(true),
+      Promise.resolve(onProgressChanged?.()),
+    ])
     endAction()
   }
 
@@ -1600,6 +1740,14 @@ export function WorldMap({
               <span className="map-legend-icon world-anomaly">✦</span>
               Предвестник мировой угрозы
             </span>
+            <span className="map-legend-item death-spirit">
+              <span className="map-legend-icon death-spirit">☠</span>
+              Дух погибшего
+            </span>
+            <span className="map-legend-item world-marker">
+              <span className="map-legend-icon world-marker">◆</span>
+              Цель, лагерь или торговец
+            </span>
           </div>
         )}
       </div>
@@ -1641,6 +1789,7 @@ export function WorldMap({
                 strongEnemyCount={strongEnemiesBySector.get(sector.id)?.length ?? 0}
                 incursionCount={incursionsBySector.get(sector.id)?.length ?? 0}
                 anomalyCount={anomaliesBySector.get(sector.id)?.length ?? 0}
+                worldMarkers={worldMarkersBySector.get(sector.id) ?? []}
                 onSelect={selectSector}
               />
             ))}
@@ -1679,6 +1828,32 @@ export function WorldMap({
               {selectedSector.player_description ||
                 'Этот сектор уже нанесён на карту, но подробное описание пока не задано.'}
             </p>
+
+            {selectedWorldMarkers.length > 0 && (
+              <div className="world-marker-list">
+                {selectedWorldMarkers.map((marker) => (
+                  <div className={'world-marker-card marker-' + marker.kind} key={marker.kind + ':' + marker.id}>
+                    <div>
+                      <span className="eyebrow">
+                        {marker.kind === 'treasure'
+                          ? 'КАРТА СОКРОВИЩ'
+                          : marker.kind === 'camp'
+                            ? 'ЛАГЕРЬ'
+                            : marker.kind === 'merchant'
+                              ? 'СТРАНСТВУЮЩИЙ ТОРГОВЕЦ'
+                              : 'ПОРУЧЕНИЕ'}
+                      </span>
+                      <strong>{marker.title}</strong>
+                    </div>
+                    <p>{marker.detail}</p>
+                    {marker.kind === 'treasure' && marker.total_stages && (
+                      <small>Этап {marker.stage ?? 1}/{marker.total_stages} · риск {marker.risk_level ?? 0}/3</small>
+                    )}
+                    {marker.ends_at && <small>Действует до {new Date(marker.ends_at).toLocaleString('ru-RU')}</small>}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {selectedAnomalies.length > 0 && (
               <div className="world-anomaly-list">
@@ -1864,10 +2039,39 @@ export function WorldMap({
                     </div>
                   )}
 
+                  <div className="camp-control-card">
+                    <div className="camp-control-head">
+                      <div>
+                        <span className="eyebrow">ЛАГЕРЬ · 48 ЧАСОВ</span>
+                        <strong>
+                          {activeCampMarker
+                            ? activeCampMarker.sector_id === selectedSector.id
+                              ? 'Лагерь уже в этом секторе'
+                              : `Текущий лагерь: сектор #${activeCampMarker.sector_id}`
+                            : 'Выбери специализацию'}
+                        </strong>
+                      </div>
+                      <span className="badge">{activeCampMarker ? 'перенос 120' : '80 золота'}</span>
+                    </div>
+                    <p className="muted">
+                      Разведка: +10% к исследованиям · Охота: +1 ресурс · Военный: +8% физ. защиты · Торговый: −10% у странствующего торговца.
+                    </p>
+                    {anyBlockingActivity && blockingReason && (
+                      <small className="camp-blocked-reason">{blockingReason}</small>
+                    )}
+                    <div className="camp-specialization-actions">
+                      <button className="ghost-button" type="button" disabled={busy || anyBlockingActivity} title={blockingReason} onClick={() => void placeCamp('scout')}>Разведка</button>
+                      <button className="ghost-button" type="button" disabled={busy || anyBlockingActivity} title={blockingReason} onClick={() => void placeCamp('hunter')}>Охота</button>
+                      <button className="ghost-button" type="button" disabled={busy || anyBlockingActivity} title={blockingReason} onClick={() => void placeCamp('war')}>Военный</button>
+                      <button className="ghost-button" type="button" disabled={busy || anyBlockingActivity} title={blockingReason} onClick={() => void placeCamp('trader')}>Торговый</button>
+                    </div>
+                  </div>
+
                   <button
                     className="primary-button"
                     type="button"
                     disabled={busy || anyBlockingActivity || captured || lockedElsewhere}
+                    title={anyBlockingActivity ? blockingReason : captured ? 'Сначала освободи сектор.' : lockedElsewhere ? 'Охотничья серия привязана к другому региону.' : ''}
                     onClick={() => void startHunt()}
                   >
                     {captured
@@ -2196,11 +2400,7 @@ export function WorldMap({
               {selectedSector.is_explorable
                 ? 'Он граничит с уже известной территорией и доступен для исследования.'
                 : anyBlockingActivity
-                  ? activeDungeonRun
-                    ? 'Сначала нужно покинуть активное подземелье.'
-                    : activeSiteAction
-                      ? 'Сначала заверши текущее исследование найденного места.'
-                      : 'Сначала нужно завершить текущую экспедицию или событие.'
+                  ? blockingReason || 'Сначала заверши текущее действие.'
                   : 'Пока слишком далеко от изученной части карты. Сначала открой соседние сектора.'}
             </p>
 
@@ -2209,6 +2409,7 @@ export function WorldMap({
                 className="primary-button sector-explore-button"
                 type="button"
                 disabled={busy || anyBlockingActivity}
+                title={anyBlockingActivity ? blockingReason : ''}
                 onClick={() => void startExploration()}
               >
                 {busy ? 'Отправляемся…' : `Исследовать · ${formatDuration(explorationSpeed.sector_seconds)}`}

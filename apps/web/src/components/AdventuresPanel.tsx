@@ -5,6 +5,7 @@ import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 import { EventBossesPanel } from './EventBossesPanel'
+import { ActivityJournalPanel } from './ActivityJournalPanel'
 import { WorldPulsePanel } from './WorldPulsePanel'
 import type {
   AutobattleGuardMode,
@@ -38,7 +39,7 @@ type Props = {
   onInventoryChanged?: () => Promise<unknown> | void
 }
 
-type AdventureTab = 'locations' | 'world' | 'bosses'
+type AdventureTab = 'journal' | 'locations' | 'world' | 'bosses'
 type LocationTab = 'dungeons' | 'ruins'
 
 type CombatScroll = {
@@ -1328,6 +1329,9 @@ export function AdventuresPanel({
           </article>
 
           <div className="adventure-folder-tabs" role="tablist" aria-label="Разделы приключений">
+            <button className={adventureTab === 'journal' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'journal'} onClick={() => setAdventureTab('journal')}>
+              <span>Журнал</span>
+            </button>
             <button className={adventureTab === 'locations' ? 'active' : ''} type="button" role="tab" aria-selected={adventureTab === 'locations'} onClick={() => setAdventureTab('locations')}>
               <span>Места</span>
               <b>{ruins.length + dungeons.length}</b>
@@ -2592,6 +2596,15 @@ export function AdventuresPanel({
           )}
         </article>
       )}
+        </div>
+      )}
+
+      {mode === 'adventures' && adventureTab === 'journal' && (
+        <div className="adventure-folder-content">
+          <ActivityJournalPanel
+            characterId={characterId}
+            onProgressChanged={onProgressChanged}
+          />
         </div>
       )}
 
