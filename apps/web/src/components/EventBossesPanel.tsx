@@ -333,21 +333,6 @@ export function EventBossesPanel({ characterId, onChanged }: Props) {
                   </div>
                 )}
 
-                <div className="event-boss-mechanics">
-                  <div>
-                    <strong>{boss.special_name}</strong>
-                    <span>
-                      Особый приём входит в опасное окно примерно каждые {boss.special_every_n} хода врага. Телеграф показывает приближение угрозы, но не гарантирует точный следующий ход.
-                    </span>
-                  </div>
-                  <div>
-                    <strong>{boss.phase2_name}</strong>
-                    <span>
-                      Ниже {boss.phase2_hp_percent}% ОЗ начинается вторая фаза «{boss.phase2_name}»: поведение и давление босса усиливаются.
-                    </span>
-                  </div>
-                </div>
-
                 {boss.reward_material_name && boss.featured_loot?.length > 0 ? (
                   <div className="event-boss-loot-system">
                     <div className="event-boss-material-reward">

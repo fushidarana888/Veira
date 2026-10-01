@@ -27,10 +27,14 @@ type ActivityJournalEntry = {
 
 type CampState = {
   sector_id: number
-  specialization: 'scout' | 'hunter' | 'war' | 'trader'
+  camp_level: number
+  access_mode: 'private' | 'party' | 'open'
   placed_at: string
   expires_at: string
-  bonus: string
+  module_slots: number
+  module_count: number
+  storage_capacity: number
+  storage_used: number
 }
 
 type ExplorationState = {
@@ -62,6 +66,8 @@ const kindLabels: Record<string, string> = {
   religion_oath: 'КЛЯТВА',
   death_spirit: 'ДУХ',
   camp: 'ЛАГЕРЬ',
+  hunting: 'ОХОТА',
+  camp_action: 'ЛАГЕРНОЕ ДЕЙСТВИЕ',
   merchant: 'ТОРГОВЕЦ',
   rumor: 'СЛУХ',
 }
@@ -85,7 +91,7 @@ export function ActivityJournalPanel({ characterId, onProgressChanged }: Props) 
   const loadJournal = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
 
-    const { data, error } = await supabase.rpc('get_character_activity_journal', {
+    const { data, error } = await supabase.rpc('get_character_activity_journal_v2', {
       p_character_id: characterId,
     })
 
@@ -207,9 +213,11 @@ export function ActivityJournalPanel({ characterId, onProgressChanged }: Props) 
           <span className="eyebrow">ЛАГЕРЬ</span>
           {journal.camp ? (
             <>
-              <h3>{journal.camp.bonus}</h3>
+              <h3>Полевой лагерь · уровень {journal.camp.camp_level}</h3>
               <p className="muted">
-                Сектор #{journal.camp.sector_id} · действует до {formatTime(journal.camp.expires_at)}.
+                Сектор #{journal.camp.sector_id} · построек {journal.camp.module_count}/{journal.camp.module_slots}
+                {' '}· склад {journal.camp.storage_used}/{journal.camp.storage_capacity}
+                {' '}· до {formatTime(journal.camp.expires_at)}.
               </p>
               <button className="ghost-button" type="button" disabled={busy} onClick={() => void removeCamp()}>
                 {busy ? 'Сворачиваем…' : 'Свернуть лагерь'}
@@ -218,7 +226,7 @@ export function ActivityJournalPanel({ characterId, onProgressChanged }: Props) 
           ) : (
             <>
               <h3>Лагерь не установлен</h3>
-              <p className="muted">Выбери открытый дикий сектор на карте и поставь лагерь нужной специализации.</p>
+              <p className="muted">Выбери открытый дикий сектор на карте и разбей полевую базу. Возможности лагеря открываются постройками, а не покупкой пассивного бафа.</p>
             </>
           )}
         </article>

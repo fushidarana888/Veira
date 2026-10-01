@@ -338,7 +338,7 @@ export function AdventuresPanel({
         .eq('character_id', characterId)
         .order('created_at', { ascending: false })
         .limit(6),
-      supabase.rpc('get_character_activity_journal', {
+      supabase.rpc('get_character_activity_journal_v2', {
         p_character_id: characterId,
       }),
     ])

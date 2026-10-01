@@ -14159,3 +14159,194 @@ html.native-app .bottom-nav {
     flex-direction: column;
   }
 }
+
+
+/* Field camp system */
+.camp-system-card {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid rgba(154, 128, 89, .32);
+  border-radius: 14px;
+  background: rgba(31, 27, 23, .42);
+}
+
+.camp-system-card h4,
+.camp-system-card p {
+  margin: 0;
+}
+
+.camp-system-head,
+.camp-section-heading,
+.camp-action-active,
+.camp-trade-offer,
+.camp-storage-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.camp-system-head > div,
+.camp-action-active > div,
+.camp-trade-offer > div {
+  display: grid;
+  gap: 4px;
+}
+
+.camp-resource-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.camp-resource-strip span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,.025);
+}
+
+.camp-owner-actions,
+.camp-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+}
+
+.camp-owner-actions label {
+  display: grid;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.camp-owner-actions select,
+.camp-storage-controls select,
+.camp-storage-controls input,
+.camp-trade-create select,
+.camp-trade-create input {
+  min-height: 38px;
+}
+
+.camp-section {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.camp-module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.camp-module-card {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 11px;
+  background: rgba(0,0,0,.12);
+}
+
+.camp-module-card.built {
+  border-color: rgba(159, 192, 142, .34);
+}
+
+.camp-module-card p,
+.camp-module-card small {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.camp-report-list,
+.camp-storage-list,
+.camp-trade-list {
+  display: grid;
+  gap: 8px;
+}
+
+.camp-report-list > div,
+.camp-storage-list > div,
+.camp-trade-offer {
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+}
+
+.camp-report-list > div {
+  display: grid;
+  gap: 3px;
+}
+
+.camp-report-list span,
+.camp-trade-offer span,
+.camp-trade-offer small {
+  color: var(--muted);
+}
+
+.camp-storage-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 86px auto;
+  gap: 8px;
+}
+
+.camp-trade-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 78px minmax(0, 1fr) 78px auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.camp-daily-event {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.camp-daily-event .eyebrow {
+  grid-column: 1 / -1;
+}
+
+.hunting-active-run {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(174, 136, 84, .3);
+  border-radius: 12px;
+  background: rgba(91, 67, 38, .16);
+}
+
+.hunting-active-run > div {
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 760px) {
+  .camp-resource-strip,
+  .camp-storage-controls,
+  .camp-trade-create {
+    grid-template-columns: 1fr;
+  }
+
+  .camp-system-head,
+  .camp-action-active,
+  .camp-trade-offer,
+  .hunting-active-run {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .camp-daily-event {
+    grid-template-columns: 1fr;
+  }
+}

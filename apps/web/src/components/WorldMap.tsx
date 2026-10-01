@@ -4,6 +4,7 @@ import { useActionGate } from '../lib/actionGate'
 import { supabase } from '../lib/supabase'
 import { useSmartRefresh } from '../lib/smartRefresh'
 import { SettlementShop } from './SettlementShop'
+import { CampPanel } from './CampPanel'
 import type {
   CharacterMapSector,
   DungeonRun,
@@ -97,16 +98,41 @@ type HuntingState = {
   active: boolean
   next_pressure: number
   next_monster_chance: number
+  resource_chance: number
+  duration_seconds: number
+  active_hunt: {
+    attempt_id: string
+    sector_id: number
+    region_key: string
+    pressure: number
+    monster_chance: number
+    focus: string
+    started_at: string
+    finishes_at: string
+    ready: boolean
+  } | null
+  last_result: {
+    attempt_id: string
+    sector_id: number
+    result: string
+    resolved_at: string | null
+    item_name: string | null
+    quantity: number
+    enemy_name: string | null
+  } | null
 }
 
 type HuntResult = {
-  result: 'resource' | 'nothing' | 'tracks' | 'monster'
+  result: 'pending' | 'resource' | 'tracks' | 'monster'
+  attempt_id: string
   pressure: number
   monster_chance: number
-  region_key: string
-  locked_until: string
+  region_key?: string
+  finishes_at?: string
   item_name?: string
   quantity?: number
+  resource_type?: string
+  hunting_table_bonus?: number
   enemy_name?: string
   run_id?: string
   encounter_id?: string
@@ -136,6 +162,10 @@ type WorldMarker = {
   total_stages?: number
   risk_level?: number
   ends_at?: string
+  camp_owner_character_id?: string
+  is_own?: boolean
+  access_mode?: 'private' | 'party' | 'open'
+  camp_level?: number
 }
 
 type ActivityBlocker = {
@@ -674,7 +704,7 @@ export function WorldMap({
       supabase.rpc('get_visible_world_strong_enemies_v2', {
         p_character_id: characterId,
       }),
-      supabase.rpc('get_character_hunting_state', {
+      supabase.rpc('get_character_hunting_state_v2', {
         p_character_id: characterId,
       }),
       supabase.rpc('get_visible_sector_incursions', {
@@ -683,10 +713,10 @@ export function WorldMap({
       supabase.rpc('get_visible_world_anomalies', {
         p_character_id: characterId,
       }),
-      supabase.rpc('get_character_world_markers', {
+      supabase.rpc('get_character_world_markers_v2', {
         p_character_id: characterId,
       }),
-      supabase.rpc('get_character_activity_journal', {
+      supabase.rpc('get_character_activity_journal_v2', {
         p_character_id: characterId,
       }),
     ])
@@ -724,7 +754,7 @@ export function WorldMap({
       dungeonRuns: (dungeonRunResult.data as DungeonRun[] | null) ?? [],
       deathSpirits: (deathSpiritResult.data as DeathSpiritMapEntry[] | null) ?? [],
       strongEnemies: (strongEnemyResult.data as WorldStrongEnemy[] | null) ?? [],
-      huntingState: ((huntingStateResult.data as HuntingState[] | null) ?? [])[0] ?? null,
+      huntingState: (huntingStateResult.data as HuntingState | null) ?? null,
       incursions: (incursionResult.data as SectorIncursion[] | null) ?? [],
       anomalies: (anomalyResult.data as WorldAnomaly[] | null) ?? [],
       worldMarkers: (worldMarkerResult.data as WorldMarker[] | null) ?? [],
@@ -807,6 +837,15 @@ export function WorldMap({
   }, [huntingState?.active, huntingState?.locked_until])
 
   useEffect(() => {
+    if (!huntingState?.active_hunt?.finishes_at || huntingState.active_hunt.ready) return
+    const delay = Math.max(0, new Date(huntingState.active_hunt.finishes_at).getTime() - Date.now() + 500)
+    const timeout = window.setTimeout(() => {
+      void loadMapData(true)
+    }, delay)
+    return () => window.clearTimeout(timeout)
+  }, [huntingState?.active_hunt?.attempt_id, huntingState?.active_hunt?.finishes_at, huntingState?.active_hunt?.ready])
+
+  useEffect(() => {
     if (incursions.length === 0) return
     const nextExpiry = Math.min(...incursions.map((entry) => new Date(entry.ends_at).getTime()))
     const delay = Math.max(0, nextExpiry - Date.now() + 500)
@@ -870,8 +909,6 @@ export function WorldMap({
     }
     return grouped
   }, [worldMarkers])
-
-  const activeCampMarker = worldMarkers.find((entry) => entry.kind === 'camp') ?? null
 
   const discoveredCount = useMemo(
     () => sectors.filter((sector) => sector.is_discovered).length,
@@ -1183,70 +1220,16 @@ export function WorldMap({
     endAction()
   }
 
-  async function placeCamp(specialization: 'scout' | 'hunter' | 'war' | 'trader') {
-    if (!selectedSector?.is_discovered || selectedSector.content_type !== 'wilderness' || selectedSector.terrain_type === 'sea') return
-
-    if (!beginAction(true)) return
-    setMessage('')
-
-    const { data, error } = await supabase.rpc('place_character_camp', {
-      p_character_id: characterId,
-      p_sector_id: selectedSector.id,
-      p_specialization: specialization,
-    })
-
-    if (error) {
-      const raw = error.message
-      setMessage(
-        raw.includes('NOT_ENOUGH_GOLD')
-          ? 'Не хватает золота: новый лагерь стоит 80, перенос или смена активного — 120.'
-          : raw.includes('EXPEDITION_ALREADY_ACTIVE') || raw.includes('SITE_ACTION_ALREADY_ACTIVE')
-            ? 'Сначала заверши текущее исследование или экспедицию.'
-            : raw.includes('DUNGEON_RUN_ALREADY_ACTIVE')
-              ? 'Сначала заверши текущее подземелье.'
-              : raw.includes('COMBAT_ALREADY_ACTIVE')
-                ? 'Сначала заверши текущий бой.'
-                : raw.includes('PARTY_DUNGEON_ACTIVE')
-                  ? 'Сначала заверши текущий групповой поход.'
-                  : userFacingError(raw, 'Не удалось поставить лагерь.'),
-      )
-      endAction()
-      return
-    }
-
-    const result = data as { price?: number; expires_at?: string } | null
-    const expiresAt = result?.expires_at
-      ? new Date(result.expires_at).toLocaleString('ru-RU', {
-          day: '2-digit',
-          month: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : null
-
-    setMessage(
-      'Лагерь установлен'
-      + (result?.price ? ` за ${result.price} золота` : '')
-      + (expiresAt ? ` · действует до ${expiresAt}` : '')
-      + '.',
-    )
-
-    await Promise.all([
-      loadMapData(true),
-      Promise.resolve(onProgressChanged?.()),
-    ])
-    endAction()
-  }
-
   async function startHunt() {
     if (!selectedSector?.is_discovered || selectedSector.content_type !== 'wilderness') return
 
     if (!beginAction(true)) return
     setMessage('')
 
-    const { data, error } = await supabase.rpc('start_hunt', {
+    const { data, error } = await supabase.rpc('start_hunt_v2', {
       p_character_id: characterId,
       p_sector_id: selectedSector.id,
+      p_focus: 'general',
     })
 
     if (error) {
@@ -1259,8 +1242,6 @@ export function WorldMap({
         setMessage('Персонаж занят другим боем, походом или исследованием.')
       } else if (raw.includes('HUNT_NOT_AVAILABLE_AT_SEA')) {
         setMessage('В морском секторе обычная охота недоступна.')
-      } else if (raw.includes('CHARACTER_HAS_NO_HP')) {
-        setMessage('Перед охотой восстанови хотя бы часть ОЗ.')
       } else {
         setMessage(userFacingError(raw))
       }
@@ -1269,13 +1250,45 @@ export function WorldMap({
     }
 
     const result = data as HuntResult
+    await loadMapData(true)
+    setMessage(
+      `Охота началась · 10 минут. Давление региона: ${result.pressure}/6`
+      + (result.monster_chance > 0 ? ` · шанс сильного монстра ${result.monster_chance}%` : '')
+      + '.',
+    )
+    endAction()
+  }
 
+  async function finishHunt() {
+    const activeHunt = huntingState?.active_hunt
+    if (!activeHunt) return
+    if (!beginAction(true)) return
+    setMessage('')
+
+    const { data, error } = await supabase.rpc('finish_hunt_v2', {
+      p_character_id: characterId,
+      p_attempt_id: activeHunt.attempt_id,
+    })
+
+    if (error) {
+      setMessage(
+        error.message.includes('HUNT_NOT_READY')
+          ? 'Охота ещё не завершилась.'
+          : userFacingError(error.message),
+      )
+      endAction()
+      return
+    }
+
+    const result = data as HuntResult
     await loadMapData(true)
 
     if (result.result === 'resource') {
       await Promise.resolve(onInventoryChanged?.())
       setMessage(
-        `Охота удалась: получено ${result.item_name ?? 'ресурс'} ×${result.quantity ?? 1}. Давление региона: ${result.pressure}/6.`,
+        `Охота завершена: ${result.item_name ?? 'ресурс'} ×${result.quantity ?? 1}`
+        + (result.hunting_table_bonus ? ' · охотничий стол дал +1 добычу' : '')
+        + '.',
       )
       endAction()
       return
@@ -1283,22 +1296,13 @@ export function WorldMap({
 
     if (result.result === 'tracks') {
       await Promise.resolve(onProgressChanged?.())
-      setMessage(
-        `Добыча ушла, но охота не была пустой: следы дали +${result.experience ?? 0} опыта. Давление региона: ${result.pressure}/6; шанс сильного монстра продолжает расти.`,
-      )
-      endAction()
-      return
-    }
-
-    if (result.result === 'nothing') {
-      setMessage(
-        `Старый исход охоты без добычи. Новые охоты вместо этого дают опыт за выслеживание. Давление региона: ${result.pressure}/6.`,
-      )
+      setMessage(`Добыча ушла, но выслеживание дало +${result.experience ?? 0} опыта.`)
       endAction()
       return
     }
 
     await Promise.resolve(onProgressChanged?.())
+    setMessage(`Следы привели к сильному противнику: ${result.enemy_name ?? 'неизвестный зверь'}.`)
     endAction()
     onOpenBattles?.()
   }
@@ -1988,13 +1992,15 @@ export function WorldMap({
               )
               const nextPressure = sameRegion ? huntingState?.next_pressure ?? 1 : 1
               const nextMonsterChance = sameRegion ? huntingState?.next_monster_chance ?? 0 : 0
-              const resourceChance = nextPressure >= 6 ? 0 : 20
+              const resourceChance = nextPressure >= 6 ? 0 : huntingState?.resource_chance ?? 70
+              const activeHunt = huntingState?.active_hunt ?? null
+              const selectedCampMarker = selectedWorldMarkers.find((entry) => entry.kind === 'camp') ?? null
 
               return (
                 <div className="hunting-card">
                   <div className="hunting-card-head">
                     <div>
-                      <span className="eyebrow">ОХОТА</span>
+                      <span className="eyebrow">ОХОТА · 10 МИНУТ</span>
                       <strong>{terrainLabels[selectedSector.terrain_type ?? 'unassigned'] ?? selectedSector.terrain_type}</strong>
                     </div>
                     <span className={'badge ' + (nextPressure >= 6 ? 'danger' : '')}>
@@ -2003,13 +2009,13 @@ export function WorldMap({
                   </div>
 
                   <p>
-                    Обычная охота даёт региональный ресурс с шансом <b>20%</b>.
-                    Чем чаще охотишься в одной серии, тем выше шанс потревожить сильного монстра.
+                    Охота больше не разрешается мгновенно. После 10 минут ты явно получишь результат:
+                    региональный ресурс, опыт за следы или встречу с сильным противником.
                   </p>
 
                   <div className="hunting-pressure-grid">
                     <span><small>Следующая охота</small><b>{nextPressure}/6</b></span>
-                    <span><small>Ресурс</small><b>{resourceChance}%</b></span>
+                    <span><small>Ресурс после выслеживания</small><b>{resourceChance}%</b></span>
                     <span><small>Сильный монстр</small><b>{nextMonsterChance}%</b></span>
                   </div>
 
@@ -2020,7 +2026,7 @@ export function WorldMap({
                       </strong>
                       <span>
                         Сменить регион можно через <Countdown endsAt={huntingState.locked_until} />.
-                        Каждая новая охота в этой серии снова продлевает след на 12 часов.
+                        Каждая новая охота снова продлевает след региона на 12 часов.
                       </span>
                     </div>
                   )}
@@ -2028,7 +2034,7 @@ export function WorldMap({
                   {nextPressure >= 6 && !lockedElsewhere && (
                     <div className="hunting-danger-note">
                       <strong>Регион перегрет охотой</strong>
-                      <span>На 6/6 ресурсы больше не выпадают: каждая охота приводит только к сильному монстру, пока серия не остынет.</span>
+                      <span>На 6/6 следующая охота гарантированно приводит к сильному монстру.</span>
                     </div>
                   )}
 
@@ -2039,51 +2045,56 @@ export function WorldMap({
                     </div>
                   )}
 
-                  <div className="camp-control-card">
-                    <div className="camp-control-head">
+                  {activeHunt ? (
+                    <div className="hunting-active-run">
                       <div>
-                        <span className="eyebrow">ЛАГЕРЬ · 48 ЧАСОВ</span>
-                        <strong>
-                          {activeCampMarker
-                            ? activeCampMarker.sector_id === selectedSector.id
-                              ? 'Лагерь уже в этом секторе'
-                              : `Текущий лагерь: сектор #${activeCampMarker.sector_id}`
-                            : 'Выбери специализацию'}
-                        </strong>
+                        <span className="eyebrow">ОХОТНИК В ПУТИ</span>
+                        <strong>Сектор #{activeHunt.sector_id} · давление {activeHunt.pressure}/6</strong>
+                        <small>
+                          {activeHunt.ready
+                            ? 'Охота завершена. Результат уже можно забрать.'
+                            : <>Возвращение через <Countdown endsAt={activeHunt.finishes_at} /></>}
+                        </small>
                       </div>
-                      <span className="badge">{activeCampMarker ? 'перенос 120' : '80 золота'}</span>
+                      <button
+                        className="primary-button"
+                        type="button"
+                        disabled={busy || !activeHunt.ready}
+                        onClick={() => void finishHunt()}
+                      >
+                        {activeHunt.ready ? 'Забрать результат охоты' : 'Охота идёт'}
+                      </button>
                     </div>
-                    <p className="muted">
-                      Разведка: +10% к исследованиям · Охота: +1 ресурс · Военный: +8% физ. защиты · Торговый: −10% у странствующего торговца.
-                    </p>
-                    {anyBlockingActivity && blockingReason && (
-                      <small className="camp-blocked-reason">{blockingReason}</small>
-                    )}
-                    <div className="camp-specialization-actions">
-                      <button className="ghost-button" type="button" disabled={busy || anyBlockingActivity} title={blockingReason} onClick={() => void placeCamp('scout')}>Разведка</button>
-                      <button className="ghost-button" type="button" disabled={busy || anyBlockingActivity} title={blockingReason} onClick={() => void placeCamp('hunter')}>Охота</button>
-                      <button className="ghost-button" type="button" disabled={busy || anyBlockingActivity} title={blockingReason} onClick={() => void placeCamp('war')}>Военный</button>
-                      <button className="ghost-button" type="button" disabled={busy || anyBlockingActivity} title={blockingReason} onClick={() => void placeCamp('trader')}>Торговый</button>
-                    </div>
-                  </div>
+                  ) : (
+                    <button
+                      className="primary-button"
+                      type="button"
+                      disabled={busy || anyBlockingActivity || captured || lockedElsewhere}
+                      title={anyBlockingActivity ? blockingReason : captured ? 'Сначала освободи сектор.' : lockedElsewhere ? 'Охотничья серия привязана к другому региону.' : ''}
+                      onClick={() => void startHunt()}
+                    >
+                      {captured
+                        ? 'Сектор захвачен'
+                        : lockedElsewhere
+                          ? 'Привязан другой регион'
+                          : anyBlockingActivity
+                            ? 'Персонаж занят'
+                            : nextPressure >= 6
+                              ? 'Начать охоту · сильный монстр'
+                              : 'Начать охоту · 10 минут'}
+                    </button>
+                  )}
 
-                  <button
-                    className="primary-button"
-                    type="button"
-                    disabled={busy || anyBlockingActivity || captured || lockedElsewhere}
-                    title={anyBlockingActivity ? blockingReason : captured ? 'Сначала освободи сектор.' : lockedElsewhere ? 'Охотничья серия привязана к другому региону.' : ''}
-                    onClick={() => void startHunt()}
-                  >
-                    {captured
-                      ? 'Сектор захвачен'
-                      : lockedElsewhere
-                        ? 'Привязан другой регион'
-                        : anyBlockingActivity
-                          ? 'Персонаж занят'
-                          : nextPressure >= 6
-                            ? 'Охотиться · гарантирован сильный монстр'
-                            : 'Охотиться'}
-                  </button>
+                  <CampPanel
+                    characterId={characterId}
+                    sectorId={selectedSector.id}
+                    campOwnerCharacterId={selectedCampMarker?.camp_owner_character_id ?? null}
+                    canPlace={selectedSector.is_discovered}
+                    blocked={anyBlockingActivity}
+                    blockingReason={blockingReason}
+                    onChanged={() => loadMapData(true)}
+                    onInventoryChanged={onInventoryChanged}
+                  />
                 </div>
               )
             })()}
@@ -2091,8 +2102,6 @@ export function WorldMap({
             {selectedStrongEnemies.length > 0 && (
               <div className="world-strong-enemy-list">
                 {selectedStrongEnemies.map((enemy) => {
-                  const wounds = enemy.mechanics.wound_rupture
-                  const rage = enemy.mechanics.rage_hunt
                   const scheduledWorldBoss = Boolean(enemy.mechanics?.scheduled && enemy.mechanics?.world_boss)
                   const runActive = enemy.run_status === 'active'
 
@@ -2124,30 +2133,6 @@ export function WorldMap({
                         <span><small>Атака</small><b>{enemy.enemy_attack}</b></span>
                         <span><small>Защита</small><b>{enemy.enemy_defense}</b></span>
                         <span><small>Рекомендация</small><b>ур. {enemy.recommended_level}+</b></span>
-                      </div>
-
-                      <div className="world-strong-enemy-mechanics">
-                        {wounds?.enabled && (
-                          <div>
-                            <strong>Ранения → Разрыв</strong>
-                            <span>
-                              3 успешных удара накапливают Ранения. Следующая успешная атака вызывает Разрыв:
-                              {' '}{wounds.rupture_max_hp_percent ?? 6}% макс. ОЗ. Разрыв нельзя заблокировать;
-                              Ранения снимаются очищением.
-                            </span>
-                          </div>
-                        )}
-                        {rage?.enabled && (
-                          <div>
-                            <strong>{enemy.phase2_name || 'Вторая фаза'} · &lt;{enemy.phase2_hp_percent}% ОЗ</strong>
-                            <span>
-                              Каждый обычный удар отнимает у врага {rage.self_damage_max_hp_percent ?? 3}% его Max HP.
-                              Шанс слабого Рывка растёт: {rage.dash_chance_1 ?? 20}% → {rage.dash_chance_2 ?? 35}% →
-                              {' '}{rage.dash_chance_3 ?? 50}% → {rage.dash_chance_4 ?? 70}%. Рывок не создаёт Ранение,
-                              но может вызвать Разрыв при 3 Ранениях.
-                            </span>
-                          </div>
-                        )}
                       </div>
 
                       <div className="world-strong-enemy-reward">
