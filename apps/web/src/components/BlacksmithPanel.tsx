@@ -6,6 +6,7 @@ import type {
   BlacksmithAffixItem,
   BlacksmithDuplicate,
   BlacksmithWeapon,
+  ItemEquipGroup,
   ItemRarity,
   WeaponFamily,
 } from '../types'
@@ -60,7 +61,16 @@ const statLabels: Record<string, string> = {
 const affixCategoryLabels: Record<BlacksmithAffixItem['category'], string> = {
   weapon: 'Оружие',
   armor: 'Броня',
-  accessory: 'Аксессуар',
+  accessory: 'Аксессуары',
+}
+
+const affixSlotLabels: Partial<Record<ItemEquipGroup, string>> = {
+  offhand: 'Щиты / вторая рука',
+  head: 'Шлемы / голова',
+  chest: 'Нагрудники',
+  hands: 'Перчатки / руки',
+  legs: 'Поножи / ноги',
+  feet: 'Сапоги / обувь',
 }
 
 const effectLabels: Record<string, string> = {
@@ -142,6 +152,9 @@ export function BlacksmithPanel({
 }: Props) {
   const [weapons, setWeapons] = useState<BlacksmithWeapon[]>([])
   const [affixItems, setAffixItems] = useState<BlacksmithAffixItem[]>([])
+  const [affixCategoryFilter, setAffixCategoryFilter] = useState<'all' | BlacksmithAffixItem['category']>('all')
+  const [affixSlotFilter, setAffixSlotFilter] = useState<'all' | ItemEquipGroup>('all')
+  const [affixWeaponFamilyFilter, setAffixWeaponFamilyFilter] = useState<'all' | WeaponFamily>('all')
   const [tab, setTab] = useState<ForgeTab>('enhance')
   const [loading, setLoading] = useState(true)
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -189,6 +202,9 @@ export function BlacksmithPanel({
     setTab('enhance')
     setMessage('')
     setAwakeningSources({})
+    setAffixCategoryFilter('all')
+    setAffixSlotFilter('all')
+    setAffixWeaponFamilyFilter('all')
     void loadWeapons()
   }, [characterId, sectorId])
 
@@ -198,6 +214,46 @@ export function BlacksmithPanel({
     affixReroll: affixItems[0]?.affix_reroll_unlocked ?? weapons[0]?.affix_reroll_unlocked ?? settlementLevel >= 3,
     awakening: weapons[0]?.awakening_unlocked ?? settlementLevel >= 3,
   }), [weapons, affixItems, settlementLevel])
+
+  const affixCategoryCounts = useMemo(() => ({
+    all: affixItems.length,
+    weapon: affixItems.filter((item) => item.category === 'weapon').length,
+    armor: affixItems.filter((item) => item.category === 'armor').length,
+    accessory: affixItems.filter((item) => item.category === 'accessory').length,
+  }), [affixItems])
+
+  const availableAffixSlots = useMemo(() => {
+    const seen = new Set<ItemEquipGroup>()
+
+    for (const item of affixItems) {
+      if (item.category !== 'armor') continue
+      if (item.equip_group === 'weapon' || item.equip_group === 'accessory') continue
+      seen.add(item.equip_group)
+    }
+
+    return [...seen].sort((left, right) =>
+      (affixSlotLabels[left] ?? left).localeCompare(affixSlotLabels[right] ?? right, 'ru-RU'),
+    )
+  }, [affixItems])
+
+  const availableAffixWeaponFamilies = useMemo(() => {
+    const seen = new Set<WeaponFamily>()
+
+    for (const item of affixItems) {
+      if (item.category === 'weapon' && item.weapon_family) seen.add(item.weapon_family)
+    }
+
+    return [...seen].sort((left, right) =>
+      (familyLabels[left] ?? left).localeCompare(familyLabels[right] ?? right, 'ru-RU'),
+    )
+  }, [affixItems])
+
+  const visibleAffixItems = useMemo(() => affixItems.filter((item) => {
+    if (affixCategoryFilter !== 'all' && item.category !== affixCategoryFilter) return false
+    if (affixSlotFilter !== 'all' && item.equip_group !== affixSlotFilter) return false
+    if (affixWeaponFamilyFilter !== 'all' && item.weapon_family !== affixWeaponFamilyFilter) return false
+    return true
+  }), [affixCategoryFilter, affixItems, affixSlotFilter, affixWeaponFamilyFilter])
 
   async function refreshAfterMutation(copy: string) {
     await Promise.all([
@@ -685,8 +741,75 @@ export function BlacksmithPanel({
               Работа с аффиксами доступна в поселениях <strong>2 уровня и выше</strong>.
             </div>
           ) : (
-            <div className="blacksmith-grid">
-              {affixItems.map((item) => {
+            <>
+              <div className="blacksmith-affix-filters">
+                <div className="blacksmith-affix-category-tabs" role="tablist" aria-label="Категория экипировки">
+                  {([
+                    ['all', 'Все'],
+                    ['weapon', 'Оружие'],
+                    ['armor', 'Броня'],
+                    ['accessory', 'Аксессуары'],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={affixCategoryFilter === key}
+                      className={affixCategoryFilter === key ? 'active' : ''}
+                      key={key}
+                      onClick={() => {
+                        setAffixCategoryFilter(key)
+                        setAffixSlotFilter('all')
+                        setAffixWeaponFamilyFilter('all')
+                      }}
+                    >
+                      <span>{label}</span>
+                      <b>{affixCategoryCounts[key]}</b>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="blacksmith-affix-filter-selects">
+                  {(affixCategoryFilter === 'all' || affixCategoryFilter === 'armor') && (
+                    <label>
+                      <span>Тип брони</span>
+                      <select
+                        value={affixSlotFilter}
+                        onChange={(event) => setAffixSlotFilter(event.target.value as 'all' | ItemEquipGroup)}
+                      >
+                        <option value="all">Вся броня</option>
+                        {availableAffixSlots.map((slot) => (
+                          <option value={slot} key={slot}>{affixSlotLabels[slot] ?? slot}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
+                  {affixCategoryFilter === 'weapon' && (
+                    <label>
+                      <span>Семейство оружия</span>
+                      <select
+                        value={affixWeaponFamilyFilter}
+                        onChange={(event) => setAffixWeaponFamilyFilter(event.target.value as 'all' | WeaponFamily)}
+                      >
+                        <option value="all">Все семейства</option>
+                        {availableAffixWeaponFamilies.map((family) => (
+                          <option value={family} key={family}>{familyLabels[family] ?? family}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
+                  <span className="blacksmith-affix-filter-count">
+                    Показано <strong>{visibleAffixItems.length}</strong> из {affixItems.length}
+                  </span>
+                </div>
+              </div>
+
+              {visibleAffixItems.length === 0 ? (
+                <div className="blacksmith-empty">Под выбранные фильтры ничего не подходит.</div>
+              ) : (
+                <div className="blacksmith-grid">
+                  {visibleAffixItems.map((item) => {
                 const busy = busyKey?.includes(item.character_item_id) ?? false
                 return (
                   <article className={'blacksmith-card blacksmith-affix-card rarity-' + item.rarity} key={item.character_item_id}>
@@ -763,10 +886,12 @@ export function BlacksmithPanel({
                         Перековок этого предмета: {item.affix_reroll_count}. Повторные перековки постепенно дорожают.
                       </small>
                     )}
-                  </article>
-                )
-              })}
-            </div>
+                    </article>
+                  )
+                })}
+              </div>
+              )}
+            </>
           )}
         </>
       )}
