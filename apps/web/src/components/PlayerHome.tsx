@@ -1,7 +1,7 @@
 import { userFacingError } from '../lib/userError'
 import { Capacitor } from '@capacitor/core'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { addStatModifiers, armorDamageReductionPercent, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
+import { addStatModifiers, armorDamageReductionPercent, baseHpMax, baseManaMax, calculateDerivedCombatStats, experienceForNextLevel, type StatKey } from '@veira/game-core'
 import { supabase } from '../lib/supabase'
 import { scheduleIdle, useSmartRefresh } from '../lib/smartRefresh'
 
@@ -207,7 +207,8 @@ const statLabels: Record<StatKey, string> = {
 }
 
 const statUpgradeHints: Partial<Record<StatKey, string>> = {
-  intellect: '+3 маг. мощи · +1 маг. броня',
+  intellect: '+3 маг. мощи · +1 маг. броня · +7 макс. маны',
+  vitality: '+10 макс. ОЗ · +2 физ. брони · +1 маг. брони',
 }
 
 function raceTraitNumber(traits: RaceTrait[] | undefined, type: string) {
@@ -901,7 +902,10 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
   const effectiveHpMax = Math.max(
     1,
     Math.round(
-      progress.hp_max
+      (
+        baseHpMax(progress.level, effectiveStats.vitality)
+        + Number(raceDefinition?.hp_bonus ?? 0)
+      )
         * (
           100
           + equipmentPercentModifiers.maxHpPercent
@@ -918,6 +922,21 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
     ),
   )
   const hpPercent = Math.min(100, Math.round((effectiveHpCurrent / effectiveHpMax) * 100))
+  const effectiveManaMax = Math.max(
+    0,
+    baseManaMax(progress.level, effectiveStats.intellect)
+      + Number(raceDefinition?.mana_bonus ?? 0),
+  )
+  const effectiveManaCurrent = Math.min(
+    effectiveManaMax,
+    Math.max(
+      0,
+      Math.round(progress.mana_current * effectiveManaMax / Math.max(1, progress.mana_max)),
+    ),
+  )
+  const manaPercent = effectiveManaMax > 0
+    ? Math.min(100, Math.round((effectiveManaCurrent / effectiveManaMax) * 100))
+    : 0
   const effectivePhysicalDefense = Math.max(
     0,
     Math.round(
@@ -1672,14 +1691,12 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
                 <article className="panel vital-card">
                   <div className="card-heading">
                     <span>Мана</span>
-                    <strong>{progress.mana_current ?? 0} / {progress.mana_max ?? 0}</strong>
+                    <strong>{effectiveManaCurrent} / {effectiveManaMax}</strong>
                   </div>
                   <div className="meter mana-meter">
                     <span
                       style={{
-                        width: (progress.mana_max ?? 0) > 0
-                          ? Math.round(((progress.mana_current ?? 0) / (progress.mana_max ?? 1)) * 100) + '%'
-                          : '0%',
+                        width: manaPercent + '%',
                       }}
                     />
                   </div>
