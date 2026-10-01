@@ -2435,6 +2435,13 @@ function InventoryPanel({
           .includes(normalizedQuery)
       })
       .sort((left, right) => {
+        const leftEquipped = equippedItemIds.has(left.id)
+        const rightEquipped = equippedItemIds.has(right.id)
+
+        if (leftEquipped !== rightEquipped) {
+          return rightEquipped ? 1 : -1
+        }
+
         const leftDefinition = normalizeDefinition(left.item_definitions)
         const rightDefinition = normalizeDefinition(right.item_definitions)
         if (!leftDefinition || !rightDefinition) return 0
@@ -2463,7 +2470,7 @@ function InventoryPanel({
           || (left.custom_name || leftDefinition.name)
             .localeCompare(right.custom_name || rightDefinition.name, 'ru-RU')
       })
-  }, [armorSlotFilter, filter, items, query, rarityFilter, sort, specialFilter, weaponFamilyFilter])
+  }, [armorSlotFilter, equippedItemIds, filter, items, query, rarityFilter, sort, specialFilter, weaponFamilyFilter])
 
   const bulkEligibleItems = useMemo(() => visibleItems.filter((item) => {
     const definition = normalizeDefinition(item.item_definitions)
