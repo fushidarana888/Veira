@@ -725,7 +725,6 @@ export function BlacksmithPanel({
             </div>
           )}
         </>
-        </>
       )}
     </section>
   )
