@@ -72,6 +72,9 @@ type DuelParticipant = {
   weapon_damage_type: string
   magic_damage_type: string
   guard_reduction_percent: number
+  guard_stance_active: boolean
+  guard_spell_percent: number
+  reflect_percent: number
   counter_bonus_percent: number
   spell_damage_bonus_percent: number
   spell_damage_bonus_hits: number
@@ -568,8 +571,14 @@ export function DuelPanel({ characterId }: Props) {
               disabled={!myTurn || busy === 'action' || mine.bow_draw_pending}
               onClick={() => void act('guard')}
             >
-              Защита
+              Защитная стойка
             </button>
+          </div>
+
+          <div className="duel-turn-help">
+            <strong>Защитная стойка:</strong>{' '}
+            защищает от ближайшего прямого удара, но исчезает, как только снова наступает ваш ход и вы выбираете другое действие.
+            Магические щиты работают отдельно и теряют 10% текущей силы за каждый следующий раунд.
           </div>
 
           {spells.length > 0 && (
@@ -585,7 +594,10 @@ export function DuelPanel({ characterId }: Props) {
                     onClick={() => void act('spell', spell.id)}
                   >
                     <span>{spell.name}</span>
-                    <small>{spellKindLabel(spell.spell_kind)} · {spell.mana_cost} ОМ</small>
+                    <small>
+                      {spellKindLabel(spell.spell_kind)} · {spell.mana_cost} ОМ
+                      {spell.spell_kind === 'guard' ? ' · −10% силы щита/раунд' : ''}
+                    </small>
                   </button>
                 ))}
               </div>
@@ -876,11 +888,36 @@ function DuelFighter({
         </div>
       </div>
 
-      {participant.guard_reduction_percent > 0 && (
+      {participant.guard_stance_active && (
         <div className="duel-guard-ready">
-          Защита готова · -{participant.guard_reduction_percent}% следующего удара
+          Защитная стойка активна
+          {participant.guard_spell_percent <= 0
+            ? ' · -' + participant.guard_reduction_percent + '% ближайшего удара'
+            : ''}
+          {' · '}исчезнет при следующем собственном действии
         </div>
       )}
+
+      {participant.guard_spell_percent > 0 && (
+        <div className="duel-guard-ready">
+          Магический щит · -{participant.guard_spell_percent}% следующего удара · сила -10% за раунд
+        </div>
+      )}
+
+      {participant.reflect_percent > 0 && (
+        <div className="duel-guard-ready">
+          Зеркальный барьер · отражение {participant.reflect_percent}% · сила -10% за раунд
+        </div>
+      )}
+
+      {!participant.guard_stance_active
+        && participant.guard_spell_percent <= 0
+        && participant.reflect_percent <= 0
+        && participant.guard_reduction_percent > 0 && (
+          <div className="duel-guard-ready">
+            Защита готова · -{participant.guard_reduction_percent}% следующего удара
+          </div>
+        )}
 
       {participant.spell_damage_bonus_percent > 0 && participant.spell_damage_bonus_hits > 0 && (
         <div className="duel-guard-ready">
