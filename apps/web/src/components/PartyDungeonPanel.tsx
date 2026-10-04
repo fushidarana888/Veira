@@ -1061,40 +1061,44 @@ export function PartyDungeonPanel({
     const timer = window.setTimeout(() => {
       if (!beginAction(true)) return
 
-      void supabase.rpc('sync_client_party_turn', {
-        p_character_id: characterId,
-        p_encounter_id: encounterId,
-      }).then(async ({ data, error }) => {
-        if (error) {
-          if (
-            error.message.includes('PARTY_NOT_YOUR_TURN')
-            || error.message.includes('PARTY_COMBAT_NOT_ACTIVE')
-          ) {
-            await loadDynamicState(true)
-          } else if (error.message.includes('FEATURE_UNAVAILABLE')) {
-            setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
-            setTurnModeEnabled(false)
-          } else {
-            setMessage(coopError(error.message))
-            await loadDynamicState(true)
+      void (async () => {
+        try {
+          const { data, error } = await supabase.rpc('sync_client_party_turn', {
+            p_character_id: characterId,
+            p_encounter_id: encounterId,
+          })
+
+          if (error) {
+            if (
+              error.message.includes('PARTY_NOT_YOUR_TURN')
+              || error.message.includes('PARTY_COMBAT_NOT_ACTIVE')
+            ) {
+              await loadDynamicState(true)
+            } else if (error.message.includes('FEATURE_UNAVAILABLE')) {
+              setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
+              setTurnModeEnabled(false)
+            } else {
+              setMessage(coopError(error.message))
+              await loadDynamicState(true)
+            }
+            return
           }
-          return
+
+          const payload = data as {
+            result?: { status?: string; run_status?: string }
+          } | null
+
+          await Promise.all([
+            loadDynamicState(true),
+            refreshPlayer(
+              payload?.result?.status === 'victory'
+              || payload?.result?.status === 'defeat',
+            ),
+          ])
+        } finally {
+          endAction()
         }
-
-        const payload = data as {
-          result?: { status?: string; run_status?: string }
-        } | null
-
-        await Promise.all([
-          loadDynamicState(true),
-          refreshPlayer(
-            payload?.result?.status === 'victory'
-            || payload?.result?.status === 'defeat',
-          ),
-        ])
-      }).finally(() => {
-        endAction()
-      })
+      })()
     }, 450)
 
     return () => window.clearTimeout(timer)
