@@ -631,9 +631,11 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
     })
   }
 
-  async function loadInventory() {
-    setInventoryBusy(true)
-    setInventoryMessage('')
+  async function loadInventory(silent = false) {
+    if (!silent) {
+      setInventoryBusy(true)
+      setInventoryMessage('')
+    }
 
     const [
       { data: itemData, error: itemError },
@@ -701,8 +703,10 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
       ])
 
     if (itemError || equipmentError || setError) {
-      setInventoryMessage(userFacingError(itemError?.message ?? equipmentError?.message ?? setError?.message, 'Не удалось загрузить инвентарь.'))
-      setInventoryBusy(false)
+      if (!silent) {
+        setInventoryMessage(userFacingError(itemError?.message ?? equipmentError?.message ?? setError?.message, 'Не удалось загрузить инвентарь.'))
+        setInventoryBusy(false)
+      }
       return
     }
 
@@ -710,7 +714,7 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
     setEquipment((equipmentData as CharacterEquipment[] | null) ?? [])
     setEquipmentSets((setData as EquipmentSetState[] | null) ?? [])
     setInventoryHydrated(true)
-    setInventoryBusy(false)
+    if (!silent) setInventoryBusy(false)
   }
 
   useEffect(() => {
@@ -769,7 +773,7 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
         ? loadTrophies()
         : Promise.resolve(),
       tab === 'character' && (characterTab === 'inventory' || characterTab === 'equipment')
-        ? loadInventory()
+        ? loadInventory(true)
         : loadEquippedState(),
     ])
   }
@@ -1079,6 +1083,10 @@ export function PlayerHome({ profile, character, userEmail, accountCreatedAt, on
         setInventoryMessage('Этот особый предмет нельзя обменять на золото.')
       } else if (raw.includes('ITEM_IS_EQUIPPED')) {
         setInventoryMessage('Сначала сними вещь с персонажа.')
+      } else if (raw.includes('ITEM_LOCKED')) {
+        setInventoryMessage('Сначала сними защиту с предмета.')
+      } else if (raw.includes('EQUIPMENT_QUANTITY_MUST_BE_ONE')) {
+        setInventoryMessage('Экипировку можно обменивать только по одной вещи.')
       } else if (raw.includes('COMBAT_ACTIVE')) {
         setInventoryMessage('Во время боя обменивать предметы нельзя.')
       } else if (raw.includes('NOT_ENOUGH_ITEMS')) {
