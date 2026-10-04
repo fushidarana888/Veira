@@ -221,7 +221,7 @@ export function DuelPanel({ characterId }: Props) {
     })
 
     if (overviewResult.error) {
-      setMessage(duelError(overviewResult.error.message))
+      if (!silent) setMessage(duelError(overviewResult.error.message))
       if (!silent) setLoading(false)
       return
     }
@@ -233,7 +233,7 @@ export function DuelPanel({ characterId }: Props) {
     if (active) {
       const detailResult = await supabase.rpc('get_pvp_duel', { p_duel_id: active.id })
       if (detailResult.error) {
-        setMessage(duelError(detailResult.error.message))
+        if (!silent) setMessage(duelError(detailResult.error.message))
       } else {
         setDetails((detailResult.data as DuelDetails | null) ?? null)
       }
@@ -316,86 +316,65 @@ export function DuelPanel({ characterId }: Props) {
       return
     }
 
-    try {
-      setTurnModeEnabled(
-        window.sessionStorage.getItem('veira:combat-mode:pvp:' + duelId) === '1',
-      )
-    } catch {
-      setTurnModeEnabled(false)
+    let cancelled = false
+
+    void supabase.rpc('get_client_runtime_state', {
+      p_character_id: characterId,
+      p_scope: 'duel',
+      p_scope_id: duelId,
+    }).then(({ data, error }) => {
+      if (cancelled) return
+      if (error) {
+        setTurnModeEnabled(false)
+        return
+      }
+
+      const state = data as {
+        available?: boolean
+        enabled?: boolean
+        server_managed?: boolean
+      } | null
+
+      if (state?.available === false) {
+        setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
+        setTurnModeEnabled(false)
+        return
+      }
+
+      setTurnModeEnabled(state?.enabled === true)
+    })
+
+    return () => {
+      cancelled = true
     }
-  }, [details?.duel?.id, details?.duel?.status, turnModeAvailable])
+  }, [details?.duel?.id, details?.duel?.status, turnModeAvailable, characterId])
 
-  useEffect(() => {
-    if (
-      !turnModeAvailable
-      || !turnModeEnabled
-      || !details
-      || details.duel.status !== 'active'
-      || !myTurn
-      || busy !== ''
-    ) return
-
-    const duelId = details.duel.id
-    const timer = window.setTimeout(() => {
-      if (!beginAction('action')) return
-
-      void (async () => {
-        try {
-          const { data, error } = await supabase.rpc('sync_client_duel_turn', {
-            p_character_id: characterId,
-            p_duel_id: duelId,
-          })
-
-          if (error) {
-            if (
-              error.message.includes('NOT_YOUR_TURN')
-              || error.message.includes('DUEL_NOT_ACTIVE')
-            ) {
-              await loadDynamic(true)
-            } else if (error.message.includes('FEATURE_UNAVAILABLE')) {
-              setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
-              setTurnModeEnabled(false)
-            } else {
-              setMessage(duelError(error.message))
-              await loadDynamic(true)
-            }
-            return
-          }
-
-          const payload = data as { state?: DuelDetails } | null
-          if (payload?.state) setDetails(payload.state)
-          await loadDynamic(true)
-        } finally {
-          endAction()
-        }
-      })()
-    }, 450)
-
-    return () => window.clearTimeout(timer)
-  }, [
-    turnModeAvailable,
-    turnModeEnabled,
-    details?.duel?.id,
-    details?.duel?.round,
-    details?.duel?.status,
-    myTurn,
-    busy,
-    characterId,
-  ])
-
-  function toggleTurnMode() {
+  async function toggleTurnMode() {
     if (!turnModeAvailable || !details || details.duel.status !== 'active') return
-    const next = !turnModeEnabled
-    setTurnModeEnabled(next)
+    if (!beginAction('turn-mode')) return
 
-    try {
-      window.sessionStorage.setItem(
-        'veira:combat-mode:pvp:' + details.duel.id,
-        next ? '1' : '0',
-      )
-    } catch {
-      // Current screen state still works if session storage is unavailable.
+    const next = !turnModeEnabled
+    const { data, error } = await supabase.rpc('set_client_runtime_state', {
+      p_character_id: characterId,
+      p_scope: 'duel',
+      p_scope_id: details.duel.id,
+      p_enabled: next,
+    })
+
+    if (error) {
+      setMessage(duelError(error.message))
+      endAction()
+      return
     }
+
+    const state = data as {
+      available?: boolean
+      enabled?: boolean
+      server_managed?: boolean
+    } | null
+
+    setTurnModeEnabled(state?.enabled === true)
+    endAction()
   }
 
   async function openHistoryDuel(duel: DuelSummary) {
@@ -601,13 +580,13 @@ export function DuelPanel({ characterId }: Props) {
               <button
                 className={turnModeEnabled ? 'primary-button' : 'ghost-button'}
                 type="button"
-                title="Режим хода"
-                aria-label="Режим хода"
+                title={turnModeEnabled ? 'Сервер сам выполняет твои ходы' : 'Включить автоматические ходы'}
+                aria-label="Автоматические ходы"
                 aria-pressed={turnModeEnabled}
-                disabled={busy === 'action'}
-                onClick={toggleTurnMode}
+                disabled={busy !== ''}
+                onClick={() => void toggleTurnMode()}
               >
-                {turnModeEnabled ? '●' : '○'}
+                {turnModeEnabled ? 'Авто · ВКЛ' : 'Авто · ВЫКЛ'}
               </button>
             )}
           </div>
