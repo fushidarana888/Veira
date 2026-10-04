@@ -215,6 +215,8 @@ type PartyDungeonState = {
   sacrifice_scroll_count: number
 }
 
+const OLEZHAO_CHARACTER_ID = 'c5caef7c-33c3-4799-8445-2cbf1448b6bc'
+
 function isBowProfile(profile: BowProfile | null | undefined): profile is BowProfile & { weapon_family: 'short_bow' | 'long_bow' } {
   return profile?.weapon_family === 'short_bow' || profile?.weapon_family === 'long_bow'
 }
@@ -449,6 +451,7 @@ export function PartyDungeonPanel({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [personalAutopilotEnabled, setPersonalAutopilotEnabled] = useState(false)
 
   const { beginAction, endAction } = useActionGate(setBusy, false, setMessage)
 
@@ -1014,6 +1017,115 @@ export function PartyDungeonPanel({
     () => [...state.turns].sort((left, right) => right.id - left.id),
     [state.turns],
   )
+  const personalAutopilotAvailable = characterId === OLEZHAO_CHARACTER_ID
+
+  useEffect(() => {
+    const encounterId = activeEncounter?.id ?? null
+    if (!personalAutopilotAvailable || !encounterId) {
+      setPersonalAutopilotEnabled(false)
+      return
+    }
+
+    try {
+      setPersonalAutopilotEnabled(
+        window.sessionStorage.getItem('veira:olezhao-autopilot:party:' + encounterId) === '1',
+      )
+    } catch {
+      setPersonalAutopilotEnabled(false)
+    }
+  }, [activeEncounter?.id, personalAutopilotAvailable])
+
+  useEffect(() => {
+    if (
+      !personalAutopilotAvailable
+      || !personalAutopilotEnabled
+      || !activeEncounter
+      || activeEncounter.status !== 'active'
+      || activeEncounter.next_actor_character_id !== characterId
+      || !me
+      || me.downed
+      || me.lost
+      || busy
+    ) return
+
+    const encounterId = activeEncounter.id
+    const timer = window.setTimeout(() => {
+      if (!beginAction(true)) return
+
+      void supabase.rpc('olezhao_party_autopilot_step', {
+        p_encounter_id: encounterId,
+      }).then(async ({ data, error }) => {
+        if (error) {
+          if (
+            error.message.includes('PARTY_NOT_YOUR_TURN')
+            || error.message.includes('PARTY_COMBAT_NOT_ACTIVE')
+          ) {
+            await loadDynamicState(true)
+          } else {
+            setMessage(coopError(error.message))
+            await loadDynamicState(true)
+          }
+          return
+        }
+
+        const payload = data as {
+          choice?: { label?: string; action?: string; reason?: string }
+          result?: { status?: string; run_status?: string }
+        } | null
+
+        await Promise.all([
+          loadDynamicState(true),
+          refreshPlayer(
+            payload?.result?.status === 'victory'
+            || payload?.result?.status === 'defeat',
+          ),
+        ])
+
+        setMessage(
+          payload?.choice?.label
+            ? 'Автопилот: ' + payload.choice.label + '.'
+            : 'Автопилот выполнил твой ход.',
+        )
+      }).finally(() => {
+        endAction()
+      })
+    }, 450)
+
+    return () => window.clearTimeout(timer)
+  }, [
+    personalAutopilotAvailable,
+    personalAutopilotEnabled,
+    activeEncounter?.id,
+    activeEncounter?.round,
+    activeEncounter?.next_actor_character_id,
+    me?.hp_current,
+    me?.mana_current,
+    me?.downed,
+    me?.lost,
+    busy,
+    characterId,
+  ])
+
+  function togglePersonalAutopilot() {
+    if (!personalAutopilotAvailable || !activeEncounter) return
+    const next = !personalAutopilotEnabled
+    setPersonalAutopilotEnabled(next)
+
+    try {
+      window.sessionStorage.setItem(
+        'veira:olezhao-autopilot:party:' + activeEncounter.id,
+        next ? '1' : '0',
+      )
+    } catch {
+      // Session storage is only a convenience; the current screen state still works.
+    }
+
+    setMessage(
+      next
+        ? 'Автопилот Олежао включён. Когда очередь дойдёт до тебя, ход выполнится автоматически.'
+        : 'Автопилот Олежао выключен.',
+    )
+  }
 
   if (loading) {
     return (
@@ -1849,6 +1961,26 @@ export function PartyDungeonPanel({
                   {(activeEncounter.enemy_bloodshed_stacks ?? 0) > 0 && (
                     <span> · Кровопролитие на враге: {activeEncounter.enemy_bloodshed_stacks}</span>
                   )}
+                </div>
+              )}
+
+              {personalAutopilotAvailable && (
+                <div className="party-turn-status">
+                  <button
+                    className={personalAutopilotEnabled ? 'primary-button' : 'ghost-button'}
+                    type="button"
+                    disabled={busy}
+                    aria-pressed={personalAutopilotEnabled}
+                    onClick={togglePersonalAutopilot}
+                  >
+                    {personalAutopilotEnabled
+                      ? 'Автопилот Олежао · ВКЛ'
+                      : 'Автопилот Олежао · ВЫКЛ'}
+                  </button>
+                  <span>
+                    {' '}Только твои обычные боевые ходы. Автопилот не использует «Последнюю жертву»,
+                    не сдаётся и не запускает побег.
+                  </span>
                 </div>
               )}
 
