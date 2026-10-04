@@ -7,8 +7,6 @@ import { useSmartRefresh } from '../lib/smartRefresh'
 import { BattleTurnLog, type BattleTurnLogEntry } from './BattleTurnLog'
 import type { BowDistance, BowProfile, CharacterSpell, CombatStatusEffectType } from '../types'
 
-const OLEZHAO_CHARACTER_ID = 'c5caef7c-33c3-4799-8445-2cbf1448b6bc'
-
 function isBowProfile(profile: BowProfile | null | undefined): profile is BowProfile & { weapon_family: 'short_bow' | 'long_bow' } {
   return profile?.weapon_family === 'short_bow' || profile?.weapon_family === 'long_bow'
 }
@@ -186,17 +184,19 @@ export function DuelPanel({ characterId }: Props) {
   const [historySelectedId, setHistorySelectedId] = useState<string | null>(null)
   const [historyTurns, setHistoryTurns] = useState<BattleTurnLogEntry[]>([])
   const [historyTurnsLoading, setHistoryTurnsLoading] = useState(false)
-  const [personalAutopilotEnabled, setPersonalAutopilotEnabled] = useState(false)
+  const [runtimeFlags, setRuntimeFlags] = useState<Record<string, boolean>>({})
+  const [turnModeEnabled, setTurnModeEnabled] = useState(false)
 
   const { beginAction, endAction } = useActionGate(setBusy, '', setMessage)
 
   async function loadStaticCombatData() {
-    const [spellsResult, bowProfileResult] = await Promise.all([
+    const [spellsResult, bowProfileResult, flagsResult] = await Promise.all([
       supabase.rpc('get_character_spells', { p_character_id: characterId }),
       supabase.rpc('get_character_bow_profile', { p_character_id: characterId }),
+      supabase.rpc('get_client_runtime_flags', { p_character_id: characterId }),
     ])
 
-    const error = spellsResult.error ?? bowProfileResult.error
+    const error = spellsResult.error ?? bowProfileResult.error ?? flagsResult.error
     if (error) {
       setMessage(duelError(error.message))
       return
@@ -210,6 +210,7 @@ export function DuelPanel({ characterId }: Props) {
         )),
     )
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
+    setRuntimeFlags((flagsResult.data as Record<string, boolean> | null) ?? {})
   }
 
   async function loadDynamic(silent = false) {
@@ -256,10 +257,10 @@ export function DuelPanel({ characterId }: Props) {
     {
       enabled: true,
       intervalMs: details?.duel?.status === 'active'
-        ? (characterId === OLEZHAO_CHARACTER_ID && personalAutopilotEnabled ? 1000 : 3500)
+        ? (runtimeFlags.turn_mode_v1 && turnModeEnabled ? 1000 : 3500)
         : 12000,
       minGapMs: details?.duel?.status === 'active'
-        ? (characterId === OLEZHAO_CHARACTER_ID && personalAutopilotEnabled ? 350 : 700)
+        ? (runtimeFlags.turn_mode_v1 && turnModeEnabled ? 350 : 700)
         : 1800,
     },
   )
@@ -306,28 +307,28 @@ export function DuelPanel({ characterId }: Props) {
   const opponentStatuses = opponent
     ? details?.statuses.filter((status) => status.target_character_id === opponent.character_id) ?? []
     : []
-  const personalAutopilotAvailable = characterId === OLEZHAO_CHARACTER_ID
+  const turnModeAvailable = runtimeFlags.turn_mode_v1 === true
 
   useEffect(() => {
     const duelId = details?.duel?.status === 'active' ? details.duel.id : null
-    if (!personalAutopilotAvailable || !duelId) {
-      setPersonalAutopilotEnabled(false)
+    if (!turnModeAvailable || !duelId) {
+      setTurnModeEnabled(false)
       return
     }
 
     try {
-      setPersonalAutopilotEnabled(
-        window.sessionStorage.getItem('veira:olezhao-autopilot:pvp:' + duelId) === '1',
+      setTurnModeEnabled(
+        window.sessionStorage.getItem('veira:combat-mode:pvp:' + duelId) === '1',
       )
     } catch {
-      setPersonalAutopilotEnabled(false)
+      setTurnModeEnabled(false)
     }
-  }, [details?.duel?.id, details?.duel?.status, personalAutopilotAvailable])
+  }, [details?.duel?.id, details?.duel?.status, turnModeAvailable])
 
   useEffect(() => {
     if (
-      !personalAutopilotAvailable
-      || !personalAutopilotEnabled
+      !turnModeAvailable
+      || !turnModeEnabled
       || !details
       || details.duel.status !== 'active'
       || !myTurn
@@ -338,14 +339,19 @@ export function DuelPanel({ characterId }: Props) {
     const timer = window.setTimeout(() => {
       if (!beginAction('action')) return
 
-      void supabase.rpc('olezhao_pvp_autopilot_step', {
+      void supabase.rpc('sync_client_duel_turn', {
+        p_character_id: characterId,
         p_duel_id: duelId,
       }).then(async ({ data, error }) => {
         if (error) {
-          if (error.message.includes('NOT_YOUR_TURN')) {
+          if (
+            error.message.includes('NOT_YOUR_TURN')
+            || error.message.includes('DUEL_NOT_ACTIVE')
+          ) {
             await loadDynamic(true)
-          } else if (error.message.includes('DUEL_NOT_ACTIVE')) {
-            await loadDynamic(true)
+          } else if (error.message.includes('FEATURE_UNAVAILABLE')) {
+            setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
+            setTurnModeEnabled(false)
           } else {
             setMessage(duelError(error.message))
             await loadDynamic(true)
@@ -353,18 +359,9 @@ export function DuelPanel({ characterId }: Props) {
           return
         }
 
-        const payload = data as {
-          choice?: { label?: string; action?: string; reason?: string }
-          state?: DuelDetails
-        } | null
-
+        const payload = data as { state?: DuelDetails } | null
         if (payload?.state) setDetails(payload.state)
         await loadDynamic(true)
-        setMessage(
-          payload?.choice?.label
-            ? 'Автопилот: ' + payload.choice.label + '.'
-            : 'Автопилот выполнил ход.',
-        )
       }).finally(() => {
         endAction()
       })
@@ -372,34 +369,29 @@ export function DuelPanel({ characterId }: Props) {
 
     return () => window.clearTimeout(timer)
   }, [
-    personalAutopilotAvailable,
-    personalAutopilotEnabled,
+    turnModeAvailable,
+    turnModeEnabled,
     details?.duel?.id,
     details?.duel?.round,
     details?.duel?.status,
     myTurn,
     busy,
+    characterId,
   ])
 
-  function togglePersonalAutopilot() {
-    if (!personalAutopilotAvailable || !details || details.duel.status !== 'active') return
-    const next = !personalAutopilotEnabled
-    setPersonalAutopilotEnabled(next)
+  function toggleTurnMode() {
+    if (!turnModeAvailable || !details || details.duel.status !== 'active') return
+    const next = !turnModeEnabled
+    setTurnModeEnabled(next)
 
     try {
       window.sessionStorage.setItem(
-        'veira:olezhao-autopilot:pvp:' + details.duel.id,
+        'veira:combat-mode:pvp:' + details.duel.id,
         next ? '1' : '0',
       )
     } catch {
-      // Session storage is only a convenience; the current screen state still works.
+      // Current screen state still works if session storage is unavailable.
     }
-
-    setMessage(
-      next
-        ? 'Автопилот Олежао включён. Когда приходит твой ход, персонаж сам выбирает действие.'
-        : 'Автопилот Олежао выключен.',
-    )
   }
 
   async function openHistoryDuel(duel: DuelSummary) {
@@ -601,27 +593,20 @@ export function DuelPanel({ characterId }: Props) {
             <span className={'badge ' + (myTurn ? 'ready' : '')}>
               {myTurn ? 'ваш ход' : 'ход соперника'}
             </span>
-          </div>
-
-          {personalAutopilotAvailable && (
-            <div className="duel-turn-help">
+            {turnModeAvailable && (
               <button
-                className={personalAutopilotEnabled ? 'primary-button' : 'ghost-button'}
+                className={turnModeEnabled ? 'primary-button' : 'ghost-button'}
                 type="button"
+                title="Режим хода"
+                aria-label="Режим хода"
+                aria-pressed={turnModeEnabled}
                 disabled={busy === 'action'}
-                aria-pressed={personalAutopilotEnabled}
-                onClick={togglePersonalAutopilot}
+                onClick={toggleTurnMode}
               >
-                {personalAutopilotEnabled
-                  ? 'Автопилот Олежао · ВКЛ'
-                  : 'Автопилот Олежао · ВЫКЛ'}
+                {turnModeEnabled ? '●' : '○'}
               </button>
-              <span>
-                {' '}Работает только для Олежао в этой дуэли. Сам выбирает атаку, лечение, щит или блок;
-                сдачу не нажимает.
-              </span>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="duel-fighters">
             <DuelFighter participant={mine} statuses={myStatuses} own />

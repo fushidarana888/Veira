@@ -215,8 +215,6 @@ type PartyDungeonState = {
   sacrifice_scroll_count: number
 }
 
-const OLEZHAO_CHARACTER_ID = 'c5caef7c-33c3-4799-8445-2cbf1448b6bc'
-
 function isBowProfile(profile: BowProfile | null | undefined): profile is BowProfile & { weapon_family: 'short_bow' | 'long_bow' } {
   return profile?.weapon_family === 'short_bow' || profile?.weapon_family === 'long_bow'
 }
@@ -451,7 +449,8 @@ export function PartyDungeonPanel({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [personalAutopilotEnabled, setPersonalAutopilotEnabled] = useState(false)
+  const [runtimeFlags, setRuntimeFlags] = useState<Record<string, boolean>>({})
+  const [turnModeEnabled, setTurnModeEnabled] = useState(false)
 
   const { beginAction, endAction } = useActionGate(setBusy, false, setMessage)
 
@@ -469,16 +468,19 @@ export function PartyDungeonPanel({
   }
 
   async function loadStaticCombatData() {
-    const [spellResult, bowProfileResult] = await Promise.all([
+    const [spellResult, bowProfileResult, flagsResult] = await Promise.all([
       supabase.rpc('get_character_spells', {
         p_character_id: characterId,
       }),
       supabase.rpc('get_character_bow_profile', {
         p_character_id: characterId,
       }),
+      supabase.rpc('get_client_runtime_flags', {
+        p_character_id: characterId,
+      }),
     ])
 
-    const error = spellResult.error ?? bowProfileResult.error
+    const error = spellResult.error ?? bowProfileResult.error ?? flagsResult.error
     if (error) {
       setMessage(coopError(error.message))
       return
@@ -489,6 +491,7 @@ export function PartyDungeonPanel({
         .filter((spell) => spell.combat_slot !== null && ['damage', 'heal', 'guard', 'cleanse', 'buff', 'taunt', 'summon'].includes(spell.spell_kind)),
     )
     setBowProfile((bowProfileResult.data as BowProfile | null) ?? null)
+    setRuntimeFlags((flagsResult.data as Record<string, boolean> | null) ?? {})
   }
 
   async function loadPartySummons(encounterId: string | null) {
@@ -606,12 +609,12 @@ export function PartyDungeonPanel({
       intervalMs: state.run?.status === 'active'
         ? (
           mode === 'combat'
-            ? (characterId === OLEZHAO_CHARACTER_ID && personalAutopilotEnabled ? 1000 : 3000)
+            ? (runtimeFlags.turn_mode_v1 && turnModeEnabled ? 1000 : 3000)
             : 10000
         )
         : 0,
       minGapMs: mode === 'combat'
-        ? (characterId === OLEZHAO_CHARACTER_ID && personalAutopilotEnabled ? 350 : 800)
+        ? (runtimeFlags.turn_mode_v1 && turnModeEnabled ? 350 : 800)
         : 1500,
     },
   )
@@ -1023,28 +1026,28 @@ export function PartyDungeonPanel({
     () => [...state.turns].sort((left, right) => right.id - left.id),
     [state.turns],
   )
-  const personalAutopilotAvailable = characterId === OLEZHAO_CHARACTER_ID
+  const turnModeAvailable = runtimeFlags.turn_mode_v1 === true
 
   useEffect(() => {
     const runId = activeRun?.id ?? null
-    if (!personalAutopilotAvailable || !runId) {
-      setPersonalAutopilotEnabled(false)
+    if (!turnModeAvailable || !runId) {
+      setTurnModeEnabled(false)
       return
     }
 
     try {
-      setPersonalAutopilotEnabled(
-        window.sessionStorage.getItem('veira:olezhao-autopilot:party:' + runId) === '1',
+      setTurnModeEnabled(
+        window.sessionStorage.getItem('veira:combat-mode:party:' + runId) === '1',
       )
     } catch {
-      setPersonalAutopilotEnabled(false)
+      setTurnModeEnabled(false)
     }
-  }, [activeRun?.id, personalAutopilotAvailable])
+  }, [activeRun?.id, turnModeAvailable])
 
   useEffect(() => {
     if (
-      !personalAutopilotAvailable
-      || !personalAutopilotEnabled
+      !turnModeAvailable
+      || !turnModeEnabled
       || !activeEncounter
       || activeEncounter.status !== 'active'
       || activeEncounter.next_actor_character_id !== characterId
@@ -1058,7 +1061,8 @@ export function PartyDungeonPanel({
     const timer = window.setTimeout(() => {
       if (!beginAction(true)) return
 
-      void supabase.rpc('olezhao_party_autopilot_step', {
+      void supabase.rpc('sync_client_party_turn', {
+        p_character_id: characterId,
         p_encounter_id: encounterId,
       }).then(async ({ data, error }) => {
         if (error) {
@@ -1067,6 +1071,9 @@ export function PartyDungeonPanel({
             || error.message.includes('PARTY_COMBAT_NOT_ACTIVE')
           ) {
             await loadDynamicState(true)
+          } else if (error.message.includes('FEATURE_UNAVAILABLE')) {
+            setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
+            setTurnModeEnabled(false)
           } else {
             setMessage(coopError(error.message))
             await loadDynamicState(true)
@@ -1075,7 +1082,6 @@ export function PartyDungeonPanel({
         }
 
         const payload = data as {
-          choice?: { label?: string; action?: string; reason?: string }
           result?: { status?: string; run_status?: string }
         } | null
 
@@ -1086,12 +1092,6 @@ export function PartyDungeonPanel({
             || payload?.result?.status === 'defeat',
           ),
         ])
-
-        setMessage(
-          payload?.choice?.label
-            ? 'Автопилот: ' + payload.choice.label + '.'
-            : 'Автопилот выполнил твой ход.',
-        )
       }).finally(() => {
         endAction()
       })
@@ -1099,8 +1099,8 @@ export function PartyDungeonPanel({
 
     return () => window.clearTimeout(timer)
   }, [
-    personalAutopilotAvailable,
-    personalAutopilotEnabled,
+    turnModeAvailable,
+    turnModeEnabled,
     activeEncounter?.id,
     activeEncounter?.round,
     activeEncounter?.next_actor_character_id,
@@ -1112,25 +1112,19 @@ export function PartyDungeonPanel({
     characterId,
   ])
 
-  function togglePersonalAutopilot() {
-    if (!personalAutopilotAvailable || !activeRun || !activeEncounter) return
-    const next = !personalAutopilotEnabled
-    setPersonalAutopilotEnabled(next)
+  function toggleTurnMode() {
+    if (!turnModeAvailable || !activeRun || !activeEncounter) return
+    const next = !turnModeEnabled
+    setTurnModeEnabled(next)
 
     try {
       window.sessionStorage.setItem(
-        'veira:olezhao-autopilot:party:' + activeRun.id,
+        'veira:combat-mode:party:' + activeRun.id,
         next ? '1' : '0',
       )
     } catch {
-      // Session storage is only a convenience; the current screen state still works.
+      // Current screen state still works if session storage is unavailable.
     }
-
-    setMessage(
-      next
-        ? 'Автопилот Олежао включён. Когда очередь дойдёт до тебя, ход выполнится автоматически.'
-        : 'Автопилот Олежао выключен.',
-    )
   }
 
   if (loading) {
@@ -1970,31 +1964,24 @@ export function PartyDungeonPanel({
                 </div>
               )}
 
-              {personalAutopilotAvailable && (
-                <div className="party-turn-status">
-                  <button
-                    className={personalAutopilotEnabled ? 'primary-button' : 'ghost-button'}
-                    type="button"
-                    disabled={busy}
-                    aria-pressed={personalAutopilotEnabled}
-                    onClick={togglePersonalAutopilot}
-                  >
-                    {personalAutopilotEnabled
-                      ? 'Автопилот Олежао · ВКЛ'
-                      : 'Автопилот Олежао · ВЫКЛ'}
-                  </button>
-                  <span>
-                    {' '}Работает до конца текущего похода. Только твои обычные боевые ходы:
-                    без «Последней жертвы», сдачи и побега.
-                  </span>
-                </div>
-              )}
-
               <div className="party-action-heading">
                 <div>
                   <span className="eyebrow">ТВОЁ ДЕЙСТВИЕ</span>
                   <strong>{isMyTurn ? 'Выбери ход' : 'Ожидание очереди'}</strong>
                 </div>
+                {turnModeAvailable && (
+                  <button
+                    className={turnModeEnabled ? 'primary-button' : 'ghost-button'}
+                    type="button"
+                    title="Режим хода"
+                    aria-label="Режим хода"
+                    aria-pressed={turnModeEnabled}
+                    disabled={busy}
+                    onClick={toggleTurnMode}
+                  >
+                    {turnModeEnabled ? '●' : '○'}
+                  </button>
+                )}
                 {activeRun.is_event_boss && activeEncounter.enemy_danger_pending && <span className="danger">босс готовит приём</span>}
               </div>
 

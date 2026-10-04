@@ -121,8 +121,6 @@ type ArenaMatchResult = {
   log: ArenaLogEntry[]
 }
 
-const OLEZHAO_CHARACTER_ID = 'c5caef7c-33c3-4799-8445-2cbf1448b6bc'
-
 const emptyOverview: ArenaOverview = {
   season: null,
   solo: null,
@@ -306,18 +304,6 @@ export function ArenaPanel({ characterId, onProgressChanged }: Props) {
           {season && <small>{formatArenaDate(season.ends_at)}</small>}
         </div>
       </section>
-
-      {characterId === OLEZHAO_CHARACTER_ID && (
-        <div className="duel-turn-help">
-          <button className="primary-button" type="button" disabled aria-pressed="true">
-            Автопилот Олежао · ВКЛ
-          </button>
-          <span>
-            {' '}На рейтинговой арене он уже работает всегда: весь матч сервер считает тактическим AI
-            с твоим билдом, боевым набором и настройками автобоя.
-          </span>
-        </div>
-      )}
 
       {message && <p className="gm-notice arena-notice" role="status" aria-live="polite">{message}</p>}
 
