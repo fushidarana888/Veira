@@ -1035,100 +1035,65 @@ export function PartyDungeonPanel({
       return
     }
 
-    try {
-      setTurnModeEnabled(
-        window.sessionStorage.getItem('veira:combat-mode:party:' + runId) === '1',
-      )
-    } catch {
-      setTurnModeEnabled(false)
+    let cancelled = false
+
+    void supabase.rpc('get_client_runtime_state', {
+      p_character_id: characterId,
+      p_scope: 'party',
+      p_scope_id: runId,
+    }).then(({ data, error }) => {
+      if (cancelled) return
+      if (error) {
+        setTurnModeEnabled(false)
+        return
+      }
+
+      const state = data as {
+        available?: boolean
+        enabled?: boolean
+        server_managed?: boolean
+      } | null
+
+      if (state?.available === false) {
+        setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
+        setTurnModeEnabled(false)
+        return
+      }
+
+      setTurnModeEnabled(state?.enabled === true)
+    })
+
+    return () => {
+      cancelled = true
     }
-  }, [activeRun?.id, turnModeAvailable])
+  }, [activeRun?.id, turnModeAvailable, characterId])
 
-  useEffect(() => {
-    if (
-      !turnModeAvailable
-      || !turnModeEnabled
-      || !activeEncounter
-      || activeEncounter.status !== 'active'
-      || activeEncounter.next_actor_character_id !== characterId
-      || !me
-      || me.downed
-      || me.lost
-      || busy
-    ) return
+  async function toggleTurnMode() {
+    if (!turnModeAvailable || !activeRun) return
+    if (!beginAction(true)) return
 
-    const encounterId = activeEncounter.id
-    const timer = window.setTimeout(() => {
-      if (!beginAction(true)) return
-
-      void (async () => {
-        try {
-          const { data, error } = await supabase.rpc('sync_client_party_turn', {
-            p_character_id: characterId,
-            p_encounter_id: encounterId,
-          })
-
-          if (error) {
-            if (
-              error.message.includes('PARTY_NOT_YOUR_TURN')
-              || error.message.includes('PARTY_COMBAT_NOT_ACTIVE')
-            ) {
-              await loadDynamicState(true)
-            } else if (error.message.includes('FEATURE_UNAVAILABLE')) {
-              setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
-              setTurnModeEnabled(false)
-            } else {
-              setMessage(coopError(error.message))
-              await loadDynamicState(true)
-            }
-            return
-          }
-
-          const payload = data as {
-            result?: { status?: string; run_status?: string }
-          } | null
-
-          await Promise.all([
-            loadDynamicState(true),
-            refreshPlayer(
-              payload?.result?.status === 'victory'
-              || payload?.result?.status === 'defeat',
-            ),
-          ])
-        } finally {
-          endAction()
-        }
-      })()
-    }, 450)
-
-    return () => window.clearTimeout(timer)
-  }, [
-    turnModeAvailable,
-    turnModeEnabled,
-    activeEncounter?.id,
-    activeEncounter?.round,
-    activeEncounter?.next_actor_character_id,
-    me?.hp_current,
-    me?.mana_current,
-    me?.downed,
-    me?.lost,
-    busy,
-    characterId,
-  ])
-
-  function toggleTurnMode() {
-    if (!turnModeAvailable || !activeRun || !activeEncounter) return
     const next = !turnModeEnabled
-    setTurnModeEnabled(next)
+    const { data, error } = await supabase.rpc('set_client_runtime_state', {
+      p_character_id: characterId,
+      p_scope: 'party',
+      p_scope_id: activeRun.id,
+      p_enabled: next,
+    })
 
-    try {
-      window.sessionStorage.setItem(
-        'veira:combat-mode:party:' + activeRun.id,
-        next ? '1' : '0',
-      )
-    } catch {
-      // Current screen state still works if session storage is unavailable.
+    if (error) {
+      setMessage(coopError(error.message))
+      endAction()
+      return
     }
+
+    const state = data as {
+      available?: boolean
+      enabled?: boolean
+      server_managed?: boolean
+    } | null
+
+    setTurnModeEnabled(state?.enabled === true)
+    endAction()
   }
 
   if (loading) {
@@ -1977,13 +1942,13 @@ export function PartyDungeonPanel({
                   <button
                     className={turnModeEnabled ? 'primary-button' : 'ghost-button'}
                     type="button"
-                    title="Режим хода"
-                    aria-label="Режим хода"
+                    title={turnModeEnabled ? 'Сервер сам выполняет твои ходы' : 'Включить автоматические ходы'}
+                    aria-label="Автоматические ходы"
                     aria-pressed={turnModeEnabled}
                     disabled={busy}
-                    onClick={toggleTurnMode}
+                    onClick={() => void toggleTurnMode()}
                   >
-                    {turnModeEnabled ? '●' : '○'}
+                    {turnModeEnabled ? 'Авто · ВКЛ' : 'Авто · ВЫКЛ'}
                   </button>
                 )}
                 {activeRun.is_event_boss && activeEncounter.enemy_danger_pending && <span className="danger">босс готовит приём</span>}
