@@ -339,32 +339,36 @@ export function DuelPanel({ characterId }: Props) {
     const timer = window.setTimeout(() => {
       if (!beginAction('action')) return
 
-      void supabase.rpc('sync_client_duel_turn', {
-        p_character_id: characterId,
-        p_duel_id: duelId,
-      }).then(async ({ data, error }) => {
-        if (error) {
-          if (
-            error.message.includes('NOT_YOUR_TURN')
-            || error.message.includes('DUEL_NOT_ACTIVE')
-          ) {
-            await loadDynamic(true)
-          } else if (error.message.includes('FEATURE_UNAVAILABLE')) {
-            setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
-            setTurnModeEnabled(false)
-          } else {
-            setMessage(duelError(error.message))
-            await loadDynamic(true)
-          }
-          return
-        }
+      void (async () => {
+        try {
+          const { data, error } = await supabase.rpc('sync_client_duel_turn', {
+            p_character_id: characterId,
+            p_duel_id: duelId,
+          })
 
-        const payload = data as { state?: DuelDetails } | null
-        if (payload?.state) setDetails(payload.state)
-        await loadDynamic(true)
-      }).finally(() => {
-        endAction()
-      })
+          if (error) {
+            if (
+              error.message.includes('NOT_YOUR_TURN')
+              || error.message.includes('DUEL_NOT_ACTIVE')
+            ) {
+              await loadDynamic(true)
+            } else if (error.message.includes('FEATURE_UNAVAILABLE')) {
+              setRuntimeFlags((current) => ({ ...current, turn_mode_v1: false }))
+              setTurnModeEnabled(false)
+            } else {
+              setMessage(duelError(error.message))
+              await loadDynamic(true)
+            }
+            return
+          }
+
+          const payload = data as { state?: DuelDetails } | null
+          if (payload?.state) setDetails(payload.state)
+          await loadDynamic(true)
+        } finally {
+          endAction()
+        }
+      })()
     }, 450)
 
     return () => window.clearTimeout(timer)
