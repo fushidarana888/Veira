@@ -1026,20 +1026,20 @@ export function PartyDungeonPanel({
   const personalAutopilotAvailable = characterId === OLEZHAO_CHARACTER_ID
 
   useEffect(() => {
-    const encounterId = activeEncounter?.id ?? null
-    if (!personalAutopilotAvailable || !encounterId) {
+    const runId = activeRun?.id ?? null
+    if (!personalAutopilotAvailable || !runId) {
       setPersonalAutopilotEnabled(false)
       return
     }
 
     try {
       setPersonalAutopilotEnabled(
-        window.sessionStorage.getItem('veira:olezhao-autopilot:party:' + encounterId) === '1',
+        window.sessionStorage.getItem('veira:olezhao-autopilot:party:' + runId) === '1',
       )
     } catch {
       setPersonalAutopilotEnabled(false)
     }
-  }, [activeEncounter?.id, personalAutopilotAvailable])
+  }, [activeRun?.id, personalAutopilotAvailable])
 
   useEffect(() => {
     if (
@@ -1113,13 +1113,13 @@ export function PartyDungeonPanel({
   ])
 
   function togglePersonalAutopilot() {
-    if (!personalAutopilotAvailable || !activeEncounter) return
+    if (!personalAutopilotAvailable || !activeRun || !activeEncounter) return
     const next = !personalAutopilotEnabled
     setPersonalAutopilotEnabled(next)
 
     try {
       window.sessionStorage.setItem(
-        'veira:olezhao-autopilot:party:' + activeEncounter.id,
+        'veira:olezhao-autopilot:party:' + activeRun.id,
         next ? '1' : '0',
       )
     } catch {
@@ -1984,8 +1984,8 @@ export function PartyDungeonPanel({
                       : 'Автопилот Олежао · ВЫКЛ'}
                   </button>
                   <span>
-                    {' '}Только твои обычные боевые ходы. Автопилот не использует «Последнюю жертву»,
-                    не сдаётся и не запускает побег.
+                    {' '}Работает до конца текущего похода. Только твои обычные боевые ходы:
+                    без «Последней жертвы», сдачи и побега.
                   </span>
                 </div>
               )}
