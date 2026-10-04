@@ -255,8 +255,12 @@ export function DuelPanel({ characterId }: Props) {
     () => loadDynamic(true),
     {
       enabled: true,
-      intervalMs: details?.duel?.status === 'active' ? 3500 : 12000,
-      minGapMs: details?.duel?.status === 'active' ? 700 : 1800,
+      intervalMs: details?.duel?.status === 'active'
+        ? (characterId === OLEZHAO_CHARACTER_ID && personalAutopilotEnabled ? 1000 : 3500)
+        : 12000,
+      minGapMs: details?.duel?.status === 'active'
+        ? (characterId === OLEZHAO_CHARACTER_ID && personalAutopilotEnabled ? 350 : 700)
+        : 1800,
     },
   )
 
