@@ -604,9 +604,15 @@ export function PartyDungeonPanel({
     {
       enabled: true,
       intervalMs: state.run?.status === 'active'
-        ? (mode === 'combat' ? 3000 : 10000)
+        ? (
+          mode === 'combat'
+            ? (characterId === OLEZHAO_CHARACTER_ID && personalAutopilotEnabled ? 1000 : 3000)
+            : 10000
+        )
         : 0,
-      minGapMs: mode === 'combat' ? 800 : 1500,
+      minGapMs: mode === 'combat'
+        ? (characterId === OLEZHAO_CHARACTER_ID && personalAutopilotEnabled ? 350 : 800)
+        : 1500,
     },
   )
 
